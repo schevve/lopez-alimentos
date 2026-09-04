@@ -1,0 +1,1 @@
+- Commit messages should be written in Portuguese
