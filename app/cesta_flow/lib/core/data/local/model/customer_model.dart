@@ -7,7 +7,7 @@ class Customer {
   final String address;
   final String city;
   final String state;
-  final String cep;
+  final String? cep;
   final String documentCPF;
   final String? documentRG;
 
@@ -20,7 +20,7 @@ class Customer {
     required this.address,
     required this.city,
     required this.state,
-    required this.cep,
+    this.cep,
     required this.documentCPF,
     this.documentRG,
   });

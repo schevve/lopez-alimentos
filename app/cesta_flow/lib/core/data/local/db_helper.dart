@@ -29,8 +29,9 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'app_database.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 3,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
       onConfigure: _onConfigure,
     );
   }
@@ -42,8 +43,20 @@ class DatabaseHelper {
 
   // Create the database tables
   Future<void> _onCreate(Database db, int version) async {
+    await _createTables(db);
+  }
+
+  // Handle schema migrations across database versions
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 3) {
+      // Ensure all tables exist for upgrades from earlier versions where tables were missing
+      await _createTables(db);
+    }
+  }
+
+  Future<void> _createTables(Database db) async {
     await db.execute('''
-      CREATE TABLE customers (
+      CREATE TABLE IF NOT EXISTS customers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         date_of_birth TEXT NOT NULL,
@@ -52,14 +65,14 @@ class DatabaseHelper {
         address TEXT NOT NULL,
         city TEXT NOT NULL,
         state TEXT NOT NULL,
-        cep TEXT NOT NULL,
-        document_cpf TEXT NOT NULL,
-        document_rg TEXT
+        cep TEXT,
+        document_cpf TEXT NOT NULL UNIQUE,
+        document_rg TEXT UNIQUE
       )
     ''');
 
     await db.execute('''
-      CREATE TABLE sales (
+      CREATE TABLE IF NOT EXISTS sales (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         customer_id INTEGER NOT NULL,
         product_name TEXT NOT NULL,
@@ -72,7 +85,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE payments (
+      CREATE TABLE IF NOT EXISTS payments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         customer_id INTEGER NOT NULL,
         method TEXT NOT NULL,
