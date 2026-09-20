@@ -74,11 +74,15 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                 decoration: InputDecoration(labelText: 'Cidade *'),
                 keyboardType: TextInputType.text,
                 onSaved: (value) => _formData['cidade'] = value,
+                validator: (value) =>
+                    value?.isNotEmpty ?? false ? null : "erro",
               ),
               TextFormField(
                 decoration: InputDecoration(labelText: 'Estado (opcional)'),
                 keyboardType: TextInputType.text,
                 onSaved: (value) => _formData['estado'] = value,
+                validator: (value) =>
+                    value?.isNotEmpty ?? false ? null : "erro",
               ),
               TextFormField(
                 decoration: InputDecoration(labelText: 'CEP (opcional)'),
