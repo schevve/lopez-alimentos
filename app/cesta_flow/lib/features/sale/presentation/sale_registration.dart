@@ -1,9 +1,11 @@
+import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/constants/util/format_cpf.dart';
 import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/sale/presentation/customer_selection.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -22,120 +24,186 @@ class _SaleRegistrationState extends State<SaleRegistration> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(
-          'Registrar Venda',
+          'Nova Venda',
           style: TextStyle(
             fontSize: 24,
             color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: Colors.green,
+        backgroundColor: AppColors.primary,
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, 32),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            spacing: 16,
-            children: [
-              FormField(
-                builder: (contextt) {
-                  return Column(
-                    children: [
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => CustomerSelection(),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 32),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                spacing: 16,
+                children: [
+                  FormField(
+                    builder: (contextt) {
+                      return Column(
+                        spacing: 16,
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CustomerSelection(),
+                                  ),
+                                ).then((value) {
+                                  if (value != null) {
+                                    if (value is Customer) {
+                                      setState(() {
+                                        _selectedCustomer = value;
+                                        _formData['clienteId'] = value.id;
+                                      });
+                                    }
+                                  }
+                                });
+                              },
+                              style: OutlinedButton.styleFrom(
+                                alignment: Alignment.centerLeft,
+                                fixedSize: Size(double.infinity, 64),
+                                side: BorderSide(
+                                  color: AppColors.primary,
+                                  width: 2,
+                                ),
+                                padding: EdgeInsets.symmetric(
+                                  vertical: 12,
+                                  horizontal: 16,
+                                ),
                               ),
-                            ).then((value) {
-                              if (value != null) {
-                                if (value is Customer) {
-                                  setState(() {
-                                    _selectedCustomer = value;
-                                    _formData['clienteId'] = value.id;
-                                  });
-                                }
-                              }
-                            });
-                          },
-                          style: OutlinedButton.styleFrom(
-                            alignment: Alignment.centerLeft,
-                            fixedSize: Size(double.infinity, 64),
-                            side: BorderSide(color: Colors.green, width: 2),
-                            padding: EdgeInsets.symmetric(
-                              vertical: 12,
-                              horizontal: 16,
+                              child: Text(
+                                'Selecionar Cliente',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
                             ),
                           ),
-                          child: Text(
-                            'Selecionar Cliente',
-                            style: TextStyle(fontSize: 20, color: Colors.green),
+                          InputDecorator(
+                            decoration: InputDecoration(labelText: 'Cliente *'),
+                            child: Text(
+                              _selectedCustomer == null
+                                  ? 'Nenhum cliente selecionado'
+                                  : '${_selectedCustomer!.name}, CPF: ${formatCpf(_selectedCustomer!.documentCPF)}',
+                              style: TextStyle(fontSize: 16),
+                            ),
                           ),
-                        ),
+                        ],
+                      );
+                    },
+                    // onSaved: (value) => _formData['clienteId'] = value,
+                  ),
+                  TextFormField(
+                    decoration: InputDecoration(labelText: 'Produto *'),
+                    onSaved: (value) => _formData['produto'] = value,
+                  ),
+                  TextFormField(
+                    decoration: InputDecoration(
+                      labelText: 'Observações (opcional)',
+                    ),
+                    onSaved: (value) => _formData['observacoes'] = value,
+                  ),
+                  TextFormField(
+                    initialValue: getCurrentFormattedDate(),
+                    decoration: InputDecoration(labelText: 'Data da Venda *'),
+                    keyboardType: TextInputType.datetime,
+                    inputFormatters: [FormatDate()],
+                    onSaved: (value) => _formData['data_venda'] = value,
+                  ),
+                  TextFormField(
+                    decoration: InputDecoration(
+                      labelText: 'Valor Total da Venda *',
+                    ),
+                    keyboardType: TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    inputFormatters: [FormatMoney()],
+                    onSaved: (value) => _formData['valor_total'] = value,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            width: MediaQuery.of(context).size.width,
+            child: Container(
+              padding: EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 10,
+                    offset: Offset(0, -5),
+                  ),
+                ],
+              ),
+              child: Column(
+                spacing: 16,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Total da venda: ',
+                        style: TextStyle(fontSize: 20, color: AppColors.text),
                       ),
-                      InputDecorator(
-                        decoration: InputDecoration(labelText: 'Cliente *'),
-                        child: Text(
-                          _selectedCustomer == null
-                              ? 'Nenhum cliente selecionado'
-                              : '${_selectedCustomer!.name}, CPF: ${formatCpf(_selectedCustomer!.documentCPF)}',
-                          style: TextStyle(fontSize: 16),
+                      Text(
+                        _formData['valor_total'] ?? '0,00',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.black,
                         ),
                       ),
                     ],
-                  );
-                },
-                // onSaved: (value) => _formData['clienteId'] = value,
-              ),
-              TextFormField(
-                decoration: InputDecoration(labelText: 'Produto *'),
-                onSaved: (value) => _formData['produto'] = value,
-              ),
-              TextFormField(
-                decoration: InputDecoration(
-                  labelText: 'Observações (opcional)',
-                ),
-                onSaved: (value) => _formData['observacoes'] = value,
-              ),
-              TextFormField(
-                initialValue: getCurrentFormattedDate(),
-                decoration: InputDecoration(labelText: 'Data da Venda *'),
-                keyboardType: TextInputType.datetime,
-                inputFormatters: [FormatDate()],
-                onSaved: (value) => _formData['data_venda'] = value,
-              ),
-              TextFormField(
-                decoration: InputDecoration(
-                  labelText: 'Valor Total da Venda *',
-                ),
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [FormatMoney()],
-                onSaved: (value) => _formData['valor_total'] = value,
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  _submitForm();
-                },
-                style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.all(Colors.green),
-                  padding: WidgetStateProperty.all(
-                    EdgeInsets.symmetric(vertical: 16, horizontal: 32),
                   ),
-                ),
-                child: Text(
-                  'Registrar Venda',
-                  style: TextStyle(color: Colors.white, fontSize: 24),
-                ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _submitForm();
+                      },
+                      style: ButtonStyle(
+                        shape: WidgetStateProperty.all(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        backgroundColor: WidgetStateProperty.all(
+                          AppColors.secondary,
+                        ),
+                        padding: WidgetStateProperty.all(
+                          EdgeInsets.symmetric(vertical: 24, horizontal: 32),
+                        ),
+                      ),
+                      child: Text(
+                        'Registrar Venda',
+                        style: TextStyle(color: Colors.white, fontSize: 20),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
