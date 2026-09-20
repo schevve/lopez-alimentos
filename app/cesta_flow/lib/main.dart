@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'features/customer/presentation/customer_registration.dart';
+import 'features/auth/presentation/login_screen.dart';
 
 void main() {
   runApp(const MainApp());
@@ -11,6 +11,13 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(home: CustomerRegistration());
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        fontFamily: 'Roboto',
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1C5632)),
+      ),
+      home: const LoginScreen(),
+    );
   }
 }
