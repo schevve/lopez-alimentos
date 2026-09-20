@@ -1,9 +1,9 @@
 // Widgets e formatação nativos do Flutter.
+import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../dashboard/presentation/home_screen.dart';
 import 'widgets/logo_widget.dart';
 import 'widgets/produce_pattern.dart';
 
@@ -51,7 +51,7 @@ class _LoginScreenState extends State<LoginScreen> {
       debugPrint('Lembrar-me: $_lembrarMe');
     }
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
+      MaterialPageRoute<void>(builder: (_) => const Dashboard()),
     );
   }
 
