@@ -18,7 +18,21 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(0xffF3FCF3),
+
       appBar: AppBar(
+        backgroundColor: const Color(0xff1C5631),
+
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            image:DecorationImage(
+              image: AssetImage('web/images/FundoComidas.png'),
+              fit: BoxFit.cover
+            )
+          ),
+        ),
+
+        toolbarHeight: 70,
         title: Text(
           'Registrar Cliente',
           style: TextStyle(
@@ -27,94 +41,271 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: Colors.green,
+        leading: IconButton.filled(
+          icon: const Icon(Icons.arrow_back,
+            color: Colors.white
+          ),
+          style: IconButton.styleFrom(
+            backgroundColor: const Color.fromARGB(48, 255, 255, 255)
+          ),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
       ),
+
       body: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(16, 16, 16, 32),
-        child: Form(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+          Row(
+            children: [
+              Container(width: 4,
+              height: 24,
+              color: Colors.orange
+              ),
+
+              SizedBox(width: 8,),
+
+              Icon(
+                Icons.person_add_alt_1_outlined,
+                color: Colors.orange,
+                size: 22
+              ),
+
+              SizedBox(width: 8,),
+
+              Text(
+                "IDENTIFICAÇÃO",
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.redAccent
+                ),
+
+              )
+            ],
+          ),
+          Padding(padding: EdgeInsetsGeometry.all(10)),
+          Form(
           key: _formKey,
           child: Column(
             spacing: 16,
             children: [
               TextFormField(
-                decoration: InputDecoration(labelText: 'Nome *'),
+                decoration: InputDecoration(
+                  labelText: 'Nome completo*',
+                  hintText: " ",
+                  prefixIcon: const Icon(
+                    Icons.person,
+                    color:  Color(0xff1C5631)
+                  ),
+
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30)
+                  ),
+
+                  filled: true,
+                  fillColor: Colors.white
+                ),
                 onSaved: (value) => _formData['nome'] = value,
               ),
+
               TextFormField(
                 decoration: InputDecoration(
                   labelText: 'Data de Nascimento *',
                   hintText: 'dd/mm/aaaa',
+
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+
+                  filled: true,
+                  fillColor: Colors.white
                 ),
+
                 keyboardType: TextInputType.datetime,
                 inputFormatters: [FormatDate()],
                 onSaved: (value) => _formData['data_nascimento'] = value,
               ),
+
               TextFormField(
-                decoration: InputDecoration(labelText: 'Email (opcional)'),
+                decoration: InputDecoration(labelText: 'Email (opcional)',
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30)
+                  ),
+
+                  filled: true,
+                  fillColor: Colors.white
+                ),
+
                 keyboardType: TextInputType.emailAddress,
+                
                 onSaved: (value) => _formData['email'] = value,
               ),
+
               TextFormField(
-                decoration: InputDecoration(labelText: 'Telefone *'),
+                decoration: InputDecoration(
+                  labelText: 'Telefone *',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30)
+                  ),
+
+                  filled: true,
+                  fillColor: Colors.white
+                ),
+
                 keyboardType: TextInputType.phone,
                 inputFormatters: [FormatPhoneNumber()],
                 onSaved: (value) => _formData['telefone'] = value,
               ),
+
               TextFormField(
-                decoration: InputDecoration(labelText: 'Rua *'),
+                decoration: InputDecoration(
+                  labelText: 'Rua *',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30)
+                  ),
+
+                  filled: true,
+                  fillColor: Colors.white
+                ),
+
                 keyboardType: TextInputType.text,
                 onSaved: (value) => _formData['rua'] = value,
               ),
+              
               TextFormField(
-                decoration: InputDecoration(labelText: 'Número *'),
+                decoration: InputDecoration(
+                  labelText: 'Número *',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30)
+                  ),
+
+                  filled: true,
+                  fillColor: Colors.white
+                ),
+
                 keyboardType: TextInputType.number,
                 onSaved: (value) => _formData['numero'] = value,
               ),
+
               TextFormField(
-                decoration: InputDecoration(labelText: 'Cidade *'),
+                decoration: InputDecoration(
+                  labelText: 'Cidade *',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30)
+                  ),
+
+                  filled: true,
+                  fillColor: Colors.white
+                ),
+                
                 keyboardType: TextInputType.text,
                 onSaved: (value) => _formData['cidade'] = value,
                 validator: (value) =>
                     value?.isNotEmpty ?? false ? null : "erro",
               ),
+
               TextFormField(
-                decoration: InputDecoration(labelText: 'Estado (opcional)'),
+                decoration: InputDecoration(
+                  labelText: 'Estado (opcional)',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30)
+                  ),
+
+                  filled: true,
+                  fillColor: Colors.white
+                ),
+
                 keyboardType: TextInputType.text,
                 onSaved: (value) => _formData['estado'] = value,
                 validator: (value) =>
                     value?.isNotEmpty ?? false ? null : "erro",
               ),
+
               TextFormField(
-                decoration: InputDecoration(labelText: 'CEP (opcional)'),
+                decoration: InputDecoration(
+                  labelText: 'CEP (opcional)',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30)
+                  ),
+                  
+                  filled: true,
+                  fillColor: Colors.white
+                ),
+
                 keyboardType: TextInputType.number,
                 onSaved: (value) => _formData['cep'] = value,
               ),
+
               TextFormField(
-                decoration: InputDecoration(labelText: 'CPF *'),
+                decoration: InputDecoration(
+                  labelText: 'CPF *',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30)
+                  ),
+
+                  filled: true,
+                  fillColor: Colors.white
+                ),
+                
                 keyboardType: TextInputType.number,
                 onSaved: (value) => _formData['cpf'] = value,
               ),
+
               TextFormField(
-                decoration: InputDecoration(labelText: 'RG (opcional)'),
+                decoration: InputDecoration(
+                  labelText: 'RG (opcional)',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30)
+                  ),
+
+                  filled: true,
+                  fillColor: Colors.white
+                ),
+
                 keyboardType: TextInputType.number,
                 onSaved: (value) => _formData['rg'] = value,
               ),
-              FilledButton(
-                onPressed: () async {
-                  await _submitForm();
-                },
-                style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.all(Colors.green),
-                  padding: WidgetStateProperty.all(
-                    EdgeInsets.symmetric(vertical: 16, horizontal: 32),
-                  ),
-                ),
-                child: Text(
-                  "Registrar Cliente",
-                  style: TextStyle(color: Colors.white, fontSize: 24),
-                ),
-              ),
+
+              
             ],
+          ),
+        ),
+
+        ],
+        ),
+
+        
+      ),
+      bottomNavigationBar: Theme(
+        data: Theme.of(context).copyWith(
+          canvasColor: Colors.transparent, 
+        ),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16), 
+          child: FilledButton.icon(
+            onPressed: () async {
+              await _submitForm();
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color.fromARGB(255, 158, 204, 174),
+              padding: EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)
+              )
+            ),
+            icon: Icon(
+              Icons.person_add_alt_1_outlined,
+              color: Color(0xff1C5631),
+              size: 26
+            ),
+            label: Text(
+              "Registrar Cliente",
+              style: TextStyle(color: Color(0xff1C5631), fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 2),
+            ),
           ),
         ),
       ),
