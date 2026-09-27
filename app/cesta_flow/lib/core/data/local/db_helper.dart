@@ -29,7 +29,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'app_database.db');
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: _onConfigure,
@@ -51,6 +51,9 @@ class DatabaseHelper {
     if (oldVersion < 3) {
       // Ensure all tables exist for upgrades from earlier versions where tables were missing
       await _createTables(db);
+    }
+    if (oldVersion < 4) {
+      await db.execute('ALTER TABLE payments ADD COLUMN sale_id INTEGER');
     }
   }
 
@@ -87,11 +90,11 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS payments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_id INTEGER NOT NULL,
+        sale_id INTEGER NOT NULL,
         method TEXT NOT NULL,
         amount REAL NOT NULL,
         date TEXT NOT NULL,
-        FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE
+        FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE CASCADE
       )
     ''');
   }
