@@ -1,14 +1,12 @@
-import 'package:cesta_flow/core/data/local/mock_data_seeder.dart';
-import 'package:cesta_flow/features/export/presentation/data_exportation.dart';
 import 'package:flutter/material.dart';
 
-const _mockDataEnabled = bool.fromEnvironment('MOCK_DATA');
+import 'features/sale/presentation/customer_selection.dart';
+import 'features/customer/presentation/customer_registration.dart';
+import 'features/sale/presentation/sale_registration.dart';
+import 'features/sale/presentation/payment_registration.dart';
+import 'features/sale/presentation/billing_page.dart';
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  if (_mockDataEnabled) {
-    await MockDataSeeder().seed();
-  }
+void main() {
   runApp(const MainApp());
 }
 
@@ -17,13 +15,6 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        fontFamily: 'Roboto',
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1C5632)),
-      ),
-      home: const DataExportation(),
-    );
+    return const MaterialApp(home: BillingPage());
   }
 }
