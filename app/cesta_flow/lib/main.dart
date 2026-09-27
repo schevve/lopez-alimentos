@@ -1,8 +1,14 @@
+import 'package:cesta_flow/core/data/local/mock_data_seeder.dart';
+import 'package:cesta_flow/features/export/presentation/data_exportation.dart';
 import 'package:flutter/material.dart';
 
-import 'features/auth/presentation/login_screen.dart';
+const _mockDataEnabled = bool.fromEnvironment('MOCK_DATA');
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  if (_mockDataEnabled) {
+    await MockDataSeeder().seed();
+  }
   runApp(const MainApp());
 }
 
@@ -17,7 +23,7 @@ class MainApp extends StatelessWidget {
         fontFamily: 'Roboto',
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1C5632)),
       ),
-      home: const LoginScreen(),
+      home: const DataExportation(),
     );
   }
 }
