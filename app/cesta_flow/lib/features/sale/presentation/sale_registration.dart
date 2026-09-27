@@ -5,7 +5,6 @@ import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/sale/presentation/customer_selection.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
