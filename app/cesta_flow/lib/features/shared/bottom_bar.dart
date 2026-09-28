@@ -1,6 +1,6 @@
 import 'package:cesta_flow/features/customer/presentation/customer_list.dart';
 import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
-import 'package:cesta_flow/features/sale/presentation/billing_page.dart';
+import 'package:cesta_flow/features/sale/presentation/payment_registration.dart';
 import 'package:flutter/material.dart';
 
 class BottomBar extends StatelessWidget {
@@ -35,7 +35,7 @@ class BottomBar extends StatelessWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => BillingPage()),
+                MaterialPageRoute(builder: (context) => PaymentRegistration()),
               );
             },
             icon: Icon(Icons.settings),

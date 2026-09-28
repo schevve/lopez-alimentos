@@ -1,6 +1,5 @@
 import 'package:cesta_flow/features/customer/presentation/customer_list.dart';
 import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
-import 'package:cesta_flow/features/sale/presentation/billing_page.dart';
 import 'package:flutter/material.dart';
 
 class TopBar extends StatelessWidget implements PreferredSizeWidget {
