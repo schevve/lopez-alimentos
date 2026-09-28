@@ -7,10 +7,13 @@ import 'package:cesta_flow/features/sale/presentation/sale_registration.dart';
 import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/payment_model.dart';
 import 'package:cesta_flow/core/data/local/repository/payment_repository.dart';
+import 'package:cesta_flow/features/shared/bottom_bar.dart';
+import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 
 class BillingPage extends StatefulWidget {
   final int customerId;
+
   const BillingPage({super.key, this.customerId = 1});
 
   @override
@@ -26,37 +29,8 @@ class _BillingPage extends State<BillingPage> {
     return Scaffold(
       backgroundColor: Color(0xffF3FCF3),
 
-      appBar: AppBar(
-        backgroundColor: const Color(0xff1C5631),
+      appBar: TopBar(pagTitle: "Cobrança"),
 
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('web/images/FundoComidas.png'),
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
-
-        toolbarHeight: 70,
-        title: Text(
-          'Registrar Cliente',
-          style: TextStyle(
-            fontSize: 24,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        leading: IconButton.filled(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          style: IconButton.styleFrom(
-            backgroundColor: const Color.fromARGB(48, 255, 255, 255),
-          ),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-      ),
       body: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(16, 16, 16, 32),
 
@@ -131,41 +105,7 @@ class _BillingPage extends State<BillingPage> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomAppBar(
-        padding: EdgeInsets.symmetric(horizontal: 40.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            IconButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => Dashboard()),
-                );
-              },
-              icon: Icon(Icons.home),
-            ),
-            IconButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => CustomerList()),
-                );
-              },
-              icon: Icon(Icons.person),
-            ),
-            IconButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => CustomerSelection()),
-                );
-              },
-              icon: Icon(Icons.settings),
-            ),
-          ],
-        ),
-      ),
+      bottomNavigationBar: BottomBar(),
     );
   }
 

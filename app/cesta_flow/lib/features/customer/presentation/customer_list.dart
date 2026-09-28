@@ -1,3 +1,4 @@
+import 'package:cesta_flow/features/shared/Top_bar.dart';
 import 'package:flutter/material.dart';
 
 class CustomerList extends StatelessWidget {
@@ -6,17 +7,7 @@ class CustomerList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Clientes',
-          style: TextStyle(
-            fontSize: 24,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: Colors.green,
-      ),
+      appBar: TopBar(pagTitle: "Lista de Clientes"),
       body: Center(child: Text('Clientes')),
     );
   }

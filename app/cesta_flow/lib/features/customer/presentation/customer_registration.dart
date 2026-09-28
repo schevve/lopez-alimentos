@@ -1,6 +1,7 @@
 import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
+import 'package:cesta_flow/features/shared/Top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -20,39 +21,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
     return Scaffold(
       backgroundColor: Color(0xffF3FCF3),
 
-      appBar: AppBar(
-        backgroundColor: const Color(0xff1C5631),
-
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            image:DecorationImage(
-              image: AssetImage('web/images/FundoComidas.png'),
-              fit: BoxFit.cover
-            )
-          ),
-        ),
-
-        toolbarHeight: 70,
-        title: Text(
-          'Registrar Cliente',
-          style: TextStyle(
-            fontSize: 24,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        leading: IconButton.filled(
-          icon: const Icon(Icons.arrow_back,
-            color: Colors.white
-          ),
-          style: IconButton.styleFrom(
-            backgroundColor: const Color.fromARGB(48, 255, 255, 255)
-          ),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-      ),
+      appBar: TopBar(pagTitle: "Registrar cliente"),
 
       body: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(16, 16, 16, 32),

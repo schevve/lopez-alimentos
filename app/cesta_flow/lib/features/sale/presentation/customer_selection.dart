@@ -1,5 +1,6 @@
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
+import 'package:cesta_flow/features/shared/Top_bar.dart';
 import 'package:flutter/material.dart';
 
 class CustomerSelection extends StatefulWidget {
@@ -27,17 +28,7 @@ class _CustomerSelectionState extends State<CustomerSelection> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Selecionar Cliente',
-          style: TextStyle(
-            fontSize: 24,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: Colors.green,
-      ),
+      appBar: TopBar(pagTitle: "Selecionar cliente"),
       body: FutureBuilder<List<Customer>>(
         future: _customers,
         builder: (context, snapshot) {
