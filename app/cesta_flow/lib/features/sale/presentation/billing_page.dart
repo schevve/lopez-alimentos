@@ -1,3 +1,7 @@
+import 'package:cesta_flow/core/data/local/model/customer_model.dart';
+import 'package:cesta_flow/features/customer/presentation/customer_list.dart';
+import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
+import 'package:cesta_flow/features/sale/presentation/customer_selection.dart';
 import 'package:cesta_flow/features/sale/presentation/payment_registration.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_registration.dart';
 import 'package:cesta_flow/core/data/local/db_helper.dart';
@@ -127,6 +131,41 @@ class _BillingPage extends State<BillingPage> {
           ],
         ),
       ),
+      bottomNavigationBar: BottomAppBar(
+        padding: EdgeInsets.symmetric(horizontal: 40.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            IconButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => Dashboard()),
+                );
+              },
+              icon: Icon(Icons.home),
+            ),
+            IconButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => CustomerList()),
+                );
+              },
+              icon: Icon(Icons.person),
+            ),
+            IconButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => CustomerSelection()),
+                );
+              },
+              icon: Icon(Icons.settings),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -144,11 +183,10 @@ class _BillingPage extends State<BillingPage> {
           .replaceAll(',', '.');
       final double realValue = double.tryParse(cleanValue) ?? 0.0;
 
-
-      try{
+      try {
         final List<Payment> allPayments = await paymentRepository
             .getPaymentsByCustumerId(customerId);
-            
+
         double amount = await paymentRepository.getPaymentsByCustumerIdAmount(
           customerId,
         );
@@ -164,11 +202,10 @@ class _BillingPage extends State<BillingPage> {
         );
         await paymentRepository.registerPayment(paymentData);
         print('Pagamento registrado com sucesso: ${paymentData.amount}');
-
-      } catch (e){
+      } catch (e) {
         print("erro no banco de dados: $e");
       }
-      
+
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => PaymentRegistration(
