@@ -46,3 +46,9 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Supabase temporários locais
+.temp/
+supabase/.temp/
+app/cesta_flow/supabase/.temp/
+*.env

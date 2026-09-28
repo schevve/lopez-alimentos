@@ -286,6 +286,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
         ),
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16), 
+          
           child: FilledButton.icon(
             onPressed: () async {
               await _submitForm();
