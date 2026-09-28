@@ -1,3 +1,4 @@
+import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 
 class Dashboard extends StatelessWidget {
@@ -6,17 +7,7 @@ class Dashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Dashboard',
-          style: TextStyle(
-            fontSize: 24,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: Colors.green,
-      ),
+      appBar: TopBar(pagTitle: "Dashboar"),
       body: Center(child: Text('Dashboard')),
     );
   }

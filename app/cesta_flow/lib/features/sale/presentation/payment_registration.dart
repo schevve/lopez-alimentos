@@ -1,78 +1,160 @@
+import 'package:cesta_flow/core/data/local/model/customer_model.dart';
+import 'package:cesta_flow/features/customer/presentation/customer_list.dart';
+import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
+import 'package:cesta_flow/features/sale/presentation/customer_selection.dart';
+import 'package:cesta_flow/features/sale/presentation/payment_success.dart';
+import 'package:cesta_flow/features/sale/presentation/sale_registration.dart';
+import 'package:cesta_flow/core/data/local/db_helper.dart';
+import 'package:cesta_flow/core/data/local/model/payment_model.dart';
+import 'package:cesta_flow/core/data/local/repository/payment_repository.dart';
+import 'package:cesta_flow/features/shared/bottom_bar.dart';
+import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 
 class PaymentRegistration extends StatefulWidget {
-  final String paymentValue;
-  final String paymentTerm;
-  final String nextVisit;
+  final int customerId;
 
-  const PaymentRegistration({
-    super.key,
-    required this.paymentValue,
-    required this.paymentTerm,
-    required this.nextVisit
-  });
+  const PaymentRegistration({super.key, this.customerId = 1});
 
   @override
-  State<PaymentRegistration> createState() => _PaymentRegistrationState();
+  State<PaymentRegistration> createState() => _PaymentRegistration();
 }
 
-class _PaymentRegistrationState extends State<PaymentRegistration> {
+class _PaymentRegistration extends State<PaymentRegistration> {
+  final _formKey = GlobalKey<FormState>();
+  final _formData = <String, dynamic>{};
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xffF3FCF3),
 
-      body: Center(
+      appBar: TopBar(pagTitle: "Cobrança"),
+
+      body: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 32),
+
         child: Column(
-          spacing: 16,
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 60,
-              height: 60,
+            Form(
+              key: _formKey,
 
-              alignment: Alignment.center,
+              child: Column(
+                spacing: 16,
+                children: [
+                  TextFormField(
+                    decoration: InputDecoration(
+                      labelText: "valor cobrado",
+                      prefixText: 'R\$',
 
-              decoration: BoxDecoration(
-                color: Color.fromARGB(255, 204, 250, 204),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                Icons.check_circle_outline,
-                size: 30,
-                color: Color.fromARGB(255, 53, 134, 83),
-              ),
-            ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
 
-            SizedBox(height: 10),
-            Text(
-              'Pagamento registrado!',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1,
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+
+                    keyboardType: TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    inputFormatters: [FormatMoney()],
+                    onSaved: (value) => _formData['paymentValue'] = value,
+                  ),
+                  TextFormField(
+                    decoration: InputDecoration(
+                      labelText: "Metodo de pagamento",
+                      prefixText: '',
+
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+
+                    onSaved: (value) => _formData['paymentTerm'] = value,
+                  ),
+                  TextFormField(
+                    decoration: InputDecoration(
+                      labelText: 'Proxima visita *',
+                      hintText: 'dd/mm/aaaa',
+
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+
+                    keyboardType: TextInputType.datetime,
+                    inputFormatters: [FormatDate()],
+                    onSaved: (value) => _formData['nextVisit'] = value,
+                  ),
+                  FilledButton(
+                    onPressed: () async {
+                      await _submitForm();
+                    },
+                    child: Text("Realizar cobrança"),
+                  ),
+                ],
               ),
             ),
-            Text(
-              "${widget.paymentValue}   -   ${widget.paymentTerm}",
-              style: TextStyle(
-                color: Color.fromARGB(255, 53, 134, 83),
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1,
-              ),
-            ),
-            Text("Próxima visita: ${widget.nextVisit}"),
-            FilledButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text("voltar ao cliente"),
-            ),
-            
           ],
         ),
       ),
+      bottomNavigationBar: BottomBar(),
     );
+  }
+
+  Future<void> _submitForm() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+
+      var db = DatabaseHelper();
+      var paymentRepository = PaymentRepository(dbHelper: db);
+      final int customerId = widget.customerId;
+
+      final String rawValue = _formData['paymentValue'] ?? "0,00";
+      final String cleanValue = rawValue
+          .replaceAll('.', '')
+          .replaceAll(',', '.');
+      final double realValue = double.tryParse(cleanValue) ?? 0.0;
+
+      try {
+        final List<Payment> allPayments = await paymentRepository
+            .getPaymentsByCustumerId(customerId);
+
+        double amount = await paymentRepository.getPaymentsByCustumerIdAmount(
+          customerId,
+        );
+
+        if (allPayments.isNotEmpty) {
+          amount = amount - realValue;
+        }
+        var paymentData = Payment(
+          customerId: customerId,
+          method: _formData['paymentTerm'],
+          amount: amount,
+          date: DateTime.now(),
+        );
+        await paymentRepository.registerPayment(paymentData);
+        print('Pagamento registrado com sucesso: ${paymentData.amount}');
+      } catch (e) {
+        print("erro no banco de dados: $e");
+      }
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => PaymentSuccess(
+            paymentValue: _formData['paymentValue'],
+            paymentTerm: _formData['paymentTerm'],
+            nextVisit: _formData['nextVisit'],
+          ),
+        ),
+      );
+    }
   }
 }
