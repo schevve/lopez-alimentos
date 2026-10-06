@@ -3,8 +3,18 @@ import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
 import 'package:cesta_flow/features/sale/presentation/payment_registration.dart';
 import 'package:flutter/material.dart';
 
-class BottomBar extends StatelessWidget {
-  const BottomBar({super.key});
+class BottomBar extends StatefulWidget {
+  BottomBar({super.key, this.onTap, this.pagesIcons});
+
+  final List<Widget>? pagesIcons;
+  final Function(int)? onTap;
+
+  @override
+  State<BottomBar> createState() => _BottomBarState();
+}
+
+class _BottomBarState extends State<BottomBar> {
+  late int _selectedIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -13,35 +23,30 @@ class BottomBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => Dashboard()),
-              );
-            },
-            icon: Icon(Icons.home),
-          ),
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => CustomerList()),
-              );
-            },
-            icon: Icon(Icons.person),
-          ),
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => PaymentRegistration()),
-              );
-            },
-            icon: Icon(Icons.settings),
-          ),
+          for (var icon in widget.pagesIcons ?? [])
+            _buildTabItem(icon, context),
         ],
       ),
+    );
+  }
+
+  Widget _buildTabItem(Widget pageIcon, BuildContext context) {
+    int index = widget.pagesIcons?.indexOf(pageIcon) ?? 0;
+    bool isSelected = index == _selectedIndex;
+
+    return IconButton(
+      icon: Icon(
+        (pageIcon as Icon).icon,
+        color: isSelected ? Colors.green : Colors.grey,
+      ),
+      onPressed: () {
+        if (widget.onTap != null) {
+          setState(() {
+            _selectedIndex = index;
+          });
+          widget.onTap!(index);
+        }
+      },
     );
   }
 }
