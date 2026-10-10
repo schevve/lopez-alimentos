@@ -105,7 +105,6 @@ class _PaymentRegistration extends State<PaymentRegistration> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomBar(),
     );
   }
 
