@@ -1,5 +1,6 @@
 import 'package:cesta_flow/features/customer/presentation/customer_list.dart';
 import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
+import 'package:cesta_flow/features/export/presentation/data_exportation.dart';
 import 'package:cesta_flow/features/sale/presentation/payment_success.dart';
 import 'package:cesta_flow/features/shared/bottom_bar.dart';
 import 'package:flutter/material.dart';
@@ -39,7 +40,7 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _pages = [
     const Dashboard(),
     const CustomerList(),
-    const PaymentRegistration(),
+    const DataExportation(),
   ];
 
   @override
@@ -53,10 +54,9 @@ class _MainScreenState extends State<MainScreen> {
           });
         },
         pagesIcons: const [
-          Icon(Icons.home),
-          Icon(Icons.people),
-          Icon(Icons.payments),
-          Icon(Icons.upload),
+          Icon(Icons.home_rounded),
+          Icon(Icons.people_rounded),
+          Icon(Icons.settings_rounded),
         ],
       ),
     );

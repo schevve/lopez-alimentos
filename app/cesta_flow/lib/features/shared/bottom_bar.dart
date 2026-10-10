@@ -21,7 +21,7 @@ class _BottomBarState extends State<BottomBar> {
     return BottomAppBar(
       padding: EdgeInsets.symmetric(horizontal: 40.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           for (var icon in widget.pagesIcons ?? [])
             _buildTabItem(icon, context),

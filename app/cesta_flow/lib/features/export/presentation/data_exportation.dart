@@ -81,7 +81,7 @@ class _DataExportationState extends State<DataExportation> {
                           width: 30,
                           child: CircularProgressIndicator(strokeWidth: 3),
                         )
-                      : Icon(Icons.upload, size: 30),
+                      : Icon(Icons.upload_rounded, size: 30),
                 ),
               ],
             ),
