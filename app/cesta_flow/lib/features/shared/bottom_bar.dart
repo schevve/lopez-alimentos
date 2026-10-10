@@ -1,52 +1,71 @@
-import 'package:cesta_flow/features/customer/presentation/customer_list.dart';
-import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
-import 'package:cesta_flow/features/sale/presentation/payment_registration.dart';
 import 'package:flutter/material.dart';
 
 class BottomBar extends StatefulWidget {
-  BottomBar({super.key, this.onTap, this.pagesIcons});
+  const BottomBar({super.key, required this.onTap, required this.buttonsIcons});
 
-  final List<Widget>? pagesIcons;
-  final Function(int)? onTap;
+  final Map<String, (String, IconData)> buttonsIcons;
+  final Function(String) onTap;
 
   @override
   State<BottomBar> createState() => _BottomBarState();
 }
 
 class _BottomBarState extends State<BottomBar> {
-  late int _selectedIndex = 0;
+  late String _selectedKey = widget.buttonsIcons.keys.first;
 
   @override
   Widget build(BuildContext context) {
     return BottomAppBar(
       padding: EdgeInsets.symmetric(horizontal: 40.0),
       child: Row(
+        spacing: 5,
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          for (var icon in widget.pagesIcons ?? [])
-            _buildTabItem(icon, context),
+          for (var entry in widget.buttonsIcons.entries)
+            _buildTabItem(entry.key, entry.value.$1, entry.value.$2, context),
         ],
       ),
     );
   }
 
-  Widget _buildTabItem(Widget pageIcon, BuildContext context) {
-    int index = widget.pagesIcons?.indexOf(pageIcon) ?? 0;
-    bool isSelected = index == _selectedIndex;
+  Widget _buildTabItem(
+    String key,
+    String label,
+    IconData buttonIcon,
+    BuildContext context,
+  ) {
+    bool isSelected = key == _selectedKey;
 
-    return IconButton(
-      icon: Icon(
-        (pageIcon as Icon).icon,
-        color: isSelected ? Colors.green : Colors.grey,
-      ),
-      onPressed: () {
-        if (widget.onTap != null) {
+    return Expanded(
+      child: IconButton(
+        icon: Column(
+          spacing: 4,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              buttonIcon,
+              color: isSelected
+                  ? Colors.green
+                  : const Color.fromARGB(255, 22, 20, 20),
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: isSelected
+                    ? Colors.green
+                    : const Color.fromARGB(255, 22, 20, 20),
+              ),
+            ),
+          ],
+        ),
+        onPressed: () {
           setState(() {
-            _selectedIndex = index;
+            _selectedKey = key;
           });
-          widget.onTap!(index);
-        }
-      },
+          widget.onTap(key);
+        },
+      ),
     );
   }
 }

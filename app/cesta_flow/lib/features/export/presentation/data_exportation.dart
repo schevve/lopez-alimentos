@@ -1,5 +1,6 @@
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/features/export/data/csv_export_service.dart';
+import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -39,17 +40,7 @@ class _DataExportationState extends State<DataExportation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Exportação de Dados',
-          style: TextStyle(
-            fontSize: 24,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: AppColors.primary,
-      ),
+      appBar: TopBar(pagTitle: 'Exportação de Dados'),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,

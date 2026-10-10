@@ -23,7 +23,10 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     WakelockPlus.enable();
-    return const MaterialApp(home: MainScreen());
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: MainScreen(),
+    );
   }
 }
 
@@ -35,29 +38,33 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _selectedIndex = 0;
+  String _selectedKey = 'Início';
 
-  final List<Widget> _pages = [
-    const Dashboard(),
-    const CustomerList(),
-    const DataExportation(),
-  ];
+  final Map<String, Widget> _pages = {
+    'home': const Dashboard(),
+    'customers': const CustomerList(),
+    'settings': const DataExportation(),
+  };
 
   @override
   Widget build(BuildContext context) {
+    int selectedIndex = _pages.keys.toList().indexOf(_selectedKey);
     return Scaffold(
-      body: IndexedStack(index: _selectedIndex, children: _pages),
+      body: IndexedStack(
+        index: selectedIndex,
+        children: _pages.values.toList(),
+      ),
       bottomNavigationBar: BottomBar(
         onTap: (index) {
           setState(() {
-            _selectedIndex = index;
+            _selectedKey = index;
           });
         },
-        pagesIcons: const [
-          Icon(Icons.home_rounded),
-          Icon(Icons.people_rounded),
-          Icon(Icons.settings_rounded),
-        ],
+        buttonsIcons: <String, (String, IconData)>{
+          'home': ('Início', Icons.home_rounded),
+          'customers': ('Clientes', Icons.people_rounded),
+          'settings': ('Configurações', Icons.settings_rounded),
+        },
       ),
     );
   }
