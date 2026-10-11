@@ -4,6 +4,7 @@ import 'package:cesta_flow/features/export/presentation/data_exportation.dart';
 import 'package:cesta_flow/features/sale/presentation/payment_success.dart';
 import 'package:cesta_flow/features/shared/bottom_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'features/sale/presentation/customer_selection.dart';
 import 'features/customer/presentation/customer_registration.dart';
@@ -13,8 +14,12 @@ import 'features/sale/presentation/payment_registration.dart';
 
 import 'package:wakelock_plus/wakelock_plus.dart';
 
-void main() {
-  runApp(const MainApp());
+Future<void> main() async {
+  await Supabase.initialize(
+    url: 'https://vzpomvpwbqaesfezxehf.supabase.co',
+    publishableKey: 'sb_publishable_Y5sHcuLfegaSCvK_c5RUFg_-ecEu179',
+  );
+  runApp(MainApp());
 }
 
 class MainApp extends StatelessWidget {
