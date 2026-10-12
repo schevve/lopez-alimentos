@@ -63,6 +63,7 @@ class DatabaseHelper {
         email TEXT,
         phone TEXT NOT NULL,
         address TEXT NOT NULL,
+        addres_number TEXT NOT NULL,
         city TEXT NOT NULL,
         state TEXT NOT NULL,
         cep TEXT,
