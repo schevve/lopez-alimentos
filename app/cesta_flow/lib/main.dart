@@ -42,7 +42,7 @@ class _MainScreenState extends State<MainScreen> {
 
   final Map<String, Widget> _pages = {
     'home': const Dashboard(),
-    'customers': const CustomerList(),
+    'customers': const CustomerRegistration(),
     'settings': const DataExportation(),
   };
 

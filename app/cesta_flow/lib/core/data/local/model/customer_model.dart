@@ -5,6 +5,7 @@ class Customer {
   final String? email;
   final String phone;
   final String address;
+  final String adress_number;
   final String city;
   final String state;
   final String? cep;
@@ -18,6 +19,7 @@ class Customer {
     this.email,
     required this.phone,
     required this.address,
+    required this.adress_number,
     required this.city,
     required this.state,
     this.cep,
@@ -32,6 +34,7 @@ class Customer {
       'email': email,
       'phone': phone,
       'address': address,
+      'adress_number': adress_number,
       'city': city,
       'state': state,
       'cep': cep,
@@ -52,6 +55,7 @@ class Customer {
       email: map['email'] as String,
       phone: map['phone'] as String,
       address: map['address'] as String,
+      adress_number: map['adress_number'] as String,
       city: map['city'] as String,
       state: map['state'] as String? ?? '',
       cep: map['cep'] as String,
@@ -67,6 +71,7 @@ class Customer {
     String? email,
     String? phone,
     String? address,
+    String? adress_number,
     String? city,
     String? state,
     String? cep,
@@ -80,6 +85,7 @@ class Customer {
       email: email ?? this.email,
       phone: phone ?? this.phone,
       address: address ?? this.address,
+      adress_number: adress_number ?? this.adress_number,
       city: city ?? this.city,
       state: state ?? this.state,
       cep: cep ?? this.cep,
@@ -90,6 +96,6 @@ class Customer {
 
   @override
   String toString() {
-    return 'Customer{id: $id, name: $name, dateOfBirth: $dateOfBirth, email: $email, phone: $phone, address: $address, city: $city, state: $state, cep: $cep, documentCPF: $documentCPF, documentRG: $documentRG}';
+    return 'Customer{id: $id, name: $name, dateOfBirth: $dateOfBirth, email: $email, phone: $phone, address: $address, adress_number: $adress_number, city: $city, state: $state, cep: $cep, documentCPF: $documentCPF, documentRG: $documentRG}';
   }
 }

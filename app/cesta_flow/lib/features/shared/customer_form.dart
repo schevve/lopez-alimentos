@@ -84,6 +84,7 @@ class _CustomerFormState extends State<CustomerForm> {
               spacing: 16,
               children: [
                 TextFormField(
+                  initialValue: customer?.name ?? '',
                   decoration: InputDecoration(
                     labelText: 'Nome completo*',
                     hintText: " ",
@@ -103,6 +104,7 @@ class _CustomerFormState extends State<CustomerForm> {
                 ),
 
                 TextFormField(
+                  initialValue: _formatDate(customer?.dateOfBirth),
                   decoration: InputDecoration(
                     labelText: 'Data de Nascimento *',
                     hintText: 'dd/mm/aaaa',
@@ -121,6 +123,7 @@ class _CustomerFormState extends State<CustomerForm> {
                 ),
 
                 TextFormField(
+                  initialValue: customer?.email ?? '',
                   decoration: InputDecoration(
                     labelText: 'Email (opcional)',
                     border: OutlineInputBorder(
@@ -137,6 +140,7 @@ class _CustomerFormState extends State<CustomerForm> {
                 ),
 
                 TextFormField(
+                  initialValue: customer?.phone ?? '',
                   decoration: InputDecoration(
                     labelText: 'Telefone *',
                     border: OutlineInputBorder(
@@ -153,6 +157,7 @@ class _CustomerFormState extends State<CustomerForm> {
                 ),
 
                 TextFormField(
+                  initialValue: customer?.address ?? '',
                   decoration: InputDecoration(
                     labelText: 'Rua *',
                     border: OutlineInputBorder(
@@ -168,6 +173,7 @@ class _CustomerFormState extends State<CustomerForm> {
                 ),
 
                 TextFormField(
+                  initialValue: customer?.adress_number ?? '',
                   decoration: InputDecoration(
                     labelText: 'Número *',
                     border: OutlineInputBorder(
@@ -183,6 +189,7 @@ class _CustomerFormState extends State<CustomerForm> {
                 ),
 
                 TextFormField(
+                  initialValue: customer?.city ?? '',
                   decoration: InputDecoration(
                     labelText: 'Cidade *',
                     border: OutlineInputBorder(
@@ -200,6 +207,7 @@ class _CustomerFormState extends State<CustomerForm> {
                 ),
 
                 TextFormField(
+                  initialValue: customer?.state ?? '',
                   decoration: InputDecoration(
                     labelText: 'Estado (opcional)',
                     border: OutlineInputBorder(
@@ -217,6 +225,7 @@ class _CustomerFormState extends State<CustomerForm> {
                 ),
 
                 TextFormField(
+                  initialValue: customer?.cep ?? '',
                   decoration: InputDecoration(
                     labelText: 'CEP (opcional)',
                     border: OutlineInputBorder(
@@ -232,6 +241,7 @@ class _CustomerFormState extends State<CustomerForm> {
                 ),
 
                 TextFormField(
+                  initialValue: customer?.documentCPF ?? '',
                   decoration: InputDecoration(
                     labelText: 'CPF *',
                     border: OutlineInputBorder(
@@ -247,6 +257,7 @@ class _CustomerFormState extends State<CustomerForm> {
                 ),
 
                 TextFormField(
+                  initialValue: customer?.documentRG ?? '',
                   decoration: InputDecoration(
                     labelText: 'RG (opcional)',
                     border: OutlineInputBorder(
