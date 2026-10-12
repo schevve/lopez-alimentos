@@ -30,7 +30,7 @@ class MainApp extends StatelessWidget {
     WakelockPlus.enable();
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: MainScreen(),
+      home: PaymentRegistration(),
     );
   }
 }
