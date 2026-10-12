@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/constants/util/format_cpf.dart';
 import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
@@ -7,6 +8,7 @@ import 'package:cesta_flow/features/sale/presentation/customer_selection.dart';
 import 'package:cesta_flow/features/shared/Top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cesta_flow/features/sale/presentation/sale_success.dart';
 
 class SaleRegistration extends StatefulWidget {
   const SaleRegistration({super.key});
@@ -23,12 +25,14 @@ class _SaleRegistrationState extends State<SaleRegistration> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(0xffF3FCF3),
       appBar: TopBar(pagTitle: "Registrar venda"),
       body: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(16, 16, 16, 32),
         child: Form(
           key: _formKey,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: 16,
             children: [
               FormField(
@@ -58,7 +62,10 @@ class _SaleRegistrationState extends State<SaleRegistration> {
                           style: OutlinedButton.styleFrom(
                             alignment: Alignment.centerLeft,
                             fixedSize: Size(double.infinity, 64),
-                            side: BorderSide(color: Colors.green, width: 2),
+                            side: BorderSide(
+                              color: Color(0xff1C5631),
+                              width: 2,
+                            ),
                             padding: EdgeInsets.symmetric(
                               vertical: 12,
                               horizontal: 16,
@@ -66,7 +73,10 @@ class _SaleRegistrationState extends State<SaleRegistration> {
                           ),
                           child: Text(
                             'Selecionar Cliente',
-                            style: TextStyle(fontSize: 20, color: Colors.green),
+                            style: TextStyle(
+                              fontSize: 20,
+                              color: Color(0xff1C5631),
+                            ),
                           ),
                         ),
                       ),
@@ -109,19 +119,20 @@ class _SaleRegistrationState extends State<SaleRegistration> {
                 inputFormatters: [FormatMoney()],
                 onSaved: (value) => _formData['valor_total'] = value,
               ),
-              ElevatedButton(
+              FilledButton(
                 onPressed: () {
                   _submitForm();
                 },
-                style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.all(Colors.green),
-                  padding: WidgetStateProperty.all(
-                    EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.greenButton,
+                  padding: EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
                 child: Text(
                   'Registrar Venda',
-                  style: TextStyle(color: Colors.white, fontSize: 24),
+                  style: TextStyle(color: Color(0xff1C5631), fontSize: 24),
                 ),
               ),
             ],
@@ -155,6 +166,15 @@ class _SaleRegistrationState extends State<SaleRegistration> {
       salesRepository.getAllSales().then((sales) {
         print('Vendas registradas: ${sales.length}');
       });
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SaleSuccess(
+            valor: saleData.price,
+            clienteNome: _selectedCustomer!.name,
+          ),
+        ),
+      );
     }
   }
 }

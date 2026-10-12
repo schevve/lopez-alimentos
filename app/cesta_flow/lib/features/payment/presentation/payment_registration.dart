@@ -2,7 +2,7 @@ import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/features/customer/presentation/customer_list.dart';
 import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
 import 'package:cesta_flow/features/sale/presentation/customer_selection.dart';
-import 'package:cesta_flow/features/sale/presentation/payment_success.dart';
+import 'package:cesta_flow/features/payment/presentation/payment_success.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_registration.dart';
 import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/payment_model.dart';
@@ -145,7 +145,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
         print("erro no banco de dados: $e");
       }
 
-      Navigator.of(context).push(
+      Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => PaymentSuccess(
             paymentValue: _formData['paymentValue'],
