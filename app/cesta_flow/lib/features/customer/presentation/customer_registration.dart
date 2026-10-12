@@ -15,8 +15,7 @@ class CustomerRegistration extends StatefulWidget {
 }
 
 class _CustomerRegistrationState extends State<CustomerRegistration> {
-  final _formKey = GlobalKey<FormState>();
-  final _formData = <String, dynamic>{};
+  final data = <String, dynamic>{};
 
   @override
   Widget build(BuildContext context) {
@@ -36,17 +35,17 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
         dbHelper: DatabaseHelper(),
       );
       final customer = Customer(
-        name: _formData['nome'],
+        name: data['nome'],
         dateOfBirth: cleanDate(data['data_nascimento']),
-        email: _formData['email'],
-        phone: _formData['telefone'],
-        address: _formData['rua'],
-        adress_number: _formData['numero'],
-        city: _formData['cidade'],
-        state: _formData['estado'],
-        cep: _formData['cep'],
-        documentCPF: _formData['cpf'],
-        documentRG: _formData['rg'],
+        email: data['email'],
+        phone: data['telefone'],
+        address: data['rua'],
+        adress_number: data['numero'],
+        city: data['cidade'],
+        state: data['estado'],
+        cep: data['cep'],
+        documentCPF: data['cpf'],
+        documentRG: data['rg'],
       );
     await repository.registerCustomer(customer);
     print('Cliente registrado com sucesso: ${customer.name}');
