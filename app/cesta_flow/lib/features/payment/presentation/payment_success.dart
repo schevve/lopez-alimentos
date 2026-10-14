@@ -9,7 +9,7 @@ class PaymentSuccess extends StatefulWidget {
     super.key,
     required this.paymentValue,
     required this.paymentTerm,
-    required this.nextVisit
+    required this.nextVisit,
   });
 
   @override
@@ -69,7 +69,6 @@ class _PaymentSuccessState extends State<PaymentSuccess> {
               },
               child: Text("voltar ao cliente"),
             ),
-            
           ],
         ),
       ),

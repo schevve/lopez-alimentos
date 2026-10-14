@@ -32,15 +32,15 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
           fontWeight: FontWeight.bold,
         ),
       ),
-      leading: IconButton.filled(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        style: IconButton.styleFrom(
-          backgroundColor: const Color.fromARGB(48, 255, 255, 255),
-        ),
-        onPressed: () {
-          Navigator.pop(context);
-        },
-      ),
+      // leading: IconButton.filled(
+      //   icon: const Icon(Icons.arrow_back, color: Colors.white),
+      //   style: IconButton.styleFrom(
+      //     backgroundColor: const Color.fromARGB(48, 255, 255, 255),
+      //   ),
+      //   onPressed: () {
+      //     Navigator.pop(context);
+      //   },
+      // ),
     );
   }
 }
