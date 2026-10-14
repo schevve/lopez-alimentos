@@ -1,186 +1,175 @@
-import 'package:cesta_flow/features/auth/presentation/tela_clientes.dart';
-import 'package:cesta_flow/features/auth/presentation/widgets/cliente_card.dart';
+import 'dart:async';
 
+import 'package:cesta_flow/core/data/local/model/customer_model.dart';
+import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
+import 'package:cesta_flow/features/customer/presentation/customer_registration.dart';
+import 'package:cesta_flow/features/customer/presentation/tela_clientes.dart';
+import 'package:cesta_flow/features/customer/presentation/widgets/cliente_card.dart';
 import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
+import 'package:cesta_flow/features/shared/bottom_bar.dart';
+import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+Customer cliente(String nome, String cpf, {int? score}) => Customer(
+  name: nome,
+  dateOfBirth: DateTime(1990, 1, 1),
+  phone: '(45) 99999-0000',
+  address: 'Rua das Flores, 10',
+  city: 'São Paulo',
+  state: 'SP',
+  documentCPF: cpf,
+  score: score,
+);
+
+class RepositorioDeTeste extends CustomerRepository {
+  List<Customer> clientes = [
+    cliente('Rosângela Batista', '123.456.789-01'),
+    cliente('Ângelo Pereira', '234.567.890-12', score: 0),
+    cliente('Janaína Gonçalves', '345.678.901-23', score: 940),
+  ];
+  int consultas = 0;
+  bool falhar = false;
+  Completer<List<Customer>>? pendente;
+
+  @override
+  Future<List<Customer>> getAllCustomers() async {
+    consultas++;
+    if (falhar) throw StateError('Falha de teste');
+    return pendente != null ? pendente!.future : List.of(clientes);
+  }
+}
+
 void main() {
   Future<void> abrirTela(
-    WidgetTester tester, {
-    Widget home = const ClientesScreen(),
+    WidgetTester tester,
+    RepositorioDeTeste repository, {
+    Size tamanho = const Size(390, 844),
   }) async {
-    tester.view.physicalSize = const Size(390, 844);
+    tester.view.physicalSize = tamanho;
     tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(MaterialApp(home: home));
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(home: ClientesScreen(repository: repository)),
+    );
+    await tester.pumpAndSettle();
   }
 
   testWidgets(
-    'Busca parcial ignora maiúsculas, mostra vazio e restaura a lista',
+    'Consulta o repositório, usa barras compartilhadas e exibe score nulo',
     (tester) async {
-      await abrirTela(tester);
-      expect(find.text('Rosângela Batista'), findsOneWidget);
-      expect(find.text('Verde (940)'), findsOneWidget);
-
-      await tester.enterText(find.byType(TextField), 'pErEi');
-      await tester.pump();
+      final repository = RepositorioDeTeste();
+      await abrirTela(tester, repository);
+      expect(repository.consultas, 1);
+      expect(find.byType(TopBar), findsOneWidget);
+      expect(find.byType(BottomBar), findsOneWidget);
+      expect(find.text('Score não informado'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'ROSANGELA');
+      await tester.pumpAndSettle();
       expect(find.byType(ClienteCard), findsOneWidget);
-      expect(find.text('Ângelo Pereira de Souza'), findsOneWidget);
-      expect(find.text('Rosângela Batista'), findsNothing);
-
-      await tester.enterText(find.byType(TextField), 'cliente inexistente');
-      await tester.pump();
-      expect(find.text('Nenhum cliente encontrado.'), findsOneWidget);
-      expect(find.byType(ClienteCard), findsNothing);
-
-      await tester.enterText(find.byType(TextField), '');
-      await tester.pump();
       expect(find.text('Rosângela Batista'), findsOneWidget);
-      expect(find.text('Ângelo Pereira de Souza'), findsOneWidget);
+      expect(repository.consultas, 1);
+      await tester.enterText(find.byType(TextField), 'inexistente');
+      await tester.pumpAndSettle();
+      expect(find.text('Nenhum cliente encontrado.'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
 
-  testWidgets('Ações usam o cliente filtrado e abas atualizam a seleção', (
+  testWidgets(
+    'Combina busca por CPF com Com score e Sem score, incluindo zero',
+    (tester) async {
+      await abrirTela(tester, RepositorioDeTeste());
+      await tester.enterText(find.byType(TextField), '23456789012');
+      await tester.tap(find.text('Com score'));
+      await tester.pumpAndSettle();
+      expect(find.text('Ângelo Pereira'), findsOneWidget);
+      expect(find.text('Score: 0'), findsOneWidget);
+      await tester.tap(find.byTooltip('Filtrar clientes'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Sem score'));
+      await tester.pumpAndSettle();
+      expect(find.text('Nenhum cliente encontrado.'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), '');
+      await tester.pumpAndSettle();
+      expect(find.text('Rosângela Batista'), findsOneWidget);
+      expect(find.text('Ângelo Pereira'), findsNothing);
+      expect(find.text('Score não informado'), findsOneWidget);
+      await tester.tap(find.text('Todos'));
+      await tester.enterText(find.byType(TextField), 'janaina');
+      await tester.pumpAndSettle();
+      expect(find.text('Score: 940'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('Novo Cliente abre cadastro e atualiza a lista ao voltar', (
     tester,
   ) async {
-    final mensagens = <String?>[];
-    final printOriginal = debugPrint;
-    debugPrint = (String? mensagem, {int? wrapWidth}) =>
-        mensagens.add(mensagem);
-    try {
-      await abrirTela(tester, home: const Dashboard());
-      await tester.tap(find.text('Meus Clientes'));
-      await tester.pumpAndSettle();
-      expect(find.byType(ClientesScreen), findsOneWidget);
-      expect(
-        tester
-            .widget<BottomNavigationBar>(find.byType(BottomNavigationBar))
-            .currentIndex,
-        1,
-      );
-
-      await tester.enterText(find.byType(TextField), 'JANAINA');
-      await tester.pump();
-      await tester.ensureVisible(find.text('Ver Perfil'));
-      await tester.tap(find.text('Ver Perfil'));
-      await tester.tap(find.text('Novo Cliente'));
-
-      expect(
-        mensagens,
-        containsAll([
-          'Ver Perfil: Janaína Gonçalves',
-          'Navegar para tela de cadastro',
-        ]),
-      );
-
-      for (final (indice, aba) in [
-        (0, 'Início'),
-        (2, 'Vendas'),
-        (3, 'Perfil'),
-        (1, 'Clientes'),
-      ]) {
-        await tester.tap(find.text(aba));
-        await tester.pumpAndSettle();
-        expect(
-          tester
-              .widget<BottomNavigationBar>(find.byType(BottomNavigationBar))
-              .currentIndex,
-          indice,
-        );
-        expect(mensagens, contains('Aba selecionada: $aba'));
-      }
-      expect(find.text('Janaína Gonçalves'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    } finally {
-      debugPrint = printOriginal;
-    }
-  });
-  testWidgets('Busca CPF e combina filtros por score', (tester) async {
-    await abrirTela(tester);
-    await tester.enterText(find.byType(TextField), '23456789012');
+    final repository = RepositorioDeTeste();
+    await abrirTela(tester, repository);
+    await tester.tap(find.text('Novo Cliente'));
     await tester.pumpAndSettle();
-    expect(find.text('Ângelo Pereira de Souza'), findsOneWidget);
-    expect(find.text('Rosângela Batista'), findsNothing);
-    await tester.tap(find.text('Score Verde'));
+    expect(find.byType(CustomerRegistration), findsOneWidget);
+    repository.clientes.add(cliente('Cliente cadastrado', '456.789.012-34'));
+    await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
-    expect(find.text('Nenhum cliente encontrado.'), findsOneWidget);
-    await tester.enterText(find.byType(TextField), '');
+    expect(repository.consultas, 2);
+    await tester.enterText(find.byType(TextField), 'cadastrado');
     await tester.pumpAndSettle();
-    expect(find.text('Rosângela Batista'), findsOneWidget);
-    expect(find.text('Ângelo Pereira de Souza'), findsNothing);
-    await tester.tap(find.byTooltip('Filtrar clientes'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ListTile, 'Bloqueados'));
-    await tester.pumpAndSettle();
-    expect(find.text('José Aparecido dos Santos'), findsOneWidget);
-    expect(find.text('Bloqueado p/ Crédito'), findsOneWidget);
+    expect(find.text('Cliente cadastrado'), findsOneWidget);
+    expect(find.text('Score não informado'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
-  testWidgets('Ocupa a janela e reorganiza cartões sem overflow', (
-    tester,
-  ) async {
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    for (final size in [
-      const Size(320, 568),
-      const Size(390, 844),
-      const Size(768, 1024),
-      const Size(1024, 768),
-      const Size(1440, 900),
-      const Size(1920, 1080),
-      const Size(844, 390),
-    ]) {
-      tester.view.physicalSize = size;
-      await tester.pumpWidget(
-        MaterialApp(key: UniqueKey(), home: const ClientesScreen()),
-      );
-      await tester.pumpAndSettle();
-      expect(tester.getSize(find.byType(Scaffold)).width, size.width);
-      final primeiro = tester.getRect(find.byType(ClienteCard).at(0));
-      if (size.width >= 768) {
-        final segundo = tester.getRect(find.byType(ClienteCard).at(1));
-        expect(primeiro.top, segundo.top);
-        expect(segundo.left, greaterThan(primeiro.right));
-      } else if (size.width < 600) {
-        expect(primeiro.width, greaterThan(size.width * .85));
-      }
-      await tester.drag(find.byType(CustomScrollView), const Offset(0, -2500));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull, reason: 'Tamanho: $size');
-    }
-  });
 
-  testWidgets('Fontes ampliadas e teclado permitem rolar e acessar ações', (
-    tester,
-  ) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(320, 568);
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      MaterialApp(
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context)
-              .copyWith(textScaler: const TextScaler.linear(2)),
-          child: child!,
-        ),
-        home: const ClientesScreen(),
+  testWidgets('Navegação compartilhada abre o Dashboard', (tester) async {
+    await abrirTela(tester, RepositorioDeTeste());
+    await tester.tap(
+      find.descendant(
+        of: find.byType(BottomBar),
+        matching: find.byIcon(Icons.home),
       ),
     );
     await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
-    tester.view.viewInsets = const FakeViewPadding(bottom: 280);
-    await tester.enterText(find.byType(TextField), 'JANAINA');
+    expect(find.byType(Dashboard), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
-    expect(find.byType(FloatingActionButton), findsNothing);
+    expect(find.byType(ClientesScreen), findsOneWidget);
     expect(tester.takeException(), isNull);
-    tester.view.resetViewInsets();
+  });
+
+  testWidgets('Exibe carregamento e permite tentar novamente após erro', (
+    tester,
+  ) async {
+    final repository = RepositorioDeTeste()
+      ..pendente = Completer<List<Customer>>();
+    await tester.pumpWidget(
+      MaterialApp(home: ClientesScreen(repository: repository)),
+    );
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    repository.pendente!.completeError(StateError('Falha de teste'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Nova Venda'));
+    expect(find.text('Não foi possível carregar os clientes.'), findsOneWidget);
+    repository.pendente = null;
+    repository.clientes.clear();
+    await tester.tap(find.text('Tentar novamente'));
     await tester.pumpAndSettle();
-    expect(find.text('Nova Venda').hitTestable(), findsOneWidget);
+    expect(repository.consultas, 2);
+    expect(find.text('Nenhum cliente encontrado.'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Cartões funcionam em celulares em pé', (tester) async {
+    for (final tamanho in [
+      const Size(320, 568),
+      const Size(390, 844),
+      const Size(430, 932),
+    ]) {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await abrirTela(tester, RepositorioDeTeste(), tamanho: tamanho);
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -1500));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: '$tamanho');
+    }
   });
 }

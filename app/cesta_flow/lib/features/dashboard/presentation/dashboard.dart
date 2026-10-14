@@ -1,4 +1,4 @@
-import '../../auth/presentation/tela_clientes.dart';
+import '../../customer/presentation/tela_clientes.dart';
 import 'package:cesta_flow/features/shared/bottom_bar.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:cesta_flow/features/shared/bottom_bar.dart';
