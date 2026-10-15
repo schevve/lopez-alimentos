@@ -1,3 +1,4 @@
+import '../../customer/presentation/tela_clientes.dart';
 import 'package:cesta_flow/features/shared/bottom_bar.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:cesta_flow/features/shared/bottom_bar.dart';
@@ -282,6 +283,13 @@ class Dashboard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            FilledButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const ClientesScreen()),
+              ),
+              icon: const Icon(Icons.groups_outlined),
+              label: const Text('Meus Clientes'),
+            ),
             const SizedBox(height: 14),
             // Logistics Card
             Container(

@@ -1,7 +1,7 @@
-import 'package:cesta_flow/features/customer/presentation/customer_list.dart';
+import 'package:cesta_flow/features/customer/presentation/tela_clientes.dart';
 import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
 import 'package:cesta_flow/features/export/presentation/data_exportation.dart';
-import 'package:cesta_flow/features/sale/presentation/payment_success.dart';
+import 'package:cesta_flow/features/payment/presentation/payment_success.dart';
 import 'package:cesta_flow/features/shared/bottom_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -9,8 +9,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'features/sale/presentation/customer_selection.dart';
 import 'features/customer/presentation/customer_registration.dart';
 import 'features/sale/presentation/sale_registration.dart';
-import 'features/sale/presentation/payment_registration.dart';
-import 'features/sale/presentation/payment_registration.dart';
+import 'features/payment/presentation/payment_registration.dart';
+import 'features/payment/presentation/payment_registration.dart';
 
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -47,7 +47,7 @@ class _MainScreenState extends State<MainScreen> {
 
   final Map<String, Widget> _pages = {
     'home': const Dashboard(),
-    'customers': const CustomerList(),
+    'customers': const ClientesScreen(),
     'settings': const DataExportation(),
   };
 

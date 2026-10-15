@@ -1,5 +1,4 @@
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
-import 'package:cesta_flow/features/customer/presentation/customer_list.dart';
 import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
 import 'package:cesta_flow/features/sale/presentation/customer_selection.dart';
 import 'package:cesta_flow/features/payment/presentation/payment_success.dart';

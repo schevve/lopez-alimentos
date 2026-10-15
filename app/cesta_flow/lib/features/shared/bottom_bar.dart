@@ -1,10 +1,21 @@
+import 'package:cesta_flow/features/customer/presentation/tela_clientes.dart';
+import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
+import 'package:cesta_flow/features/payment/presentation/payment_registration.dart';
 import 'package:flutter/material.dart';
 
 class BottomBar extends StatefulWidget {
-  const BottomBar({super.key, required this.onTap, required this.buttonsIcons});
+  const BottomBar({
+    super.key,
+    this.onTap,
+    this.buttonsIcons = const {
+      'home': ('Início', Icons.home),
+      'customers': ('Clientes', Icons.person),
+      'settings': ('Ajustes', Icons.settings),
+    },
+  });
 
   final Map<String, (String, IconData)> buttonsIcons;
-  final Function(String) onTap;
+  final ValueChanged<String>? onTap;
 
   @override
   State<BottomBar> createState() => _BottomBarState();
@@ -63,7 +74,20 @@ class _BottomBarState extends State<BottomBar> {
           setState(() {
             _selectedKey = key;
           });
-          widget.onTap(key);
+          if (widget.onTap != null) {
+            widget.onTap!(key);
+          } else {
+            final pagina = switch (key) {
+              'home' => const Dashboard(),
+              'customers' => const ClientesScreen(),
+              'settings' => const PaymentRegistration(),
+              _ => null,
+            };
+            if (pagina != null) {
+              Navigator.of(context)
+                  .push(MaterialPageRoute<void>(builder: (_) => pagina));
+            }
+          }
         },
       ),
     );
