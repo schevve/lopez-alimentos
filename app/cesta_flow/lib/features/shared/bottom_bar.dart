@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:flutter/material.dart';
 
 class BottomBar extends StatefulWidget {
@@ -17,6 +18,7 @@ class _BottomBarState extends State<BottomBar> {
   Widget build(BuildContext context) {
     return BottomAppBar(
       padding: EdgeInsets.symmetric(horizontal: 40.0),
+      color: AppColors.primary,
       child: Row(
         spacing: 5,
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -37,34 +39,33 @@ class _BottomBarState extends State<BottomBar> {
     bool isSelected = key == _selectedKey;
 
     return Expanded(
-      child: IconButton(
-        icon: Column(
-          spacing: 4,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              buttonIcon,
-              color: isSelected
-                  ? Colors.green
-                  : const Color.fromARGB(255, 22, 20, 20),
-            ),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: isSelected
-                    ? Colors.green
-                    : const Color.fromARGB(255, 22, 20, 20),
+      child: Container(
+        color: isSelected ? AppColors.black.withAlpha(50) : Colors.transparent,
+        child: IconButton(
+          icon: Column(
+            spacing: 4,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                buttonIcon,
+                color: isSelected ? Colors.green : AppColors.white,
               ),
-            ),
-          ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isSelected ? Colors.green : AppColors.white,
+                ),
+              ),
+            ],
+          ),
+          onPressed: () {
+            setState(() {
+              _selectedKey = key;
+            });
+            widget.onTap(key);
+          },
         ),
-        onPressed: () {
-          setState(() {
-            _selectedKey = key;
-          });
-          widget.onTap(key);
-        },
       ),
     );
   }
