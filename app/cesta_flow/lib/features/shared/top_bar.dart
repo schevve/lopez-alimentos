@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/features/customer/presentation/customer_list.dart';
 import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
 import 'package:flutter/material.dart';
@@ -12,12 +13,13 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: const Color(0xff1C5631),
-
+      backgroundColor: AppColors.primary,
+      iconTheme: const IconThemeData(color: Colors.white),
+      scrolledUnderElevation: 0,
       flexibleSpace: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('web/images/FundoComidas.png'),
+            image: AssetImage('assets/images/FundoComidas.png'),
             fit: BoxFit.cover,
           ),
         ),
