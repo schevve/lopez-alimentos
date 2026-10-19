@@ -2,7 +2,7 @@ import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/features/customer/presentation/customer_list.dart';
 import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
 import 'package:cesta_flow/features/export/presentation/data_exportation.dart';
-import 'package:cesta_flow/features/sale/presentation/sales_list.dart';
+import 'package:cesta_flow/features/sale/presentation/sale_list.dart';
 import 'package:cesta_flow/features/shared/app_navigation.dart';
 import 'package:cesta_flow/features/shared/bottom_bar.dart';
 import 'package:flutter/material.dart';
