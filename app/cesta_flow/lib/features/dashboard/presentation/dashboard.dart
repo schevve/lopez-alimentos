@@ -2,9 +2,7 @@ import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/features/dashboard/presentation/widgets/metrics_row.dart';
 import 'package:cesta_flow/features/dashboard/presentation/widgets/sale_card.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_registration.dart';
-import 'package:cesta_flow/features/shared/bottom_bar.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
-import 'package:cesta_flow/features/shared/bottom_bar.dart';
 import 'package:flutter/material.dart';
 
 class Dashboard extends StatefulWidget {
