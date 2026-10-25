@@ -191,7 +191,6 @@ class _ClientesScreenState extends State<ClientesScreen> {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: _menta,
     appBar: const TopBar(pagTitle: 'Meus Clientes'),
-    bottomNavigationBar: const BottomBar(),
     floatingActionButton: MediaQuery.viewInsetsOf(context).bottom > 0
         ? null
         : FloatingActionButton.extended(
