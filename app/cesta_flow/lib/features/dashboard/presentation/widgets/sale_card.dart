@@ -1,7 +1,9 @@
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
+import 'package:cesta_flow/features/payment/presentation/payment_registration.dart';
 import 'package:flutter/material.dart';
 
 class SaleCard extends StatelessWidget {
+  final int? saleId;
   final String name;
   final String? scoreLabel;
   final Color? scoreColor;
@@ -15,6 +17,7 @@ class SaleCard extends StatelessWidget {
   final String amount;
   final Color amountColor;
   const SaleCard({
+    required this.saleId,
     required this.name,
     this.scoreLabel,
     this.scoreColor,
@@ -143,7 +146,17 @@ class SaleCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        onPressed: () {},
+                        onPressed: saleId == null
+                            ? null
+                            : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  PaymentRegistration(saleId: saleId!),
+                            ),
+                          );
+                        },
                         child: const Text(
                           'Receber',
                           style: TextStyle(color: Colors.white),

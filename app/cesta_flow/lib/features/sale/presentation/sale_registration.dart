@@ -155,6 +155,8 @@ class _SaleRegistrationState extends State<SaleRegistration> {
       salesRepository.getAllSales().then((sales) {
         print('Vendas registradas: ${sales.length}');
       });
+      if (!mounted) return;
+      Navigator.pop(context);
     }
   }
 }

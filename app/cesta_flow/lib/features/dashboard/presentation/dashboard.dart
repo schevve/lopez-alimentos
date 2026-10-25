@@ -246,6 +246,7 @@ class _DashboardState extends State<Dashboard> {
         : '${customer.address} (${customer.city})';
 
     return SaleCard(
+      saleId: sale.id,
       name: customer?.name ?? 'Cliente #${sale.customerId}',
       status: 'Registrada em ${_formatDate(sale.date)}',
       statusColor: AppColors.greenText,

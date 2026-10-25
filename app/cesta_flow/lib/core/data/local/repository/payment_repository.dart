@@ -31,25 +31,25 @@ class PaymentRepository {
     return null;
   }
 
-  Future<List<Payment>> getPaymentsByCustumerId(int custumerId) async {
+  Future<List<Payment>> getPaymentsBySaleId(int saleId) async {
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
       'payments',
-      where: 'custumer_id = ?',
-      whereArgs: [custumerId],
+      where: 'sale_id = ?',
+      whereArgs: [saleId],
     );
     return maps.map((map) => Payment.fromMap(map)).toList();
   }
 
-  Future<double> getPaymentsByCustumerIdAmount(int custumerId) async {
+  Future<double> getPaymentsBySaleIdAmount(int saleId) async {
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> result = await db.query(
       'payments',
       columns: ['sum(amount) as total'],
-      where: 'custumer_id = ?',
-      whereArgs: [custumerId],
+      where: 'sale_id = ?',
+      whereArgs: [saleId],
     );
-    return (result.first['total'] as num).toDouble();
+    return (result.first['total'] as num?)?.toDouble() ?? 0.0;
   }
 
   Future<List<Payment>> getAllPayments() async {

@@ -73,7 +73,7 @@ class SaleRepository {
       SELECT COUNT(DISTINCT s.customer_id) AS total
       FROM sales s
       WHERE NOT EXISTS (
-        SELECT 1 FROM payments p WHERE p.customer_id = s.customer_id
+        SELECT 1 FROM payments p WHERE p.sale_id = s.id
       )
     ''');
     return (result.first['total'] as num).toInt();
