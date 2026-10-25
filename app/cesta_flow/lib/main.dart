@@ -81,6 +81,7 @@ class _MainScreenState extends State<MainScreen> {
         },
         selectedIndex: selectedIndex,
         children: [
+          SizedBox(height: 20),
           NavigationDrawerDestination(
             backgroundColor: AppColors.primary,
             icon: const Icon(Icons.home_rounded, color: AppColors.white),
