@@ -13,7 +13,7 @@ class _SalesListState extends State<SalesList> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: TopBar(pagTitle: "Vendas"),
+      appBar: const TopBar(pagTitle: "Vendas", showDrawer: true),
       body: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(16, 16, 16, 32),
         child: Column(

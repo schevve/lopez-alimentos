@@ -8,8 +8,8 @@ class SaleCard extends StatelessWidget {
   final String status;
   final Color statusColor;
   final String address;
-  final String distance;
-  final Color distanceColor;
+  final String? distance;
+  final Color? distanceColor;
   final String product;
   final Color productColor;
   final String amount;
@@ -21,8 +21,8 @@ class SaleCard extends StatelessWidget {
     required this.status,
     required this.statusColor,
     required this.address,
-    required this.distance,
-    required this.distanceColor,
+    this.distance,
+    this.distanceColor,
     required this.product,
     required this.productColor,
     required this.amount,
@@ -85,11 +85,13 @@ class SaleCard extends StatelessWidget {
                     color: Color(0xFF202020),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  distance,
-                  style: TextStyle(color: distanceColor, fontSize: 12),
-                ),
+                if (distance != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    distance!,
+                    style: TextStyle(color: distanceColor, fontSize: 12),
+                  ),
+                ],
                 const SizedBox(height: 4),
                 Container(
                   padding: const EdgeInsets.symmetric(

@@ -4,7 +4,7 @@ import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_customer_selection.dart';
-import 'package:cesta_flow/features/shared/Top_bar.dart';
+import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 

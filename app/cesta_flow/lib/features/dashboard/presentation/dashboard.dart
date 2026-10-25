@@ -1,4 +1,10 @@
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
+import 'package:cesta_flow/core/constants/util/format_currency.dart';
+import 'package:cesta_flow/core/data/local/model/customer_model.dart';
+import 'package:cesta_flow/core/data/local/model/sale_model.dart';
+import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
+import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
+import 'package:cesta_flow/features/dashboard/presentation/widgets/metric_card.dart';
 import 'package:cesta_flow/features/dashboard/presentation/widgets/metrics_row.dart';
 import 'package:cesta_flow/features/dashboard/presentation/widgets/sale_card.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_registration.dart';
@@ -13,37 +19,107 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
+  static const int _latestSalesLimit = 5;
+
+  final SaleRepository _saleRepository = SaleRepository();
+  final CustomerRepository _customerRepository = CustomerRepository();
+
+  bool _isLoading = true;
+  String? _errorMessage;
+  List<Sale> _latestSales = const [];
+  Map<int, Customer> _customersById = const {};
+  double _salesAmountLast7Days = 0;
+  int _customersCount = 0;
+  int _pendingCustomersCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData({bool showLoadingIndicator = false}) async {
+    if (showLoadingIndicator) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
+
+    try {
+      final latestSales = await _saleRepository.getLatestSales(
+        limit: _latestSalesLimit,
+      );
+      final salesAmount = await _saleRepository.getTotalSalesAmountSince(
+        DateTime.now().subtract(const Duration(days: 7)),
+      );
+      final pendingCustomers = await _saleRepository.getPendingCustomersCount();
+      final customers = await _customerRepository.getAllCustomers();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _latestSales = latestSales;
+        _salesAmountLast7Days = salesAmount;
+        _pendingCustomersCount = pendingCustomers;
+        _customersCount = customers.length;
+        _customersById = {
+          for (final customer in customers)
+            if (customer.id != null) customer.id!: customer,
+        };
+        _isLoading = false;
+      });
+    } catch (error) {
+      debugPrint('Erro ao carregar dados da dashboard: $error');
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Não foi possível carregar as vendas.';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF0FDF4),
-      appBar: const TopBar(pagTitle: 'Início'),
+      appBar: const TopBar(pagTitle: 'Início', showDrawer: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 14),
-            MetricsRow(),
+            MetricsRow(
+              cards: [
+                MetricCard(
+                  title: 'Vendas',
+                  value: _metricValue(formatCurrency(_salesAmountLast7Days)),
+                  subtitle: 'Últimos 7 dias',
+                  icon: Icons.shopping_cart,
+                  iconColor: AppColors.primary,
+                ),
+                MetricCard(
+                  title: 'Clientes',
+                  value: _metricValue(_customersCount.toString()),
+                  subtitle: 'Cadastrados',
+                  icon: Icons.people,
+                  iconColor: AppColors.primary,
+                ),
+                MetricCard(
+                  title: 'Pendências',
+                  value: _metricValue(_pendingCustomersCount.toString()),
+                  subtitle: 'Sem pagamento',
+                  icon: Icons.warning,
+                  iconColor: const Color(0xFFC62828),
+                ),
+              ],
+            ),
             const SizedBox(height: 14),
-            // Pills
-            // Row(
-            //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            //   children: [
-            //     _Pill(
-            //       label: 'Vence Hoje',
-            //       selected: true,
-            //       badgeCount: 7,
-            //       badgeColor: const Color(0xFFB9D2BE),
-            //     ),
-            //     _Pill(
-            //       label: 'Atrasados',
-            //       badgeCount: 3,
-            //       badgeColor: const Color(0xFFC62828),
-            //     ),
-            //     _Pill(label: 'Agendados'),
-            //   ],
-            // ),
             Text(
               'Últimas vendas',
               style: TextStyle(
@@ -53,60 +129,22 @@ class _DashboardState extends State<Dashboard> {
               ),
             ),
             const SizedBox(height: 14),
-            // Client Cards
-            SaleCard(
-              name: 'José Aparecido dos Santos',
-              scoreLabel: 'Score: Ruim',
-              scoreColor: const Color(0xFFFF7A16),
-              status: 'Vencida há 3 dias',
-              statusColor: const Color(0xFFC62828),
-              address: 'Av. das Palmeiras, 420 – Bloco B (Jd. América)',
-              distance: 'A 800m',
-              distanceColor: const Color(0xFF0D5C34),
-              product: 'Cesta Básica Completa Família',
-              productColor: const Color(0xFFB9D2BE),
-              amount: 'R\$ 85,00',
-              amountColor: const Color(0xFFC62828),
-            ),
-            const SizedBox(height: 14),
-            SaleCard(
-              name: 'Rosângela Batista',
-              scoreLabel: 'Score: Bom',
-              scoreColor: const Color(0xFF0D5C34),
-              status: 'Parcela programada para hoje',
-              statusColor: const Color(0xFF0D5C34),
-              address: 'Rua dos Pintados, 67 (Vila Nova)',
-              distance: 'Próxima da rota',
-              distanceColor: const Color(0xFF0D5C34),
-              product: 'Cesta Especial 7ª Base',
-              productColor: const Color(0xFFB9D2BE),
-              amount: 'R\$ 83,00',
-              amountColor: const Color(0xFFC62828),
-            ),
-            const SizedBox(height: 14),
-            SaleCard(
-              name: 'Ângelo Pereira de Souza',
-              status: 'Horário comercial sugerido',
-              statusColor: const Color(0xFFFF7A16),
-              address: 'Rua Robert Petter, 89 (Centro)',
-              distance: 'Próxima da rota',
-              distanceColor: const Color(0xFF0D5C34),
-              product: '2 Cestas Econômicas',
-              productColor: const Color(0xFFB9D2BE),
-              amount: 'R\$ 110,00',
-              amountColor: const Color(0xFFC62828),
-            ),
+            ..._buildSalesSection(),
             const SizedBox(height: 100), // space for FAB
           ],
         ),
       ),
       // Floating Action Button
       floatingActionButton: FilledButton(
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          await Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const SaleRegistration()),
           );
+          if (!mounted) {
+            return;
+          }
+          await _loadDashboardData(showLoadingIndicator: true);
         },
         style: FilledButton.styleFrom(
           padding: EdgeInsets.zero,
@@ -149,56 +187,81 @@ class _DashboardState extends State<Dashboard> {
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
-}
 
-// Pill widget
-class _Pill extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final int? badgeCount;
-  final Color? badgeColor;
-  _Pill({required this.label})
-    : selected = false,
-      badgeCount = null,
-      badgeColor = null;
+  String _metricValue(String value) {
+    if (_isLoading || _errorMessage != null) {
+      return '—';
+    }
+    return value;
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    final bg = selected ? const Color(0xFF0D5C34) : Colors.white;
-    final txt = selected ? Colors.white : const Color(0xFF202020);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
-      ),
-      child: Row(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: txt,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
+  List<Widget> _buildSalesSection() {
+    if (_isLoading) {
+      return const [
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 32),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ];
+    }
+
+    if (_errorMessage != null) {
+      return [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 32),
+          child: Text(
+            _errorMessage!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14, color: Color(0xFFC62828)),
           ),
-          if (badgeCount != null) ...[
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: badgeColor ?? Colors.red,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                '$badgeCount',
-                style: const TextStyle(color: Colors.white, fontSize: 12),
-              ),
-            ),
-          ],
-        ],
-      ),
+        ),
+      ];
+    }
+
+    if (_latestSales.isEmpty) {
+      return const [
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 32),
+          child: Text(
+            'Nenhuma venda registrada ainda.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: Color(0xFF707070)),
+          ),
+        ),
+      ];
+    }
+
+    return [
+      for (var index = 0; index < _latestSales.length; index++) ...[
+        if (index > 0) const SizedBox(height: 14),
+        _buildSaleCard(_latestSales[index]),
+      ],
+    ];
+  }
+
+  Widget _buildSaleCard(Sale sale) {
+    final customer = _customersById[sale.customerId];
+    final address = customer == null
+        ? 'Endereço não informado'
+        : '${customer.address} (${customer.city})';
+
+    return SaleCard(
+      name: customer?.name ?? 'Cliente #${sale.customerId}',
+      status: 'Registrada em ${_formatDate(sale.date)}',
+      statusColor: AppColors.greenText,
+      address: address,
+      product: sale.quantity > 1
+          ? '${sale.quantity}x ${sale.productName}'
+          : sale.productName,
+      productColor: AppColors.greenText,
+      amount: formatCurrency(sale.price * sale.quantity),
+      amountColor: AppColors.primary,
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
   }
 }

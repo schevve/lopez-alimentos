@@ -1,4 +1,4 @@
-import 'package:cesta_flow/features/shared/Top_bar.dart';
+import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 
 class CustomerList extends StatelessWidget {
@@ -7,7 +7,7 @@ class CustomerList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: TopBar(pagTitle: "Lista de Clientes"),
+      appBar: const TopBar(pagTitle: "Lista de Clientes", showDrawer: true),
       body: Center(child: Text('Clientes')),
     );
   }
