@@ -1,19 +1,15 @@
-import 'package:cesta_flow/core/data/local/model/customer_model.dart';
-import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
-import 'package:cesta_flow/features/sale/presentation/customer_selection.dart';
 import 'package:cesta_flow/features/payment/presentation/payment_success.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_registration.dart';
 import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/payment_model.dart';
 import 'package:cesta_flow/core/data/local/repository/payment_repository.dart';
-import 'package:cesta_flow/features/shared/bottom_bar.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 
 class PaymentRegistration extends StatefulWidget {
-  final int customerId;
+  final int saleId;
 
-  const PaymentRegistration({super.key, this.customerId = 1});
+  const PaymentRegistration({super.key, required this.saleId});
 
   @override
   State<PaymentRegistration> createState() => _PaymentRegistration();
@@ -113,7 +109,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
 
       var db = DatabaseHelper();
       var paymentRepository = PaymentRepository(dbHelper: db);
-      final int customerId = widget.customerId;
+      final int saleId = widget.saleId;
 
       final String rawValue = _formData['paymentValue'] ?? "0,00";
       final String cleanValue = rawValue
@@ -123,17 +119,17 @@ class _PaymentRegistration extends State<PaymentRegistration> {
 
       try {
         final List<Payment> allPayments = await paymentRepository
-            .getPaymentsByCustumerId(customerId);
+            .getPaymentsBySaleId(saleId);
 
-        double amount = await paymentRepository.getPaymentsByCustumerIdAmount(
-          customerId,
+        double amount = await paymentRepository.getPaymentsBySaleIdAmount(
+          saleId,
         );
 
         if (allPayments.isNotEmpty) {
           amount = amount - realValue;
         }
         var paymentData = Payment(
-          customerId: customerId,
+          saleId: saleId,
           method: _formData['paymentTerm'],
           amount: amount,
           date: DateTime.now(),
