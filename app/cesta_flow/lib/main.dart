@@ -1,5 +1,4 @@
-import 'package:cesta_flow/core/constants/colors/app_colors.dart';
-import 'package:cesta_flow/features/customer/presentation/customer_list.dart';
+import 'package:cesta_flow/features/customer/presentation/tela_clientes.dart';
 import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
 import 'package:cesta_flow/features/export/presentation/data_exportation.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_list.dart';
@@ -44,7 +43,7 @@ class _MainScreenState extends State<MainScreen> {
   final Map<String, Widget> _pages = {
     'home': const Dashboard(),
     'sales': const SalesList(),
-    'customers': const CustomerList(),
+    'customers': const ClientesScreen(),
     'export': const DataExportation(),
   };
 

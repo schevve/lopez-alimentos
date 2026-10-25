@@ -30,6 +30,7 @@ class DatabaseHelper {
     return await openDatabase(
       path,
       version: 4,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: _onConfigure,
@@ -55,6 +56,13 @@ class DatabaseHelper {
     if (oldVersion < 4) {
       await _migratePaymentsToSales(db);
     }
+    if (oldVersion < 4) {
+      // Bases antigas preservam os clientes; o novo campo começa como NULL.
+      final columns = await db.rawQuery('PRAGMA table_info(customers)');
+      if (!columns.any((column) => column['name'] == 'score')) {
+        await db.execute('ALTER TABLE customers ADD COLUMN score INTEGER');
+      }
+    }
   }
 
   Future<void> _createTables(Database db) async {
@@ -70,7 +78,8 @@ class DatabaseHelper {
         state TEXT NOT NULL,
         cep TEXT,
         document_cpf TEXT NOT NULL UNIQUE,
-        document_rg TEXT UNIQUE
+        document_rg TEXT UNIQUE,
+        score INTEGER
       )
     ''');
 
