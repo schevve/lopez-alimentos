@@ -52,6 +52,25 @@ class PaymentRepository {
     return (result.first['total'] as num?)?.toDouble() ?? 0.0;
   }
 
+  Future<Map<int, double>> getPaymentTotalsBySaleIds(List<int> saleIds) async {
+    if (saleIds.isEmpty) {
+      return {};
+    }
+
+    final db = await _dbHelper.database;
+    final placeholders = List.filled(saleIds.length, '?').join(', ');
+    final result = await db.rawQuery(
+      'SELECT sale_id, COALESCE(SUM(amount), 0) AS total '
+      'FROM payments WHERE sale_id IN ($placeholders) GROUP BY sale_id',
+      saleIds,
+    );
+
+    return {
+      for (final row in result)
+        (row['sale_id'] as num).toInt(): (row['total'] as num).toDouble(),
+    };
+  }
+
   Future<List<Payment>> getAllPayments() async {
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.query('payments');

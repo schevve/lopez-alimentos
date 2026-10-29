@@ -1,10 +1,11 @@
+import 'package:cesta_flow/features/customer/presentation/customer_details.dart';
 import 'package:flutter/material.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 
 import '../../shared/top_bar.dart';
-import '../../shared/bottom_bar.dart';
 import 'customer_registration.dart';
+import 'package:cesta_flow/features/sale/presentation/sale_registration.dart';
 
 import 'widgets/cliente_card.dart';
 
@@ -99,8 +100,26 @@ class _ClientesScreenState extends State<ClientesScreen> {
     super.dispose();
   }
 
-  void _acao(Customer cliente, String acao) =>
-      debugPrint('$acao: ${cliente.name}');
+  Future<void> _acao(Customer cliente, String acao) async {
+    if (acao == 'Ver Perfil' && cliente.id != null) {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => CustomerDetails(customerId: cliente.id!),
+        ),
+      );
+      if (mounted) _recarregar();
+      return;
+    }
+
+    if (acao == 'Nova Venda') {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(builder: (_) => const SaleRegistration()),
+      );
+      return;
+    }
+
+    debugPrint('$acao: ${cliente.name}');
+  }
 
   Future<void> _abrirFiltros() async {
     await showModalBottomSheet<void>(
