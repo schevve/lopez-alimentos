@@ -170,7 +170,7 @@ class _DashboardState extends State<Dashboard> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: const [
-              Icon(Icons.add_rounded, color: Colors.white, size: 30),
+              Icon(Icons.add_shopping_cart, color: Colors.white, size: 26),
               SizedBox(width: 8),
               Text(
                 'Registrar Venda',
