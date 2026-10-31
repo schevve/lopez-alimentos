@@ -31,15 +31,20 @@ class SaleRepository {
     return null;
   }
 
-  Future<List<Sale>> getSalesBycustumerId(int custumerId) async {
+  Future<List<Sale>> getSalesByCustomerId(int customerId) async {
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
       'sales',
-      where: 'custumer_id = ?',
-      whereArgs: [custumerId],
+      where: 'customer_id = ?',
+      whereArgs: [customerId],
+      orderBy: 'date DESC, id DESC',
     );
     return maps.map((map) => Sale.fromMap(map)).toList();
   }
+
+  @Deprecated('Use getSalesByCustomerId instead.')
+  Future<List<Sale>> getSalesBycustumerId(int custumerId) =>
+      getSalesByCustomerId(custumerId);
 
   Future<List<Sale>> getAllSales() async {
     final db = await _dbHelper.database;

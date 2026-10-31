@@ -1,4 +1,3 @@
-import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
@@ -6,7 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class CustomerRegistration extends StatefulWidget {
-  const CustomerRegistration({super.key});
+  const CustomerRegistration({super.key, this.customerId, this.repository});
+
+  final int? customerId;
+  final CustomerRepository? repository;
 
   @override
   State<CustomerRegistration> createState() => _CustomerRegistrationState();
@@ -15,13 +17,71 @@ class CustomerRegistration extends StatefulWidget {
 class _CustomerRegistrationState extends State<CustomerRegistration> {
   final _formKey = GlobalKey<FormState>();
   final _formData = <String, dynamic>{};
+  late final CustomerRepository _customerRepository;
+  Customer? _cliente;
+  bool _carregando = false;
+  bool _salvando = false;
+  String? _erroCarregamento;
+
+  @override
+  void initState() {
+    super.initState();
+    _customerRepository = widget.repository ?? CustomerRepository();
+    if (widget.customerId != null) {
+      _carregando = true;
+      _carregarCliente();
+    }
+  }
+
+  Future<void> _carregarCliente() async {
+    try {
+      final cliente = await _customerRepository.getCustomerById(
+        widget.customerId!,
+      );
+      if (!mounted) return;
+      setState(() {
+        _cliente = cliente;
+        _carregando = false;
+        if (cliente == null) {
+          _erroCarregamento = 'Cliente não encontrado.';
+        }
+      });
+    } catch (error) {
+      debugPrint('Erro ao carregar cliente para edição: $error');
+      if (!mounted) return;
+      setState(() {
+        _carregando = false;
+        _erroCarregamento = 'Não foi possível carregar os dados do cliente.';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_carregando || _erroCarregamento != null) {
+      return Scaffold(
+        backgroundColor: const Color(0xffF3FCF3),
+        appBar: TopBar(
+          pagTitle: widget.customerId == null
+              ? 'Registrar cliente'
+              : 'Editar cliente',
+        ),
+        body: Center(
+          child: _carregando
+              ? const CircularProgressIndicator()
+              : Text(_erroCarregamento!),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Color(0xffF3FCF3),
 
-      appBar: TopBar(pagTitle: "Registrar cliente"),
+      appBar: TopBar(
+        pagTitle: widget.customerId == null
+            ? "Registrar cliente"
+            : "Editar cliente",
+      ),
 
       body: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -59,6 +119,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                 spacing: 16,
                 children: [
                   TextFormField(
+                    initialValue: _cliente?.name,
                     decoration: InputDecoration(
                       labelText: 'Nome completo*',
                       hintText: " ",
@@ -78,6 +139,9 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                   ),
 
                   TextFormField(
+                    initialValue: _cliente == null
+                        ? null
+                        : _formatDate(_cliente!.dateOfBirth),
                     decoration: InputDecoration(
                       labelText: 'Data de Nascimento *',
                       hintText: 'dd/mm/aaaa',
@@ -96,6 +160,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                   ),
 
                   TextFormField(
+                    initialValue: _cliente?.email,
                     decoration: InputDecoration(
                       labelText: 'Email (opcional)',
                       border: OutlineInputBorder(
@@ -112,6 +177,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                   ),
 
                   TextFormField(
+                    initialValue: _cliente?.phone,
                     decoration: InputDecoration(
                       labelText: 'Telefone *',
                       border: OutlineInputBorder(
@@ -128,6 +194,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                   ),
 
                   TextFormField(
+                    initialValue: _cliente?.address,
                     decoration: InputDecoration(
                       labelText: 'Rua *',
                       border: OutlineInputBorder(
@@ -158,6 +225,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                   ),
 
                   TextFormField(
+                    initialValue: _cliente?.city,
                     decoration: InputDecoration(
                       labelText: 'Cidade *',
                       border: OutlineInputBorder(
@@ -175,6 +243,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                   ),
 
                   TextFormField(
+                    initialValue: _cliente?.state,
                     decoration: InputDecoration(
                       labelText: 'Estado (opcional)',
                       border: OutlineInputBorder(
@@ -192,6 +261,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                   ),
 
                   TextFormField(
+                    initialValue: _cliente?.cep,
                     decoration: InputDecoration(
                       labelText: 'CEP (opcional)',
                       border: OutlineInputBorder(
@@ -207,6 +277,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                   ),
 
                   TextFormField(
+                    initialValue: _cliente?.documentCPF,
                     decoration: InputDecoration(
                       labelText: 'CPF *',
                       border: OutlineInputBorder(
@@ -222,6 +293,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
                   ),
 
                   TextFormField(
+                    initialValue: _cliente?.documentRG,
                     decoration: InputDecoration(
                       labelText: 'RG (opcional)',
                       border: OutlineInputBorder(
@@ -247,9 +319,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
 
           child: FilledButton.icon(
-            onPressed: () async {
-              await _submitForm();
-            },
+            onPressed: _salvando ? null : _submitForm,
             style: FilledButton.styleFrom(
               backgroundColor: const Color.fromARGB(255, 158, 204, 174),
               padding: EdgeInsets.symmetric(vertical: 16, horizontal: 32),
@@ -263,7 +333,11 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
               size: 26,
             ),
             label: Text(
-              "Registrar Cliente",
+              _salvando
+                  ? "Salvando..."
+                  : widget.customerId == null
+                  ? "Registrar Cliente"
+                  : "Salvar alterações",
               style: TextStyle(
                 color: Color(0xff1C5631),
                 fontSize: 24,
@@ -278,17 +352,13 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
   }
 
   Future<void> _submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-      print('Registrando cliente: ${_formData['nome']}');
-      var db = DatabaseHelper();
-      var customerRepository = CustomerRepository(dbHelper: db);
-      var customers = await customerRepository.getAllCustomers();
-      print('Clientes existentes: ${customers.length}');
-      for (var customer in customers) {
-        print('Cliente existente: ${customer.name}');
-      }
-      var customerData = Customer(
+    if (!_formKey.currentState!.validate()) return;
+
+    _formKey.currentState!.save();
+    setState(() => _salvando = true);
+    try {
+      final customerData = Customer(
+        id: _cliente?.id,
         name: _formData['nome'],
         dateOfBirth: cleanDate(_formData['data_nascimento']),
         email: _formData['email'],
@@ -299,11 +369,31 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
         cep: _formData['cep'],
         documentCPF: _formData['cpf'],
         documentRG: _formData['rg'],
+        score: _cliente?.score,
       );
-      await customerRepository.registerCustomer(customerData);
-      print('Cliente registrado com sucesso: ${customerData.name}');
+
+      if (_cliente == null) {
+        await _customerRepository.registerCustomer(customerData);
+      } else {
+        await _customerRepository.updateCustomer(customerData);
+      }
+
+      if (mounted) Navigator.pop(context, true);
+    } catch (error) {
+      debugPrint('Erro ao salvar cliente: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Não foi possível salvar o cliente.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _salvando = false);
     }
   }
+
+  String _formatDate(DateTime date) =>
+      '${date.day.toString().padLeft(2, '0')}/'
+      '${date.month.toString().padLeft(2, '0')}/${date.year}';
 
   DateTime cleanDate(String dateString) {
     final parts = dateString.split('/');
@@ -323,11 +413,9 @@ class FormatPhoneNumber extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    print('Old Value: ${oldValue.text}, New Value: ${newValue.text}');
     final digitsOnly = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
     if (digitsOnly.length == 11) {
       final match = RegExp(r'^(\d{2})(\d{5})(\d{4})$').firstMatch(digitsOnly);
-      print('Digits Only: $digitsOnly, Match: $match');
       if (match != null) {
         return TextEditingValue(
           text: '(${match.group(1)}) ${match.group(2)}-${match.group(3)}',
