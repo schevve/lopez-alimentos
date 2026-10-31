@@ -31,20 +31,57 @@ class SaleRepository {
     return null;
   }
 
-  Future<List<Sale>> getSalesBycustumerId(int custumerId) async {
+  Future<List<Sale>> getSalesByCustomerId(int customerId) async {
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
       'sales',
-      where: 'custumer_id = ?',
-      whereArgs: [custumerId],
+      where: 'customer_id = ?',
+      whereArgs: [customerId],
+      orderBy: 'date DESC, id DESC',
     );
     return maps.map((map) => Sale.fromMap(map)).toList();
   }
+
+  @Deprecated('Use getSalesByCustomerId instead.')
+  Future<List<Sale>> getSalesBycustumerId(int custumerId) =>
+      getSalesByCustomerId(custumerId);
 
   Future<List<Sale>> getAllSales() async {
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.query('sales');
     return maps.map((map) => Sale.fromMap(map)).toList();
+  }
+
+  Future<List<Sale>> getLatestSales({int limit = 5}) async {
+    final db = await _dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'sales',
+      orderBy: 'date DESC',
+      limit: limit,
+    );
+    return maps.map((map) => Sale.fromMap(map)).toList();
+  }
+
+  Future<double> getTotalSalesAmountSince(DateTime date) async {
+    final db = await _dbHelper.database;
+    final List<Map<String, dynamic>> result = await db.rawQuery(
+      'SELECT COALESCE(SUM(price * quantity), 0) AS total '
+      'FROM sales WHERE date >= ?',
+      [date.toIso8601String()],
+    );
+    return (result.first['total'] as num).toDouble();
+  }
+
+  Future<int> getPendingCustomersCount() async {
+    final db = await _dbHelper.database;
+    final List<Map<String, dynamic>> result = await db.rawQuery('''
+      SELECT COUNT(DISTINCT s.customer_id) AS total
+      FROM sales s
+      WHERE NOT EXISTS (
+        SELECT 1 FROM payments p WHERE p.sale_id = s.id
+      )
+    ''');
+    return (result.first['total'] as num).toInt();
   }
 
   Future<int> updateSale(Sale sale) async {

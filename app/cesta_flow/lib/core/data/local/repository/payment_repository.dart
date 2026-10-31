@@ -31,25 +31,44 @@ class PaymentRepository {
     return null;
   }
 
-  Future<List<Payment>> getPaymentsByCustumerId(int custumerId) async {
+  Future<List<Payment>> getPaymentsBySaleId(int saleId) async {
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
       'payments',
-      where: 'custumer_id = ?',
-      whereArgs: [custumerId],
+      where: 'sale_id = ?',
+      whereArgs: [saleId],
     );
     return maps.map((map) => Payment.fromMap(map)).toList();
   }
 
-  Future<double> getPaymentsByCustumerIdAmount(int custumerId) async {
+  Future<double> getPaymentsBySaleIdAmount(int saleId) async {
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> result = await db.query(
       'payments',
       columns: ['sum(amount) as total'],
-      where: 'custumer_id = ?',
-      whereArgs: [custumerId],
+      where: 'sale_id = ?',
+      whereArgs: [saleId],
     );
-    return (result.first['total'] as num).toDouble();
+    return (result.first['total'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  Future<Map<int, double>> getPaymentTotalsBySaleIds(List<int> saleIds) async {
+    if (saleIds.isEmpty) {
+      return {};
+    }
+
+    final db = await _dbHelper.database;
+    final placeholders = List.filled(saleIds.length, '?').join(', ');
+    final result = await db.rawQuery(
+      'SELECT sale_id, COALESCE(SUM(amount), 0) AS total '
+      'FROM payments WHERE sale_id IN ($placeholders) GROUP BY sale_id',
+      saleIds,
+    );
+
+    return {
+      for (final row in result)
+        (row['sale_id'] as num).toInt(): (row['total'] as num).toDouble(),
+    };
   }
 
   Future<List<Payment>> getAllPayments() async {

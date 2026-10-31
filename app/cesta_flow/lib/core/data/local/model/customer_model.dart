@@ -11,6 +11,7 @@ class Customer {
   final String? cep;
   final String documentCPF;
   final String? documentRG;
+  final int? score;
 
   Customer({
     this.id,
@@ -25,6 +26,7 @@ class Customer {
     this.cep,
     required this.documentCPF,
     this.documentRG,
+    this.score,
   });
 
   Map<String, dynamic> toMap() {
@@ -40,6 +42,7 @@ class Customer {
       'cep': cep,
       'document_cpf': documentCPF,
       'document_rg': documentRG,
+      'score': score,
     };
     if (id != null) {
       map['id'] = id;
@@ -52,15 +55,16 @@ class Customer {
       id: map['id'] as int?,
       name: map['name'] as String,
       dateOfBirth: DateTime.parse(map['date_of_birth'] as String),
-      email: map['email'] as String,
+      email: map['email'] as String?,
       phone: map['phone'] as String,
       address: map['address'] as String,
       adress_number: map['adress_number'] as String,
       city: map['city'] as String,
       state: map['state'] as String? ?? '',
-      cep: map['cep'] as String,
+      cep: map['cep'] as String?,
       documentCPF: map['document_cpf'] as String,
       documentRG: map['document_rg'] as String?,
+      score: map['score'] as int?,
     );
   }
 
@@ -77,6 +81,8 @@ class Customer {
     String? cep,
     String? documentCPF,
     String? documentRG,
+    int? score,
+    bool clearScore = false,
   }) {
     return Customer(
       id: id ?? this.id,
@@ -91,6 +97,7 @@ class Customer {
       cep: cep ?? this.cep,
       documentCPF: documentCPF ?? this.documentCPF,
       documentRG: documentRG ?? this.documentRG,
+      score: clearScore ? null : score ?? this.score,
     );
   }
 

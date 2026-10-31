@@ -40,7 +40,7 @@ class _DataExportationState extends State<DataExportation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: TopBar(pagTitle: 'Exportação de Dados'),
+      appBar: const TopBar(pagTitle: 'Exportação de Dados', showDrawer: true),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
