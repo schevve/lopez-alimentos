@@ -209,7 +209,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: _menta,
-    appBar: const TopBar(pagTitle: 'Meus Clientes'),
+    appBar: const TopBar(pagTitle: 'Meus Clientes', showDrawer: true),
     floatingActionButton: MediaQuery.viewInsetsOf(context).bottom > 0
         ? null
         : FilledButton(
