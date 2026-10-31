@@ -101,14 +101,14 @@ class _DashboardState extends State<Dashboard> {
                   value: _metricValue(formatCurrency(_salesAmountLast7Days)),
                   subtitle: 'Últimos 7 dias',
                   icon: Icons.shopping_cart,
-                  iconColor: AppColors.primary,
+                  iconColor: const Color(0xFF1D5335),
                 ),
                 MetricCard(
                   title: 'Clientes',
                   value: _metricValue(_customersCount.toString()),
                   subtitle: 'Cadastrados',
                   icon: Icons.people,
-                  iconColor: AppColors.primary,
+                  iconColor: const Color(0xFF1D5335),
                 ),
                 MetricCard(
                   title: 'Pendências',
