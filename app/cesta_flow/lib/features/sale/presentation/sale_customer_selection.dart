@@ -1,6 +1,8 @@
+import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
-import 'package:cesta_flow/features/shared/Top_bar.dart';
+import 'package:cesta_flow/features/customer/presentation/customer_registration.dart';
+import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 
 class CustomerSelection extends StatefulWidget {
@@ -28,6 +30,7 @@ class _CustomerSelectionState extends State<CustomerSelection> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(0xffF3FCF3),
       appBar: TopBar(pagTitle: "Selecionar cliente"),
       body: FutureBuilder<List<Customer>>(
         future: _customers,
@@ -51,9 +54,11 @@ class _CustomerSelectionState extends State<CustomerSelection> {
                   ),
                   OutlinedButton(
                     onPressed: () {
-                      Navigator.pushNamed(
+                      Navigator.push(
                         context,
-                        '/customerRegistration',
+                        MaterialPageRoute(
+                          builder: (context) => const CustomerRegistration(),
+                        ),
                       ).then((value) {
                         if (value != null && value is Customer) {
                           setState(() {
@@ -65,7 +70,7 @@ class _CustomerSelectionState extends State<CustomerSelection> {
                     style: OutlinedButton.styleFrom(
                       alignment: Alignment.centerLeft,
                       fixedSize: Size(double.infinity, 64),
-                      side: BorderSide(color: Colors.green, width: 2),
+                      side: BorderSide(color: Color(0xff1C5631), width: 2),
                       padding: EdgeInsets.symmetric(
                         vertical: 12,
                         horizontal: 16,
@@ -73,7 +78,7 @@ class _CustomerSelectionState extends State<CustomerSelection> {
                     ),
                     child: Text(
                       'Cadastrar Novo Cliente',
-                      style: TextStyle(fontSize: 20, color: Colors.green),
+                      style: TextStyle(fontSize: 20, color: Color(0xff1C5631)),
                     ),
                   ),
                   Expanded(
