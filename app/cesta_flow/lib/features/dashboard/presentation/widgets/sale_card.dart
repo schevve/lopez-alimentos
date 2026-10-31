@@ -1,4 +1,5 @@
 import 'package:cesta_flow/features/payment/presentation/payment_registration.dart';
+import 'package:cesta_flow/features/sale/presentation/sale_details.dart';
 import 'package:flutter/material.dart';
 
 class SaleCard extends StatelessWidget {
@@ -168,7 +169,17 @@ class SaleCard extends StatelessWidget {
                       icon: Icons.receipt_long_outlined,
                       background: const Color(0xFFE3F2E9),
                       foreground: const Color(0xFF46524B),
-                      onTap: () {},
+                      onTap: saleId == null
+                          ? null
+                          : () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      SaleDetails(saleId: saleId!),
+                                ),
+                              );
+                            },
                     ),
                   ),
                   SizedBox(
