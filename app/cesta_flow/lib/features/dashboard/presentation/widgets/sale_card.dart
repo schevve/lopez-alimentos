@@ -1,4 +1,3 @@
-import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/features/payment/presentation/payment_registration.dart';
 import 'package:flutter/material.dart';
 
@@ -6,170 +5,241 @@ class SaleCard extends StatelessWidget {
   final int? saleId;
   final String name;
   final String? scoreLabel;
-  final Color? scoreColor;
   final String status;
-  final Color statusColor;
   final String address;
   final String? distance;
-  final Color? distanceColor;
   final String product;
-  final Color productColor;
   final String amount;
-  final Color amountColor;
   const SaleCard({
     required this.saleId,
     required this.name,
     this.scoreLabel,
-    this.scoreColor,
     required this.status,
-    required this.statusColor,
     required this.address,
     this.distance,
-    this.distanceColor,
     required this.product,
-    required this.productColor,
     required this.amount,
-    required this.amountColor,
     super.key,
   });
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: AppColors.primary, width: 2),
         borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF194D30).withValues(alpha: .025),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (scoreLabel != null && scoreColor != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: scoreColor?.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          scoreLabel ?? '',
-                          style: TextStyle(color: scoreColor, fontSize: 12),
-                        ),
-                      ),
-                  ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final nome = Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -.45,
+                  color: Color(0xFF18251F),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  status,
-                  style: TextStyle(color: statusColor, fontSize: 12),
-                ),
-                const SizedBox(height: 4),
-                Text(
+              );
+              final badge = scoreLabel == null
+                  ? null
+                  : Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0F3F1),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Text(
+                        scoreLabel!,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF46524B),
+                        ),
+                      ),
+                    );
+              if (badge == null) return nome;
+              if (constraints.maxWidth < 380 ||
+                  MediaQuery.textScalerOf(context).scale(14) > 18) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [nome, const SizedBox(height: 8), badge],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: nome),
+                  const SizedBox(width: 12),
+                  badge,
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          Text(status, style: const TextStyle(color: Color(0xFF46524B))),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(
+                Icons.location_on_outlined,
+                size: 18,
+                color: Color(0xFF46524B),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
                   address,
                   style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF202020),
+                    fontSize: 15,
+                    height: 1.3,
+                    color: Color(0xFF46524B),
                   ),
                 ),
-                if (distance != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    distance!,
-                    style: TextStyle(color: distanceColor, fontSize: 12),
-                  ),
-                ],
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: productColor.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+              ),
+            ],
+          ),
+          if (distance != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              distance!,
+              style: const TextStyle(fontSize: 15, color: Color(0xFF46524B)),
+            ),
+          ],
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEEF7F1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.shopping_bag_outlined,
+                  size: 20,
+                  color: Color(0xFF1D5335),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
                   child: Text(
                     product,
-                    style: TextStyle(color: productColor, fontSize: 12),
+                    style: const TextStyle(color: Color(0xFF18251F)),
                   ),
                 ),
-                const SizedBox(height: 8),
                 Text(
                   amount,
-                  style: TextStyle(
-                    color: amountColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1D5335),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFFCCCCCC)),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onPressed: () {},
-                        child: const Text(
-                          'Ver Venda',
-                          style: TextStyle(color: Color(0xFF202020)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: amountColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onPressed: saleId == null
-                            ? null
-                            : () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  PaymentRegistration(saleId: saleId!),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                          'Receber',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 20),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final empilhar =
+                  constraints.maxWidth < 330 ||
+                  MediaQuery.textScalerOf(context).scale(16) > 21;
+              final largura = empilhar
+                  ? constraints.maxWidth
+                  : (constraints.maxWidth - 10) / 2;
+              return Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  SizedBox(
+                    width: largura,
+                    child: _AcaoButton(
+                      label: 'Ver Venda',
+                      icon: Icons.receipt_long_outlined,
+                      background: const Color(0xFFE3F2E9),
+                      foreground: const Color(0xFF46524B),
+                      onTap: () {},
+                    ),
+                  ),
+                  SizedBox(
+                    width: largura,
+                    child: _AcaoButton(
+                      label: 'Receber',
+                      icon: Icons.payments_outlined,
+                      background: const Color(0xFFFF7816),
+                      foreground: Colors.white,
+                      onTap: saleId == null
+                          ? null
+                          : () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      PaymentRegistration(saleId: saleId!),
+                                ),
+                              );
+                            },
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
     );
   }
+}
+
+class _AcaoButton extends StatelessWidget {
+  const _AcaoButton({
+    required this.label,
+    required this.icon,
+    required this.background,
+    required this.foreground,
+    required this.onTap,
+  });
+  final String label;
+  final IconData icon;
+  final Color background;
+  final Color foreground;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => FilledButton(
+    onPressed: onTap,
+    style: FilledButton.styleFrom(
+      backgroundColor: background,
+      foregroundColor: foreground,
+      disabledBackgroundColor: background.withValues(alpha: .5),
+      disabledForegroundColor: foreground.withValues(alpha: .5),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+      minimumSize: const Size(0, 54),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 21),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    ),
+  );
 }

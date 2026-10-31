@@ -249,14 +249,11 @@ class _DashboardState extends State<Dashboard> {
       saleId: sale.id,
       name: customer?.name ?? 'Cliente #${sale.customerId}',
       status: 'Registrada em ${_formatDate(sale.date)}',
-      statusColor: AppColors.greenText,
       address: address,
       product: sale.quantity > 1
           ? '${sale.quantity}x ${sale.productName}'
           : sale.productName,
-      productColor: AppColors.greenText,
       amount: formatCurrency(sale.price * sale.quantity),
-      amountColor: AppColors.primary,
     );
   }
 
