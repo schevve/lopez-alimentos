@@ -212,14 +212,47 @@ class _ClientesScreenState extends State<ClientesScreen> {
     appBar: const TopBar(pagTitle: 'Meus Clientes'),
     floatingActionButton: MediaQuery.viewInsetsOf(context).bottom > 0
         ? null
-        : FloatingActionButton.extended(
+        : FilledButton(
             onPressed: _novoCliente,
-            backgroundColor: const Color(0xFFFF7816),
-            foregroundColor: Colors.white,
-            shape: const StadiumBorder(),
-            icon: const Icon(Icons.person_add_alt_1_outlined),
-            label: const Text('Novo Cliente'),
+            style: FilledButton.styleFrom(
+              padding: EdgeInsets.zero,
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.black,
+              elevation: 6,
+            ),
+            child: Container(
+              height: 58,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF7A16),
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color.fromRGBO(255, 122, 22, 0.28),
+                    spreadRadius: 0,
+                    blurRadius: 24,
+                    offset: Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.person_add_alt_1_outlined, color: Colors.white, size: 26),
+                  SizedBox(width: 8),
+                  Text(
+                    'Novo Cliente',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
+    floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     body: FutureBuilder<List<Customer>>(
       future: _clientes,
       builder: (context, snapshot) {
