@@ -15,7 +15,7 @@ class MetricsRow extends StatelessWidget {
         children: [
           for (var index = 0; index < cards.length; index++) ...[
             if (index > 0) const SizedBox(width: _spacing),
-            cards[index],
+            Expanded(child: cards[index]),
           ],
         ],
       ),

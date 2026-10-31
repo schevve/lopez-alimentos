@@ -101,14 +101,14 @@ class _DashboardState extends State<Dashboard> {
                   value: _metricValue(formatCurrency(_salesAmountLast7Days)),
                   subtitle: 'Últimos 7 dias',
                   icon: Icons.shopping_cart,
-                  iconColor: AppColors.primary,
+                  iconColor: const Color(0xFF1D5335),
                 ),
                 MetricCard(
                   title: 'Clientes',
                   value: _metricValue(_customersCount.toString()),
                   subtitle: 'Cadastrados',
                   icon: Icons.people,
-                  iconColor: AppColors.primary,
+                  iconColor: const Color(0xFF1D5335),
                 ),
                 MetricCard(
                   title: 'Pendências',
@@ -170,7 +170,7 @@ class _DashboardState extends State<Dashboard> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: const [
-              Icon(Icons.add_rounded, color: Colors.white, size: 30),
+              Icon(Icons.add_shopping_cart, color: Colors.white, size: 26),
               SizedBox(width: 8),
               Text(
                 'Registrar Venda',
@@ -249,14 +249,11 @@ class _DashboardState extends State<Dashboard> {
       saleId: sale.id,
       name: customer?.name ?? 'Cliente #${sale.customerId}',
       status: 'Registrada em ${_formatDate(sale.date)}',
-      statusColor: AppColors.greenText,
       address: address,
       product: sale.quantity > 1
           ? '${sale.quantity}x ${sale.productName}'
           : sale.productName,
-      productColor: AppColors.greenText,
       amount: formatCurrency(sale.price * sale.quantity),
-      amountColor: AppColors.primary,
     );
   }
 

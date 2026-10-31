@@ -18,13 +18,14 @@ class SalesList extends StatefulWidget {
 }
 
 class _SalesListState extends State<SalesList> {
+  static const _verde = Color(0xFF1B4D31);
+
   final SaleRepository _saleRepository = SaleRepository();
   final CustomerRepository _customerRepository = CustomerRepository();
   final TextEditingController _searchController = TextEditingController();
 
   bool _isLoading = true;
   String? _errorMessage;
-  String _searchQuery = '';
   List<Sale> _sales = const [];
   Map<int, Customer> _customersById = const {};
 
@@ -78,13 +79,29 @@ class _SalesListState extends State<SalesList> {
     }
   }
 
+  // Busca local por nome (sem acentos) ou CPF, igual à tela de clientes.
+  String _normalize(String text) {
+    var result = text.toLowerCase();
+    const groups = {
+      '[áàâãä]': 'a',
+      '[éèêë]': 'e',
+      '[íìîï]': 'i',
+      '[óòôõö]': 'o',
+      '[úùûü]': 'u',
+      'ç': 'c',
+    };
+    groups.forEach(
+      (pattern, value) => result = result.replaceAll(RegExp(pattern), value),
+    );
+    return result;
+  }
+
   List<Sale> get _filteredSales {
-    final query = _searchQuery.trim();
+    final query = _normalize(_searchController.text.trim());
     if (query.isEmpty) {
       return _sales;
     }
 
-    final nameQuery = query.toLowerCase();
     final cpfQuery = query.replaceAll(RegExp(r'[^0-9]'), '');
 
     return _sales.where((sale) {
@@ -93,7 +110,7 @@ class _SalesListState extends State<SalesList> {
         return false;
       }
 
-      final matchesName = customer.name.toLowerCase().contains(nameQuery);
+      final matchesName = _normalize(customer.name).contains(query);
       final matchesCpf =
           cpfQuery.isNotEmpty &&
           customer.documentCPF
@@ -114,6 +131,7 @@ class _SalesListState extends State<SalesList> {
       body: RefreshIndicator(
         onRefresh: _loadSalesList,
         child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
@@ -128,29 +146,42 @@ class _SalesListState extends State<SalesList> {
                   color: AppColors.black,
                 ),
               ),
-              const SizedBox(height: 14),
-              SearchBar(
-                controller: _searchController,
-                hintText: 'Digite o nome ou CPF do cliente',
-                leading: const Icon(Icons.search),
-                trailing: [
-                  if (_searchController.text.isNotEmpty)
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      tooltip: 'Limpar busca',
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() {
-                          _searchQuery = '';
-                        });
-                      },
+              Container(
+                margin: const EdgeInsets.fromLTRB(0, 16, 0, 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: _verde,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    hintText: 'Buscar por nome, CPF...',
+                    hintStyle: const TextStyle(
+                      color: Color(0xFF808A84),
+                      fontSize: 18,
                     ),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value;
-                  });
-                },
+                    fillColor: Colors.white,
+                    filled: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 20,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: _verde,
+                      size: 26,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(height: 14),
               ..._buildSalesSection(filteredSales),
@@ -194,7 +225,7 @@ class _SalesListState extends State<SalesList> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: const [
-              Icon(Icons.add_rounded, color: Colors.white, size: 30),
+              Icon(Icons.add_shopping_cart, color: Colors.white, size: 26),
               SizedBox(width: 8),
               Text(
                 'Registrar Venda',
@@ -240,7 +271,7 @@ class _SalesListState extends State<SalesList> {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 32),
           child: Text(
-            _searchQuery.trim().isEmpty
+            _searchController.text.trim().isEmpty
                 ? 'Nenhuma venda registrada ainda.'
                 : 'Nenhuma venda encontrada para a busca.',
             textAlign: TextAlign.center,
@@ -272,14 +303,11 @@ class _SalesListState extends State<SalesList> {
       saleId: sale.id,
       name: customer?.name ?? 'Cliente #${sale.customerId}',
       status: status,
-      statusColor: AppColors.greenText,
       address: address,
       product: sale.quantity > 1
           ? '${sale.quantity}x ${sale.productName}'
           : sale.productName,
-      productColor: AppColors.greenText,
       amount: formatCurrency(sale.price * sale.quantity),
-      amountColor: AppColors.primary,
     );
   }
 
