@@ -1,4 +1,3 @@
-import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
@@ -17,12 +16,9 @@ class CustomerRegistration extends StatefulWidget {
 }
 
 class _CustomerRegistrationState extends State<CustomerRegistration> {
-  final _formKey = GlobalKey<FormState>();
-  final _formData = <String, dynamic>{};
   late final CustomerRepository _customerRepository;
   Customer? _cliente;
   bool _carregando = false;
-  bool _salvando = false;
   String? _erroCarregamento;
 
   @override
@@ -94,7 +90,6 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
   }
 
   Future<void> _registerCustomer(Map<String, dynamic> data) async {
-    final repository = CustomerRepository(dbHelper: DatabaseHelper());
     final customer = Customer(
       name: data['nome'],
       dateOfBirth: cleanDate(data['data_nascimento']),

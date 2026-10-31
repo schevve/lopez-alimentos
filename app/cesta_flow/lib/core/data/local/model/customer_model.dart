@@ -58,7 +58,7 @@ class Customer {
       email: map['email'] as String?,
       phone: map['phone'] as String,
       address: map['address'] as String,
-      adress_number: map['adress_number'] as String,
+      adress_number: map['adress_number'] as String? ?? '',
       city: map['city'] as String,
       state: map['state'] as String? ?? '',
       cep: map['cep'] as String?,
