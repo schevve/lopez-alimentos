@@ -1,4 +1,3 @@
-import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:flutter/material.dart';
 
 class MetricCard extends StatelessWidget {
@@ -18,12 +17,18 @@ class MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 110,
-      padding: const EdgeInsets.all(14),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: AppColors.primary, width: 2),
         borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF194D30).withValues(alpha: .025),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -32,21 +37,22 @@ class MetricCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             title,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF707070)),
+            style: const TextStyle(fontSize: 12, color: Color(0xFF46524B)),
           ),
           const SizedBox(height: 4),
           Text(
             value,
             style: const TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF202020),
+              fontWeight: FontWeight.w700,
+              letterSpacing: -.45,
+              color: Color(0xFF18251F),
             ),
           ),
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF707070)),
+            style: const TextStyle(fontSize: 12, color: Color(0xFF46524B)),
           ),
         ],
       ),
