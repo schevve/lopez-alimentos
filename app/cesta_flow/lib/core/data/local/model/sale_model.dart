@@ -1,9 +1,15 @@
+import 'package:objectbox/objectbox.dart';
+
+@Entity()
 class Sale {
-  final int? id;
+  @Id(assignable: true)
+  int? id;
+  @Index()
   final int customerId;
   final String productName;
   final double price;
   final int quantity;
+  @Property(type: PropertyType.dateNano)
   final DateTime date;
   final String description;
 

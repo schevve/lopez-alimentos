@@ -1,57 +1,54 @@
-import 'package:cesta_flow/core/data/local/db_helper.dart';
-import 'package:cesta_flow/core/data/local/model/customer_model.dart';
-import 'package:sqflite/sqflite.dart';
+import '../../../../objectbox.g.dart';
+import '../db_helper.dart';
+import '../model/customer_model.dart';
+import '../model/sale_model.dart';
+import '../model/payment_model.dart';
 
 class CustomerRepository {
   final DatabaseHelper _dbHelper;
-
   CustomerRepository({DatabaseHelper? dbHelper})
     : _dbHelper = dbHelper ?? DatabaseHelper();
 
-  Future<int> registerCustomer(Customer customer) async {
-    final db = await _dbHelper.database;
-    return await db.insert(
-      'customers',
-      customer.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+  Future<int> registerCustomer(Customer value) async {
+    final db = await _dbHelper.store;
+    return db.runInTransaction(TxMode.write, () {
+      return db.box<Customer>().put(value);
+    });
   }
 
-  Future<Customer?> getCustomerById(int id) async {
-    final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'customers',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    if (maps.isNotEmpty) {
-      return Customer.fromMap(maps.first);
+  Future<Customer?> getCustomerById(int id) async =>
+      (await _dbHelper.store).box<Customer>().get(id);
+  Future<List<Customer>> getAllCustomers() async =>
+      (await _dbHelper.store).box<Customer>().getAll();
+  Future<int> updateCustomer(Customer value) async {
+    if (value.id == null || value.id == 0) {
+      throw ArgumentError('ID obrigatório para atualizar.');
     }
-    return null;
-  }
+    final db = await _dbHelper.store;
+    return db.runInTransaction(TxMode.write, () {
+      if (db.box<Customer>().get(value.id!) == null) return 0;
 
-  Future<List<Customer>> getAllCustomers() async {
-    final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query('customers');
-    return maps.map((map) => Customer.fromMap(map)).toList();
-  }
-
-  Future<int> updateCustomer(Customer customer) async {
-    if (customer.id == null) {
-      throw ArgumentError('Customer id cannot be null when updating.');
-    }
-    final db = await _dbHelper.database;
-    return await db.update(
-      'customers',
-      customer.toMap(),
-      where: 'id = ?',
-      whereArgs: [customer.id],
-    );
+      db.box<Customer>().put(value, mode: PutMode.update);
+      return 1;
+    });
   }
 
   Future<int> deleteCustomer(int id) async {
-    final db = await _dbHelper.database;
-    return await db.delete('customers', where: 'id = ?', whereArgs: [id]);
+    final db = await _dbHelper.store;
+    return db.runInTransaction(TxMode.write, () {
+      final query = db.box<Sale>().query(Sale_.customerId.equals(id)).build();
+      final sales = query.find();
+      query.close();
+      for (final sale in sales) {
+        final payments = db
+            .box<Payment>()
+            .query(Payment_.saleId.equals(sale.id!))
+            .build();
+        payments.remove();
+        payments.close();
+        db.box<Sale>().remove(sale.id!);
+      }
+      return db.box<Customer>().remove(id) ? 1 : 0;
+    });
   }
 }

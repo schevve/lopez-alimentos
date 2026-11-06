@@ -15,6 +15,7 @@ Customer cliente(String nome, String cpf, {int? score}) => Customer(
   name: nome,
   dateOfBirth: DateTime(1990, 1, 1),
   phone: '(45) 99999-0000',
+  adress_number: '10',
   address: 'Rua das Flores, 10',
   city: 'São Paulo',
   state: 'SP',

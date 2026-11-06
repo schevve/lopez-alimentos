@@ -2,6 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:cesta_flow/core/data/local/db_helper.dart';
+import 'package:cesta_flow/core/data/local/model/customer_model.dart';
+import 'package:cesta_flow/core/data/local/model/sale_model.dart';
+import 'package:cesta_flow/core/data/local/model/payment_model.dart';
+import 'package:objectbox/objectbox.dart';
 import 'package:path_provider/path_provider.dart';
 
 class CsvExportService {
@@ -53,10 +57,15 @@ class CsvExportService {
   ];
 
   Future<File> exportDatabase() async {
-    final db = await _dbHelper.database;
-    final sales = await db.query('sales', orderBy: 'id');
-    final customers = await db.query('customers', orderBy: 'id');
-    final payments = await db.query('payments', orderBy: 'id');
+    final db = await _dbHelper.store;
+    final (sales, customers, payments) = db.runInTransaction(
+      TxMode.read,
+      () => (
+        db.box<Sale>().getAll().map((s) => s.toMap()).toList(),
+        db.box<Customer>().getAll().map((c) => c.toMap()).toList(),
+        db.box<Payment>().getAll().map((p) => p.toMap()).toList(),
+      ),
+    );
     final customersById = {
       for (final customer in customers) customer['id']: customer,
     };

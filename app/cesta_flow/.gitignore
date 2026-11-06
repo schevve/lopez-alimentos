@@ -52,3 +52,8 @@ app.*.map.json
 supabase/.temp/
 app/cesta_flow/supabase/.temp/
 *.env
+# Bibliotecas nativas baixadas somente para testes ObjectBox
+/download/
+/lib/libobjectbox*
+/lib/objectbox.dll
+/lib/objectbox-model.json.bak

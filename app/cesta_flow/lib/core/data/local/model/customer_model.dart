@@ -1,6 +1,11 @@
+import 'package:objectbox/objectbox.dart';
+
+@Entity()
 class Customer {
-  final int? id;
+  @Id(assignable: true)
+  int? id;
   final String name;
+  @Property(type: PropertyType.dateNano)
   final DateTime dateOfBirth;
   final String? email;
   final String phone;
@@ -9,7 +14,9 @@ class Customer {
   final String city;
   final String state;
   final String? cep;
+  @Unique()
   final String documentCPF;
+  @Unique()
   final String? documentRG;
   final int? score;
 
@@ -58,7 +65,8 @@ class Customer {
       email: map['email'] as String?,
       phone: map['phone'] as String,
       address: map['address'] as String,
-      adress_number: map['adress_number'] as String? ?? '',
+      adress_number:
+          (map['adress_number'] ?? map['addres_number']) as String? ?? '',
       city: map['city'] as String,
       state: map['state'] as String? ?? '',
       cep: map['cep'] as String?,
