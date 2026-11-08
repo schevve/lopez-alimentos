@@ -39,6 +39,7 @@ class _SaleRepository extends SaleRepository {
   Future<List<Sale>> getSalesByCustomerId(int customerId) async => [
     Sale(
       id: 11,
+      uuid: 'sale-11',
       customerId: customerId,
       productName: 'Cesta básica',
       price: 50,
@@ -48,6 +49,7 @@ class _SaleRepository extends SaleRepository {
     ),
     Sale(
       id: 12,
+      uuid: 'sale-12',
       customerId: customerId,
       productName: 'Arroz',
       price: 25,

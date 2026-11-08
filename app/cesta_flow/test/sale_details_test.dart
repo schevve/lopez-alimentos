@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 class _SaleRepository extends SaleRepository {
   Sale? sale = Sale(
     id: 11,
+    uuid: 'sale-11',
     customerId: 5,
     productName: 'Cesta básica',
     price: 50,

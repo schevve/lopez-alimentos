@@ -4,6 +4,7 @@ import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:cesta_flow/features/shared/customer_form.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
 
 class CustomerRegistration extends StatefulWidget {
   const CustomerRegistration({super.key, this.customerId, this.repository});
@@ -90,13 +91,15 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
   }
 
   Future<void> _registerCustomer(Map<String, dynamic> data) async {
+    final uuid = Uuid().v4();
     final customer = Customer(
+      uuid: uuid,
       name: data['nome'],
       dateOfBirth: cleanDate(data['data_nascimento']),
       email: data['email'],
       phone: data['telefone'],
       address: data['rua'],
-      adress_number: data['numero'],
+      addressNumber: data['numero'],
       city: data['cidade'],
       state: data['estado'],
       cep: data['cep'],
@@ -104,7 +107,6 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
       documentRG: data['rg'],
     );
     await _customerRepository.registerCustomer(customer);
-    print('Cliente registrado com sucesso: ${customer.name}');
   }
 }
 

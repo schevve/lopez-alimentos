@@ -17,6 +17,7 @@ dependencies:
   wakelock_plus: ^1.7.0
   objectbox: 5.3.2
   objectbox_flutter_libs: 5.3.2
+  uuid: ^4.6.0
 
 dev_dependencies:
   flutter_test:

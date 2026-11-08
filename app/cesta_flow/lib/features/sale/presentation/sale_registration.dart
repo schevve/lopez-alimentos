@@ -8,6 +8,7 @@ import 'package:cesta_flow/features/sale/presentation/sale_customer_selection.da
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_success.dart';
 
 class SaleRegistration extends StatefulWidget {
@@ -149,6 +150,7 @@ class _SaleRegistrationState extends State<SaleRegistration> {
       var db = DatabaseHelper();
       var salesRepository = SaleRepository(dbHelper: db);
       final saleData = Sale(
+        uuid: const Uuid().v4(),
         customerId: _formData['clienteId'],
         productName: _formData['produto'],
         price: double.parse(

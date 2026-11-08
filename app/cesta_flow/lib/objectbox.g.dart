@@ -25,7 +25,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(1, 4701824812835680819),
     name: 'Customer',
-    lastPropertyId: const obx_int.IdUid(13, 6994353464100272602),
+    lastPropertyId: const obx_int.IdUid(18, 504638120936899876),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -61,12 +61,6 @@ final _entities = <obx_int.ModelEntity>[
       obx_int.ModelProperty(
         id: const obx_int.IdUid(6, 7481537747433887838),
         name: 'address',
-        type: 9,
-        flags: 0,
-      ),
-      obx_int.ModelProperty(
-        id: const obx_int.IdUid(7, 818118996813678362),
-        name: 'adress_number',
         type: 9,
         flags: 0,
       ),
@@ -108,6 +102,36 @@ final _entities = <obx_int.ModelEntity>[
         type: 6,
         flags: 0,
       ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(14, 5816578542895812408),
+        name: 'uuid',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(15, 4409382761374600660),
+        name: 'addressNumber',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(16, 1331790417569478420),
+        name: 'isBlocked',
+        type: 1,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(17, 4441114696466587658),
+        name: 'isDeleted',
+        type: 1,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(18, 504638120936899876),
+        name: 'isSynced',
+        type: 1,
+        flags: 0,
+      ),
     ],
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[],
@@ -131,7 +155,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(3, 1939311216846362540),
     name: 'Payment',
-    lastPropertyId: const obx_int.IdUid(5, 8689637147799756084),
+    lastPropertyId: const obx_int.IdUid(9, 3876233115759566934),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -165,6 +189,30 @@ final _entities = <obx_int.ModelEntity>[
         type: 12,
         flags: 0,
       ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 2991756587567750485),
+        name: 'uuid',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(7, 5386505259579833343),
+        name: 'isBlocked',
+        type: 1,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(8, 1064612922156208424),
+        name: 'isDeleted',
+        type: 1,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(9, 3876233115759566934),
+        name: 'isSynced',
+        type: 1,
+        flags: 0,
+      ),
     ],
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[],
@@ -172,7 +220,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(4, 5530438478604448331),
     name: 'Sale',
-    lastPropertyId: const obx_int.IdUid(7, 7821167298407210678),
+    lastPropertyId: const obx_int.IdUid(11, 293901658726070243),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -216,6 +264,30 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(7, 7821167298407210678),
         name: 'description',
         type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(8, 5337203109858339630),
+        name: 'uuid',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(9, 6308068897524923776),
+        name: 'isBlocked',
+        type: 1,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(10, 8494981195914917091),
+        name: 'isDeleted',
+        type: 1,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(11, 293901658726070243),
+        name: 'isSynced',
+        type: 1,
         flags: 0,
       ),
     ],
@@ -273,7 +345,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
     lastSequenceId: const obx_int.IdUid(0, 0),
     retiredEntityUids: const [],
     retiredIndexUids: const [],
-    retiredPropertyUids: const [],
+    retiredPropertyUids: const [818118996813678362],
     retiredRelationUids: const [],
     modelVersion: 5,
     modelVersionParserMinimum: 5,
@@ -296,7 +368,6 @@ obx_int.ModelDefinition getObjectBoxModel() {
             : fbb.writeString(object.email!);
         final phoneOffset = fbb.writeString(object.phone);
         final addressOffset = fbb.writeString(object.address);
-        final adress_numberOffset = fbb.writeString(object.adress_number);
         final cityOffset = fbb.writeString(object.city);
         final stateOffset = fbb.writeString(object.state);
         final cepOffset = object.cep == null
@@ -306,20 +377,26 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final documentRGOffset = object.documentRG == null
             ? null
             : fbb.writeString(object.documentRG!);
-        fbb.startTable(14);
+        final uuidOffset = fbb.writeString(object.uuid);
+        final addressNumberOffset = fbb.writeString(object.addressNumber);
+        fbb.startTable(19);
         fbb.addInt64(0, object.id ?? 0);
         fbb.addOffset(1, nameOffset);
         fbb.addInt64(2, object.dateOfBirth.microsecondsSinceEpoch * 1000);
         fbb.addOffset(3, emailOffset);
         fbb.addOffset(4, phoneOffset);
         fbb.addOffset(5, addressOffset);
-        fbb.addOffset(6, adress_numberOffset);
         fbb.addOffset(7, cityOffset);
         fbb.addOffset(8, stateOffset);
         fbb.addOffset(9, cepOffset);
         fbb.addOffset(10, documentCPFOffset);
         fbb.addOffset(11, documentRGOffset);
         fbb.addInt64(12, object.score);
+        fbb.addOffset(13, uuidOffset);
+        fbb.addOffset(14, addressNumberOffset);
+        fbb.addBool(15, object.isBlocked);
+        fbb.addBool(16, object.isDeleted);
+        fbb.addBool(17, object.isSynced);
         fbb.finish(fbb.endTable());
         return object.id ?? 0;
       },
@@ -331,6 +408,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
           rootOffset,
           4,
         );
+        final uuidParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 30, '');
         final nameParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 6, '');
@@ -347,9 +427,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final addressParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 14, '');
-        final adress_numberParam = const fb.StringReader(
+        final addressNumberParam = const fb.StringReader(
           asciiOptimization: true,
-        ).vTableGet(buffer, rootOffset, 16, '');
+        ).vTableGet(buffer, rootOffset, 32, '');
         final cityParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 18, '');
@@ -370,20 +450,42 @@ obx_int.ModelDefinition getObjectBoxModel() {
           rootOffset,
           28,
         );
+        final isBlockedParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          34,
+          false,
+        );
+        final isDeletedParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          36,
+          false,
+        );
+        final isSyncedParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          38,
+          false,
+        );
         final object = Customer(
           id: idParam,
+          uuid: uuidParam,
           name: nameParam,
           dateOfBirth: dateOfBirthParam,
           email: emailParam,
           phone: phoneParam,
           address: addressParam,
-          adress_number: adress_numberParam,
+          addressNumber: addressNumberParam,
           city: cityParam,
           state: stateParam,
           cep: cepParam,
           documentCPF: documentCPFParam,
           documentRG: documentRGParam,
           score: scoreParam,
+          isBlocked: isBlockedParam,
+          isDeleted: isDeletedParam,
+          isSynced: isSyncedParam,
         );
 
         return object;
@@ -427,12 +529,17 @@ obx_int.ModelDefinition getObjectBoxModel() {
       },
       objectToFB: (Payment object, fb.Builder fbb) {
         final methodOffset = fbb.writeString(object.method);
-        fbb.startTable(6);
+        final uuidOffset = fbb.writeString(object.uuid);
+        fbb.startTable(10);
         fbb.addInt64(0, object.id ?? 0);
         fbb.addInt64(1, object.saleId);
         fbb.addOffset(2, methodOffset);
         fbb.addFloat64(3, object.amount);
         fbb.addInt64(4, object.date.microsecondsSinceEpoch * 1000);
+        fbb.addOffset(5, uuidOffset);
+        fbb.addBool(6, object.isBlocked);
+        fbb.addBool(7, object.isDeleted);
+        fbb.addBool(8, object.isSynced);
         fbb.finish(fbb.endTable());
         return object.id ?? 0;
       },
@@ -444,6 +551,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
           rootOffset,
           4,
         );
+        final uuidParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 14, '');
         final saleIdParam = const fb.Int64Reader().vTableGet(
           buffer,
           rootOffset,
@@ -463,12 +573,34 @@ obx_int.ModelDefinition getObjectBoxModel() {
           (const fb.Int64Reader().vTableGet(buffer, rootOffset, 12, 0) / 1000)
               .round(),
         );
+        final isBlockedParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          16,
+          false,
+        );
+        final isDeletedParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          18,
+          false,
+        );
+        final isSyncedParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          20,
+          false,
+        );
         final object = Payment(
           id: idParam,
+          uuid: uuidParam,
           saleId: saleIdParam,
           method: methodParam,
           amount: amountParam,
           date: dateParam,
+          isBlocked: isBlockedParam,
+          isDeleted: isDeletedParam,
+          isSynced: isSyncedParam,
         );
 
         return object;
@@ -485,7 +617,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
       objectToFB: (Sale object, fb.Builder fbb) {
         final productNameOffset = fbb.writeString(object.productName);
         final descriptionOffset = fbb.writeString(object.description);
-        fbb.startTable(8);
+        final uuidOffset = fbb.writeString(object.uuid);
+        fbb.startTable(12);
         fbb.addInt64(0, object.id ?? 0);
         fbb.addInt64(1, object.customerId);
         fbb.addOffset(2, productNameOffset);
@@ -493,6 +626,10 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.addInt64(4, object.quantity);
         fbb.addInt64(5, object.date.microsecondsSinceEpoch * 1000);
         fbb.addOffset(6, descriptionOffset);
+        fbb.addOffset(7, uuidOffset);
+        fbb.addBool(8, object.isBlocked);
+        fbb.addBool(9, object.isDeleted);
+        fbb.addBool(10, object.isSynced);
         fbb.finish(fbb.endTable());
         return object.id ?? 0;
       },
@@ -504,6 +641,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
           rootOffset,
           4,
         );
+        final uuidParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 18, '');
         final customerIdParam = const fb.Int64Reader().vTableGet(
           buffer,
           rootOffset,
@@ -532,14 +672,36 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final descriptionParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 16, '');
+        final isBlockedParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          20,
+          false,
+        );
+        final isDeletedParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          22,
+          false,
+        );
+        final isSyncedParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          24,
+          false,
+        );
         final object = Sale(
           id: idParam,
+          uuid: uuidParam,
           customerId: customerIdParam,
           productName: productNameParam,
           price: priceParam,
           quantity: quantityParam,
           date: dateParam,
           description: descriptionParam,
+          isBlocked: isBlockedParam,
+          isDeleted: isDeletedParam,
+          isSynced: isSyncedParam,
         );
 
         return object;
@@ -582,39 +744,59 @@ class Customer_ {
     _entities[0].properties[5],
   );
 
-  /// See [Customer.adress_number].
-  static final adress_number = obx.QueryStringProperty<Customer>(
-    _entities[0].properties[6],
-  );
-
   /// See [Customer.city].
   static final city = obx.QueryStringProperty<Customer>(
-    _entities[0].properties[7],
+    _entities[0].properties[6],
   );
 
   /// See [Customer.state].
   static final state = obx.QueryStringProperty<Customer>(
-    _entities[0].properties[8],
+    _entities[0].properties[7],
   );
 
   /// See [Customer.cep].
   static final cep = obx.QueryStringProperty<Customer>(
-    _entities[0].properties[9],
+    _entities[0].properties[8],
   );
 
   /// See [Customer.documentCPF].
   static final documentCPF = obx.QueryStringProperty<Customer>(
-    _entities[0].properties[10],
+    _entities[0].properties[9],
   );
 
   /// See [Customer.documentRG].
   static final documentRG = obx.QueryStringProperty<Customer>(
-    _entities[0].properties[11],
+    _entities[0].properties[10],
   );
 
   /// See [Customer.score].
   static final score = obx.QueryIntegerProperty<Customer>(
+    _entities[0].properties[11],
+  );
+
+  /// See [Customer.uuid].
+  static final uuid = obx.QueryStringProperty<Customer>(
     _entities[0].properties[12],
+  );
+
+  /// See [Customer.addressNumber].
+  static final addressNumber = obx.QueryStringProperty<Customer>(
+    _entities[0].properties[13],
+  );
+
+  /// See [Customer.isBlocked].
+  static final isBlocked = obx.QueryBooleanProperty<Customer>(
+    _entities[0].properties[14],
+  );
+
+  /// See [Customer.isDeleted].
+  static final isDeleted = obx.QueryBooleanProperty<Customer>(
+    _entities[0].properties[15],
+  );
+
+  /// See [Customer.isSynced].
+  static final isSynced = obx.QueryBooleanProperty<Customer>(
+    _entities[0].properties[16],
   );
 }
 
@@ -652,6 +834,26 @@ class Payment_ {
   static final date = obx.QueryDateNanoProperty<Payment>(
     _entities[2].properties[4],
   );
+
+  /// See [Payment.uuid].
+  static final uuid = obx.QueryStringProperty<Payment>(
+    _entities[2].properties[5],
+  );
+
+  /// See [Payment.isBlocked].
+  static final isBlocked = obx.QueryBooleanProperty<Payment>(
+    _entities[2].properties[6],
+  );
+
+  /// See [Payment.isDeleted].
+  static final isDeleted = obx.QueryBooleanProperty<Payment>(
+    _entities[2].properties[7],
+  );
+
+  /// See [Payment.isSynced].
+  static final isSynced = obx.QueryBooleanProperty<Payment>(
+    _entities[2].properties[8],
+  );
 }
 
 /// [Sale] entity fields to define ObjectBox queries.
@@ -687,5 +889,23 @@ class Sale_ {
   /// See [Sale.description].
   static final description = obx.QueryStringProperty<Sale>(
     _entities[3].properties[6],
+  );
+
+  /// See [Sale.uuid].
+  static final uuid = obx.QueryStringProperty<Sale>(_entities[3].properties[7]);
+
+  /// See [Sale.isBlocked].
+  static final isBlocked = obx.QueryBooleanProperty<Sale>(
+    _entities[3].properties[8],
+  );
+
+  /// See [Sale.isDeleted].
+  static final isDeleted = obx.QueryBooleanProperty<Sale>(
+    _entities[3].properties[9],
+  );
+
+  /// See [Sale.isSynced].
+  static final isSynced = obx.QueryBooleanProperty<Sale>(
+    _entities[3].properties[10],
   );
 }

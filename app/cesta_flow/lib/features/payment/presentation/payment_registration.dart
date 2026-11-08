@@ -5,6 +5,7 @@ import 'package:cesta_flow/core/data/local/model/payment_model.dart';
 import 'package:cesta_flow/core/data/local/repository/payment_repository.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 
 class PaymentRegistration extends StatefulWidget {
   final int saleId;
@@ -129,6 +130,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
           amount = amount - realValue;
         }
         var paymentData = Payment(
+          uuid: const Uuid().v4(),
           saleId: saleId,
           method: _formData['paymentTerm'],
           amount: amount,

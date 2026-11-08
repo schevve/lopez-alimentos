@@ -28,6 +28,7 @@ Customer customer({int? id, String cpf = '12345678901', String? rg}) =>
     );
 Sale sale(int customerId, {int? id, DateTime? date}) => Sale(
   id: id,
+  uuid: 'sale-${id ?? customerId}',
   customerId: customerId,
   productName: 'Cesta',
   price: 50,
@@ -37,6 +38,7 @@ Sale sale(int customerId, {int? id, DateTime? date}) => Sale(
 );
 Payment payment(int saleId, {int? id, double amount = 25}) => Payment(
   id: id,
+  uuid: 'payment-${id ?? saleId}-$amount',
   saleId: saleId,
   method: 'Pix',
   amount: amount,

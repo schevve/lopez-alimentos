@@ -5,7 +5,7 @@
   "entities": [
     {
       "id": "1:4701824812835680819",
-      "lastPropertyId": "13:6994353464100272602",
+      "lastPropertyId": "18:504638120936899876",
       "name": "Customer",
       "properties": [
         {
@@ -37,11 +37,6 @@
         {
           "id": "6:7481537747433887838",
           "name": "address",
-          "type": 9
-        },
-        {
-          "id": "7:818118996813678362",
-          "name": "adress_number",
           "type": 9
         },
         {
@@ -77,6 +72,31 @@
           "id": "13:6994353464100272602",
           "name": "score",
           "type": 6
+        },
+        {
+          "id": "14:5816578542895812408",
+          "name": "uuid",
+          "type": 9
+        },
+        {
+          "id": "15:4409382761374600660",
+          "name": "addressNumber",
+          "type": 9
+        },
+        {
+          "id": "16:1331790417569478420",
+          "name": "isBlocked",
+          "type": 1
+        },
+        {
+          "id": "17:4441114696466587658",
+          "name": "isDeleted",
+          "type": 1
+        },
+        {
+          "id": "18:504638120936899876",
+          "name": "isSynced",
+          "type": 1
         }
       ],
       "relations": []
@@ -97,7 +117,7 @@
     },
     {
       "id": "3:1939311216846362540",
-      "lastPropertyId": "5:8689637147799756084",
+      "lastPropertyId": "9:3876233115759566934",
       "name": "Payment",
       "properties": [
         {
@@ -127,13 +147,33 @@
           "id": "5:8689637147799756084",
           "name": "date",
           "type": 12
+        },
+        {
+          "id": "6:2991756587567750485",
+          "name": "uuid",
+          "type": 9
+        },
+        {
+          "id": "7:5386505259579833343",
+          "name": "isBlocked",
+          "type": 1
+        },
+        {
+          "id": "8:1064612922156208424",
+          "name": "isDeleted",
+          "type": 1
+        },
+        {
+          "id": "9:3876233115759566934",
+          "name": "isSynced",
+          "type": 1
         }
       ],
       "relations": []
     },
     {
       "id": "4:5530438478604448331",
-      "lastPropertyId": "7:7821167298407210678",
+      "lastPropertyId": "11:293901658726070243",
       "name": "Sale",
       "properties": [
         {
@@ -173,6 +213,26 @@
           "id": "7:7821167298407210678",
           "name": "description",
           "type": 9
+        },
+        {
+          "id": "8:5337203109858339630",
+          "name": "uuid",
+          "type": 9
+        },
+        {
+          "id": "9:6308068897524923776",
+          "name": "isBlocked",
+          "type": 1
+        },
+        {
+          "id": "10:8494981195914917091",
+          "name": "isDeleted",
+          "type": 1
+        },
+        {
+          "id": "11:293901658726070243",
+          "name": "isSynced",
+          "type": 1
         }
       ],
       "relations": []
@@ -186,7 +246,9 @@
   "modelVersionParserMinimum": 5,
   "retiredEntityUids": [],
   "retiredIndexUids": [],
-  "retiredPropertyUids": [],
+  "retiredPropertyUids": [
+    818118996813678362
+  ],
   "retiredRelationUids": [],
   "version": 1
 }

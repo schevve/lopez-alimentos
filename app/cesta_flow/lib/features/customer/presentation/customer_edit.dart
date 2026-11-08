@@ -31,12 +31,13 @@ class CustomerEdit extends StatelessWidget {
     final repository = CustomerRepository(dbHelper: DatabaseHelper());
     final updatedcustomer = Customer(
       id: customer.id,
+      uuid: customer.uuid,
       name: data['nome'],
       dateOfBirth: cleanDate(data['data_nascimento']),
       email: data['email'],
       phone: data['telefone'],
       address: data['rua'],
-      adress_number: data['numero'],
+      addressNumber: data['numero'],
       city: data['cidade'],
       state: data['estado'],
       cep: data['cep'],
