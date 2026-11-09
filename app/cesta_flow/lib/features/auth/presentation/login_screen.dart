@@ -1,7 +1,6 @@
 // Widgets e formatação nativos do Flutter.
-import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
+import 'package:cesta_flow/features/auth/data/auth_service.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'widgets/logo_widget.dart';
@@ -25,6 +24,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _senhaController = TextEditingController();
   bool _senhaVisivel = false;
   bool _lembrarMe = true;
+  bool _carregando = false;
+  String? _erro;
 
   @override
   void dispose() {
@@ -33,26 +34,38 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // Valida somente o preenchimento; autenticação será integrada depois.
+  // O CPF é digitado com máscara; para validar, só contam os 11 dígitos.
   String? _validarCpf(String? valor) {
-    return valor == null || valor.trim().isEmpty ? 'Informe seu CPF.' : null;
+    final digitos = (valor ?? '').replaceAll(RegExp(r'\D'), '');
+    if (digitos.isEmpty) return 'Informe seu CPF.';
+    if (digitos.length != 11) return 'O CPF deve ter 11 dígitos.';
+    return null;
   }
 
   String? _validarSenha(String? valor) {
-    return valor == null || valor.trim().isEmpty ? 'Informe sua senha.' : null;
+    return valor == null || valor.isEmpty ? 'Informe sua senha.' : null;
   }
 
-  void _entrar() {
+  // Autentica no Supabase. Ao dar certo, o AuthGate (main.dart) detecta a
+  // sessão e troca esta tela pela tela principal, então não navegamos aqui.
+  Future<void> _entrar() async {
+    if (_carregando) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _erro = null);
     if (!_formKey.currentState!.validate()) return;
-    // Saída solicitada para desenvolvimento, desativada em release.
-    if (kDebugMode) {
-      debugPrint('CPF: ${_cpfController.text}');
-      debugPrint('Senha: ${_senhaController.text}');
-      debugPrint('Lembrar-me: $_lembrarMe');
+
+    setState(() => _carregando = true);
+    try {
+      await AuthService.instance.entrar(
+        cpf: _cpfController.text,
+        senha: _senhaController.text,
+        lembrarMe: _lembrarMe,
+      );
+    } on LoginException catch (e) {
+      if (mounted) setState(() => _erro = e.message);
+    } finally {
+      if (mounted) setState(() => _carregando = false);
     }
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => const Dashboard()),
-    );
   }
 
   InputDecoration _decoracaoCampo({String? placeholder, Widget? suffixIcon}) {
@@ -323,14 +336,32 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                                     ],
                                   ),
+                                  // Erro vindo do servidor (ex.: senha incorreta).
+                                  if (_erro != null) ...[
+                                    const SizedBox(height: 16),
+                                    Semantics(
+                                      liveRegion: true,
+                                      child: Text(
+                                        _erro!,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: Color(0xFFFFDAD6),
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                   const SizedBox(height: 24),
                                   SizedBox(
                                     height: 56,
                                     child: ElevatedButton(
-                                      onPressed: _entrar,
+                                      onPressed: _carregando ? null : _entrar,
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: _verdeBotao,
                                         foregroundColor: Colors.white,
+                                        disabledBackgroundColor: _verdeBotao,
+                                        disabledForegroundColor: Colors.white70,
                                         elevation: 3,
                                         shadowColor: Colors.black.withValues(
                                           alpha: .24,
@@ -354,13 +385,22 @@ class _LoginScreenState extends State<LoginScreen> {
                                           ),
                                         ),
                                       ),
-                                      child: const Text(
-                                        'Entrar',
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
+                                      child: _carregando
+                                          ? const SizedBox(
+                                              width: 24,
+                                              height: 24,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 3,
+                                                color: Colors.white,
+                                              ),
+                                            )
+                                          : const Text(
+                                              'Entrar',
+                                              style: TextStyle(
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
                                     ),
                                   ),
                                 ],
