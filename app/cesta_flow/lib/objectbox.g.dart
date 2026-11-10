@@ -296,7 +296,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
             : fbb.writeString(object.email!);
         final phoneOffset = fbb.writeString(object.phone);
         final addressOffset = fbb.writeString(object.address);
-        final adress_numberOffset = fbb.writeString(object.adress_number);
+        final adress_numberOffset = fbb.writeString(object.adressNumber);
         final cityOffset = fbb.writeString(object.city);
         final stateOffset = fbb.writeString(object.state);
         final cepOffset = object.cep == null
@@ -377,7 +377,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           email: emailParam,
           phone: phoneParam,
           address: addressParam,
-          adress_number: adress_numberParam,
+          adressNumber: adress_numberParam,
           city: cityParam,
           state: stateParam,
           cep: cepParam,

@@ -20,7 +20,7 @@ Customer customer({int? id, String cpf = '12345678901', String? rg}) =>
       dateOfBirth: DateTime(1990, 1, 1),
       phone: '45999999999',
       address: 'Rua de teste',
-      adress_number: '12',
+      adressNumber: '12',
       city: 'Cascavel',
       state: 'PR',
       documentCPF: cpf,
@@ -125,7 +125,7 @@ void main() {
         payments: [payment(40, id: 70).toMap()],
       );
       migrate();
-      expect(store.box<Customer>().get(12)!.adress_number, '12');
+      expect(store.box<Customer>().get(12)!.adressNumber, '12');
       expect(store.box<Customer>().get(12)!.score, isNull);
       expect(store.box<Payment>().get(70)!.saleId, 40);
       final newId = store.box<Customer>().put(customer(cpf: '98765432100'));
@@ -223,7 +223,7 @@ void main() {
         file,
         factory: sqlite.databaseFactoryFfi,
       );
-      expect(store.box<Customer>().get(7)!.adress_number, '20');
+      expect(store.box<Customer>().get(7)!.adressNumber, '20');
       expect(store.box<Customer>().get(7)!.score, isNull);
       expect(File(file).readAsBytesSync(), before);
     },
