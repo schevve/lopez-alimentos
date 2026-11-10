@@ -1,5 +1,13 @@
 enum CustomerScoreCategory { green, yellow, red }
 
+extension CustomerScoreCategoryLabel on CustomerScoreCategory {
+  String get label => switch (this) {
+    CustomerScoreCategory.green => 'Verde',
+    CustomerScoreCategory.yellow => 'Amarelo',
+    CustomerScoreCategory.red => 'Vermelho',
+  };
+}
+
 class Customer {
   final int? id;
   final String name;

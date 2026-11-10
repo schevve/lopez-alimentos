@@ -1,7 +1,9 @@
 import 'package:cesta_flow/core/constants/util/format_currency.dart';
+import 'package:cesta_flow/core/data/local/model/installment_model.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
+import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/payment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
@@ -14,12 +16,14 @@ class SaleDetails extends StatefulWidget {
     this.saleRepository,
     this.paymentRepository,
     this.customerRepository,
+    this.installmentRepository,
   });
 
   final int saleId;
   final SaleRepository? saleRepository;
   final PaymentRepository? paymentRepository;
   final CustomerRepository? customerRepository;
+  final InstallmentRepository? installmentRepository;
 
   @override
   State<SaleDetails> createState() => _SaleDetailsState();
@@ -32,6 +36,8 @@ class _SaleDetailsState extends State<SaleDetails> {
       widget.paymentRepository ?? PaymentRepository();
   late final CustomerRepository _customerRepository =
       widget.customerRepository ?? CustomerRepository();
+  late final InstallmentRepository _installmentRepository =
+      widget.installmentRepository ?? InstallmentRepository();
   late Future<_SaleDetailsData> _details;
 
   @override
@@ -49,9 +55,22 @@ class _SaleDetailsState extends State<SaleDetails> {
     final paid = await _paymentRepository.getPaymentsBySaleIdAmount(
       widget.saleId,
     );
+    final installments = await _installmentRepository.getInstallmentsBySaleId(
+      widget.saleId,
+    );
+    final installmentPaymentTotals = await _paymentRepository
+        .getPaymentTotalsByInstallmentIds(
+          installments.map((installment) => installment.id!).toList(),
+        );
     final customer = await _customerRepository.getCustomerById(sale.customerId);
 
-    return _SaleDetailsData(sale: sale, paid: paid, customer: customer);
+    return _SaleDetailsData(
+      sale: sale,
+      paid: paid,
+      customer: customer,
+      installments: installments,
+      installmentPaymentTotals: installmentPaymentTotals,
+    );
   }
 
   void _reload() {
@@ -100,7 +119,12 @@ class _SaleDetailsState extends State<SaleDetails> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
             children: [
-              _saleHeader(sale, data.customer),
+              _saleHeader(
+                sale,
+                data.customer,
+                paid: data.paid,
+                total: saleValue,
+              ),
               const SizedBox(height: 20),
               const _SectionTitle(title: 'Resumo da venda'),
               const SizedBox(height: 12),
@@ -126,7 +150,7 @@ class _SaleDetailsState extends State<SaleDetails> {
                       _MetricCard(
                         width: cardWidth,
                         title: 'Parcelas',
-                        value: '${_mockInstallments.length}',
+                        value: '${data.installments.length}',
                         icon: Icons.calendar_month_outlined,
                       ),
                     ],
@@ -139,14 +163,15 @@ class _SaleDetailsState extends State<SaleDetails> {
               _ProductCard(sale: sale),
               const SizedBox(height: 24),
               const _SectionTitle(title: 'Parcelas'),
-              const SizedBox(height: 6),
-              const Text(
-                'Valores ilustrativos. O modelo de parcelas ainda não está pronto.',
-                style: TextStyle(color: Color(0xFF59665E), height: 1.4),
-              ),
               const SizedBox(height: 12),
-              for (final installment in _mockInstallments)
-                _InstallmentCard(installment: installment),
+              if (data.installments.isEmpty)
+                const Text('Esta venda ainda não possui parcelas.')
+              else
+                for (final installment in data.installments)
+                  _InstallmentCard(
+                    installment: installment,
+                    paid: data.installmentPaymentTotals[installment.id] ?? 0,
+                  ),
             ],
           ),
         );
@@ -154,7 +179,19 @@ class _SaleDetailsState extends State<SaleDetails> {
     ),
   );
 
-  Widget _saleHeader(Sale sale, Customer? customer) {
+  Widget _saleHeader(
+    Sale sale,
+    Customer? customer, {
+    required double paid,
+    required double total,
+  }) {
+    final paidCents = (paid * 100).round();
+    final totalCents = (total * 100).round();
+    final status = paidCents >= totalCents
+        ? 'Quitada'
+        : paidCents > 0
+        ? 'Parcialmente paga'
+        : 'Em aberto';
     return Card(
       color: Colors.white,
       margin: EdgeInsets.zero,
@@ -191,6 +228,7 @@ class _SaleDetailsState extends State<SaleDetails> {
               value: customer?.name ?? 'Cliente #${sale.customerId}',
             ),
             _InfoLine(label: 'Data', value: _formatDate(sale.date)),
+            _InfoLine(label: 'Situação', value: status),
             if (sale.description.trim().isNotEmpty)
               _InfoLine(label: 'Observações', value: sale.description),
           ],
@@ -204,29 +242,20 @@ class _SaleDetailsState extends State<SaleDetails> {
       '${date.month.toString().padLeft(2, '0')}/${date.year}';
 }
 
-const _mockInstallments = [
-  _MockInstallment(number: 1, amount: 50, status: 'Paga'),
-  _MockInstallment(number: 2, amount: 50, status: 'Pendente'),
-];
-
 class _SaleDetailsData {
-  const _SaleDetailsData({required this.sale, this.paid = 0, this.customer});
+  const _SaleDetailsData({
+    required this.sale,
+    this.paid = 0,
+    this.customer,
+    this.installments = const [],
+    this.installmentPaymentTotals = const {},
+  });
 
   final Sale? sale;
   final double paid;
   final Customer? customer;
-}
-
-class _MockInstallment {
-  const _MockInstallment({
-    required this.number,
-    required this.amount,
-    required this.status,
-  });
-
-  final int number;
-  final double amount;
-  final String status;
+  final List<Installment> installments;
+  final Map<int, double> installmentPaymentTotals;
 }
 
 class _MetricCard extends StatelessWidget {
@@ -309,13 +338,22 @@ class _ProductCard extends StatelessWidget {
 }
 
 class _InstallmentCard extends StatelessWidget {
-  const _InstallmentCard({required this.installment});
+  const _InstallmentCard({required this.installment, required this.paid});
 
-  final _MockInstallment installment;
+  final Installment installment;
+  final double paid;
 
   @override
   Widget build(BuildContext context) {
-    final isPaid = installment.status == 'Paga';
+    final amountCents = (installment.amount * 100).round();
+    final paidCents = (paid * 100).round();
+    final isPaid = paidCents >= amountCents;
+    final isPartial = paidCents > 0 && !isPaid;
+    final status = isPaid
+        ? 'Paga'
+        : isPartial
+        ? 'Parcialmente paga'
+        : 'Pendente';
     return Card(
       color: Colors.white,
       margin: const EdgeInsets.only(bottom: 10),
@@ -333,11 +371,13 @@ class _InstallmentCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  installment.status,
+                  status,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: isPaid
                         ? const Color(0xFF1B4D31)
+                        : isPartial
+                        ? const Color(0xFF175CD3)
                         : const Color(0xFFB54708),
                   ),
                 ),
@@ -348,11 +388,21 @@ class _InstallmentCard extends StatelessWidget {
               label: 'Valor',
               value: formatCurrency(installment.amount),
             ),
+            _InfoLine(label: 'Valor pago', value: formatCurrency(paid)),
+            if (installment.dueDate != null)
+              _InfoLine(
+                label: 'Vencimento',
+                value: _formatDueDate(installment.dueDate!),
+              ),
           ],
         ),
       ),
     );
   }
+
+  String _formatDueDate(DateTime date) =>
+      '${date.day.toString().padLeft(2, '0')}/'
+      '${date.month.toString().padLeft(2, '0')}/${date.year}';
 }
 
 class _InfoLine extends StatelessWidget {
@@ -369,10 +419,7 @@ class _InfoLine extends StatelessWidget {
       children: [
         SizedBox(
           width: 130,
-          child: Text(
-            label,
-            style: const TextStyle(color: Color(0xFF59665E)),
-          ),
+          child: Text(label, style: const TextStyle(color: Color(0xFF59665E))),
         ),
         Expanded(
           child: Text(
@@ -402,11 +449,7 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _MessageState extends StatelessWidget {
-  const _MessageState({
-    required this.message,
-    this.actionLabel,
-    this.onAction,
-  });
+  const _MessageState({required this.message, this.actionLabel, this.onAction});
 
   final String message;
   final String? actionLabel;

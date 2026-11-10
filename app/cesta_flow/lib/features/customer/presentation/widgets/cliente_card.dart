@@ -29,7 +29,6 @@ class ClienteCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // NULL significa que o score ainda não foi informado, nunca score zero.
           LayoutBuilder(
             builder: (context, constraints) {
               final nome = Text(
@@ -51,9 +50,7 @@ class ClienteCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: Text(
-                  cliente.score == null
-                      ? 'Score não informado'
-                      : 'Score: ${cliente.score}',
+                  'Score: ${cliente.scoreCategory.label}',
                   style: const TextStyle(
                     fontSize: 14,
                     color: Color(0xFF46524B),

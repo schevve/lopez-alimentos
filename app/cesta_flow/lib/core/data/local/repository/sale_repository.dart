@@ -1,6 +1,7 @@
 import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:cesta_flow/core/data/local/customer_score_updater.dart';
+import 'package:cesta_flow/core/domain/installment_schedule.dart';
 
 class SaleRepository {
   final DatabaseHelper _dbHelper;
@@ -9,12 +10,28 @@ class SaleRepository {
     : _dbHelper = dbHelper ?? DatabaseHelper();
 
   Future<int> registerSale(Sale sale) async {
+    return registerSaleWithInstallments(sale, installmentCount: 1);
+  }
+
+  Future<int> registerSaleWithInstallments(
+    Sale sale, {
+    required int installmentCount,
+  }) async {
     final db = await _dbHelper.database;
-    return await db.insert(
-      'sales',
-      sale.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    return db.transaction((txn) async {
+      final saleId = await txn.insert('sales', sale.toMap());
+      final installments = createInstallmentSchedule(
+        saleId: saleId,
+        count: installmentCount,
+        totalAmount: sale.price * sale.quantity,
+        saleDate: sale.date,
+      );
+      for (final installment in installments) {
+        await txn.insert('installments', installment.toMap());
+      }
+      await CustomerScoreUpdater.refresh(txn, sale.customerId);
+      return saleId;
+    });
   }
 
   Future<Sale?> getSaleById(int id) async {
@@ -77,8 +94,12 @@ class SaleRepository {
     final List<Map<String, dynamic>> result = await db.rawQuery('''
       SELECT COUNT(DISTINCT s.customer_id) AS total
       FROM sales s
-      WHERE NOT EXISTS (
-        SELECT 1 FROM payments p WHERE p.sale_id = s.id
+      WHERE ROUND(s.price * s.quantity * 100) > ROUND(
+        COALESCE((
+          SELECT SUM(p.amount * 100)
+          FROM payments p
+          WHERE p.sale_id = s.id
+        ), 0)
       )
     ''');
     return (result.first['total'] as num).toInt();

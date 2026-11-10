@@ -117,10 +117,7 @@ class _CustomerDetailsState extends State<CustomerDetails> {
               (sale) => _SaleSummary(
                 sale: sale,
                 total: sale.price * sale.quantity,
-                paid: math.max(
-                  0,
-                  data.paymentTotals[sale.id] ?? 0,
-                ).toDouble(),
+                paid: math.max(0, data.paymentTotals[sale.id] ?? 0).toDouble(),
               ),
             )
             .toList();
@@ -133,7 +130,7 @@ class _CustomerDetailsState extends State<CustomerDetails> {
           (total, summary) => total + summary.paid,
         );
         final pending = summaries
-            .where((summary) => summary.balance > 0)
+            .where((summary) => summary.balanceCents > 0)
             .toList();
         final totalPending = pending.fold<double>(
           0,
@@ -200,18 +197,18 @@ class _CustomerDetailsState extends State<CustomerDetails> {
                   message: 'Este cliente não possui vendas em aberto.',
                 )
               else
-                for (final summary in pending)
-                  _SaleCard(summary: summary),
+                for (final summary in pending) _SaleCard(summary: summary),
               const SizedBox(height: 24),
-              _SectionTitle(title: 'Histórico de vendas (${data.sales.length})'),
+              _SectionTitle(
+                title: 'Histórico de vendas (${data.sales.length})',
+              ),
               const SizedBox(height: 12),
               if (summaries.isEmpty)
                 const _EmptySection(
                   message: 'Este cliente ainda não possui vendas.',
                 )
               else
-                for (final summary in summaries)
-                  _SaleCard(summary: summary),
+                for (final summary in summaries) _SaleCard(summary: summary),
             ],
           ),
         );
@@ -275,8 +272,10 @@ class _CustomerDetailsState extends State<CustomerDetails> {
               label: 'Data de nascimento',
               value: _formatDate(customer.dateOfBirth),
             ),
-            if (customer.score != null)
-              _InfoLine(label: 'Score', value: '${customer.score}'),
+            _InfoLine(
+              label: 'Classificação do score',
+              value: customer.scoreCategory.label,
+            ),
             if (customer.id != null)
               _InfoLine(label: 'Código do cliente', value: '#${customer.id}'),
           ],
@@ -313,7 +312,10 @@ class _SaleSummary {
   final double total;
   final double paid;
 
-  double get balance => math.max(0, total - paid).toDouble();
+  int get balanceCents =>
+      math.max(0, (total * 100).round() - (paid * 100).round());
+
+  double get balance => balanceCents / 100;
 }
 
 class _MetricCard extends StatelessWidget {
@@ -416,7 +418,10 @@ class _SaleCard extends StatelessWidget {
               style: const TextStyle(color: Color(0xFF59665E)),
             ),
             const SizedBox(height: 10),
-            _InfoLine(label: 'Valor da venda', value: formatCurrency(summary.total)),
+            _InfoLine(
+              label: 'Valor da venda',
+              value: formatCurrency(summary.total),
+            ),
             _InfoLine(label: 'Total pago', value: formatCurrency(summary.paid)),
             _InfoLine(
               label: 'Saldo restante',
@@ -447,10 +452,7 @@ class _InfoLine extends StatelessWidget {
       children: [
         SizedBox(
           width: 130,
-          child: Text(
-            label,
-            style: const TextStyle(color: Color(0xFF59665E)),
-          ),
+          child: Text(label, style: const TextStyle(color: Color(0xFF59665E))),
         ),
         Expanded(
           child: Text(
@@ -495,11 +497,7 @@ class _EmptySection extends StatelessWidget {
 }
 
 class _MessageState extends StatelessWidget {
-  const _MessageState({
-    required this.message,
-    this.actionLabel,
-    this.onAction,
-  });
+  const _MessageState({required this.message, this.actionLabel, this.onAction});
 
   final String message;
   final String? actionLabel;

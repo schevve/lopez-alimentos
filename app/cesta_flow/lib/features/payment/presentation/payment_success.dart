@@ -4,12 +4,14 @@ class PaymentSuccess extends StatefulWidget {
   final String paymentValue;
   final String paymentTerm;
   final String nextVisit;
+  final bool saleSettled;
 
   const PaymentSuccess({
     super.key,
     required this.paymentValue,
     required this.paymentTerm,
     required this.nextVisit,
+    this.saleSettled = false,
   });
 
   @override
@@ -62,6 +64,7 @@ class _PaymentSuccessState extends State<PaymentSuccess> {
                 letterSpacing: 1,
               ),
             ),
+            if (widget.saleSettled) Text('Venda quitada.'),
             Text("Próxima visita: ${widget.nextVisit}"),
             FilledButton(
               onPressed: () {
