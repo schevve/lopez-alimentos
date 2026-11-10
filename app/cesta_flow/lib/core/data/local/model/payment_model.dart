@@ -1,8 +1,14 @@
+import 'package:objectbox/objectbox.dart';
+
+@Entity()
 class Payment {
-  final int? id;
+  @Id(assignable: true)
+  int? id;
+  @Index()
   final int saleId;
   final String method;
   final double amount;
+  @Property(type: PropertyType.dateNano)
   final DateTime date;
 
   Payment({
