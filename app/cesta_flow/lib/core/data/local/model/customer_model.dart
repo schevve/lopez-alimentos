@@ -1,3 +1,5 @@
+enum CustomerScoreCategory { green, yellow, red }
+
 class Customer {
   final int? id;
   final String name;
@@ -12,6 +14,9 @@ class Customer {
   final String documentCPF;
   final String? documentRG;
   final int? score;
+  final CustomerScoreCategory scoreCategory;
+  final bool authorized;
+  final bool? manualBlockOverride;
 
   Customer({
     this.id,
@@ -27,6 +32,9 @@ class Customer {
     required this.documentCPF,
     this.documentRG,
     this.score,
+    this.scoreCategory = CustomerScoreCategory.yellow,
+    this.authorized = false,
+    this.manualBlockOverride,
   });
 
   Map<String, dynamic> toMap() {
@@ -43,6 +51,13 @@ class Customer {
       'document_cpf': documentCPF,
       'document_rg': documentRG,
       'score': score,
+      'score_category': scoreCategory.name,
+      'authorized': authorized ? 1 : 0,
+      'manual_block_override': manualBlockOverride == null
+          ? null
+          : manualBlockOverride!
+          ? 1
+          : 0,
     };
     if (id != null) {
       map['id'] = id;
@@ -65,6 +80,15 @@ class Customer {
       documentCPF: map['document_cpf'] as String,
       documentRG: map['document_rg'] as String?,
       score: map['score'] as int?,
+      scoreCategory: map['score_category'] == null
+          ? CustomerScoreCategory.yellow
+          : CustomerScoreCategory.values.byName(
+              map['score_category'] as String,
+            ),
+      authorized: (map['authorized'] as num?)?.toInt() == 1,
+      manualBlockOverride: (map['manual_block_override'] as num?) == null
+          ? null
+          : (map['manual_block_override'] as num).toInt() == 1,
     );
   }
 
@@ -83,6 +107,10 @@ class Customer {
     String? documentRG,
     int? score,
     bool clearScore = false,
+    CustomerScoreCategory? scoreCategory,
+    bool? authorized,
+    bool? manualBlockOverride,
+    bool clearManualBlockOverride = false,
   }) {
     return Customer(
       id: id ?? this.id,
@@ -98,6 +126,11 @@ class Customer {
       documentCPF: documentCPF ?? this.documentCPF,
       documentRG: documentRG ?? this.documentRG,
       score: clearScore ? null : score ?? this.score,
+      scoreCategory: scoreCategory ?? this.scoreCategory,
+      authorized: authorized ?? this.authorized,
+      manualBlockOverride: clearManualBlockOverride
+          ? null
+          : manualBlockOverride ?? this.manualBlockOverride,
     );
   }
 

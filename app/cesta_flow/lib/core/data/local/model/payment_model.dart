@@ -1,6 +1,7 @@
 class Payment {
   final int? id;
   final int saleId;
+  final int? installmentId;
   final String method;
   final double amount;
   final DateTime date;
@@ -8,6 +9,7 @@ class Payment {
   Payment({
     this.id,
     required this.saleId,
+    this.installmentId,
     required this.method,
     required this.amount,
     required this.date,
@@ -16,6 +18,7 @@ class Payment {
   Map<String, dynamic> toMap() {
     final map = <String, dynamic>{
       'sale_id': saleId,
+      'installment_id': installmentId,
       'method': method,
       'amount': amount,
       'date': date.toIso8601String(),
@@ -30,6 +33,7 @@ class Payment {
     return Payment(
       id: map['id'] as int?,
       saleId: map['sale_id'] as int,
+      installmentId: map['installment_id'] as int?,
       method: map['method'] as String,
       amount: (map['amount'] as num).toDouble(),
       date: DateTime.parse(map['date'] as String),
@@ -39,6 +43,7 @@ class Payment {
   Payment copyWith({
     int? id,
     int? saleId,
+    int? installmentId,
     String? method,
     double? amount,
     DateTime? date,
@@ -46,6 +51,7 @@ class Payment {
     return Payment(
       id: id ?? this.id,
       saleId: saleId ?? this.saleId,
+      installmentId: installmentId ?? this.installmentId,
       method: method ?? this.method,
       amount: amount ?? this.amount,
       date: date ?? this.date,

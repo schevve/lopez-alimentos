@@ -29,7 +29,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'app_database.db');
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: _onConfigure,
@@ -62,6 +62,9 @@ class DatabaseHelper {
         await db.execute('ALTER TABLE customers ADD COLUMN score INTEGER');
       }
     }
+    if (oldVersion < 5) {
+      await _migrateToInstallments(db);
+    }
   }
 
   Future<void> _createTables(Database db) async {
@@ -79,7 +82,10 @@ class DatabaseHelper {
         cep TEXT,
         document_cpf TEXT NOT NULL UNIQUE,
         document_rg TEXT UNIQUE,
-        score INTEGER
+        score INTEGER,
+        score_category TEXT NOT NULL DEFAULT 'yellow',
+        authorized INTEGER NOT NULL DEFAULT 0,
+        manual_block_override INTEGER
       )
     ''');
 
@@ -97,14 +103,91 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
+      CREATE TABLE IF NOT EXISTS installments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sale_id INTEGER NOT NULL,
+        number INTEGER NOT NULL,
+        amount REAL NOT NULL,
+        due_date TEXT,
+        FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
       CREATE TABLE IF NOT EXISTS payments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         sale_id INTEGER NOT NULL,
+        installment_id INTEGER,
         method TEXT NOT NULL,
         amount REAL NOT NULL,
         date TEXT NOT NULL,
+        FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE CASCADE,
+        FOREIGN KEY (installment_id) REFERENCES installments (id) ON DELETE CASCADE
+      )
+    ''');
+  }
+
+  Future<void> _migrateToInstallments(Database db) async {
+    final customerColumns = await db.rawQuery('PRAGMA table_info(customers)');
+    if (!customerColumns.any((column) => column['name'] == 'score_category')) {
+      await db.execute(
+        "ALTER TABLE customers ADD COLUMN score_category TEXT NOT NULL DEFAULT 'yellow'",
+      );
+    }
+    if (!customerColumns.any((column) => column['name'] == 'authorized')) {
+      await db.execute(
+        'ALTER TABLE customers ADD COLUMN authorized INTEGER NOT NULL DEFAULT 0',
+      );
+    }
+    if (!customerColumns.any(
+      (column) => column['name'] == 'manual_block_override',
+    )) {
+      await db.execute(
+        'ALTER TABLE customers ADD COLUMN manual_block_override INTEGER',
+      );
+    }
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS installments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sale_id INTEGER NOT NULL,
+        number INTEGER NOT NULL,
+        amount REAL NOT NULL,
+        due_date TEXT,
         FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE CASCADE
       )
+    ''');
+
+    final paymentColumns = await db.rawQuery('PRAGMA table_info(payments)');
+    if (!paymentColumns.any((column) => column['name'] == 'installment_id')) {
+      await db.execute('''
+        ALTER TABLE payments
+        ADD COLUMN installment_id INTEGER
+        REFERENCES installments (id) ON DELETE CASCADE
+      ''');
+    }
+
+    await db.execute('''
+      INSERT INTO installments (sale_id, number, amount, due_date)
+      SELECT s.id, 1, s.price * s.quantity, NULL
+      FROM sales s
+      WHERE NOT EXISTS (
+        SELECT 1 FROM installments i WHERE i.sale_id = s.id
+      )
+    ''');
+    await db.execute('''
+      UPDATE payments
+      SET installment_id = (
+        SELECT i.id
+        FROM installments i
+        WHERE i.sale_id = payments.sale_id
+        ORDER BY i.number, i.id
+        LIMIT 1
+      )
+      WHERE installment_id IS NULL
+        AND EXISTS (
+          SELECT 1 FROM installments i WHERE i.sale_id = payments.sale_id
+        )
     ''');
   }
 
