@@ -7,6 +7,7 @@ environment:
   sdk: ^3.13.0
 
 dependencies:
+  sqflite_common_ffi_web: ^0.4.5
   flutter:
     sdk: flutter
   intl: ^0.20.3
@@ -25,4 +26,4 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets: 
-  - web/images/
+  - assets/images/

@@ -1,22 +1,23 @@
-import 'package:cesta_flow/core/data/local/model/customer_model.dart';
-import 'package:cesta_flow/features/customer/presentation/customer_list.dart';
-import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
-import 'package:cesta_flow/features/sale/presentation/customer_selection.dart';
-import 'package:cesta_flow/features/sale/presentation/payment_success.dart';
+import 'package:cesta_flow/features/payment/presentation/payment_success.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_registration.dart';
 import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/payment_model.dart';
 import 'package:cesta_flow/core/data/local/repository/payment_repository.dart';
-import 'package:cesta_flow/features/shared/bottom_bar.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class PaymentRegistration extends StatefulWidget {
+<<<<<<< HEAD:app/cesta_flow/lib/features/sale/presentation/payment_registration.dart
   final Customer? customer;
   final Payment? payment;
 
   const PaymentRegistration({super.key, this.customer, this.payment});
+=======
+  final int saleId;
+
+  const PaymentRegistration({super.key, required this.saleId});
+>>>>>>> origin/main:app/cesta_flow/lib/features/payment/presentation/payment_registration.dart
 
   @override
   State<PaymentRegistration> createState() => _PaymentRegistration();
@@ -304,12 +305,18 @@ class _PaymentRegistration extends State<PaymentRegistration> {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
 
+<<<<<<< HEAD:app/cesta_flow/lib/features/sale/presentation/payment_registration.dart
       // var db = DatabaseHelper();
       // var paymentRepository = PaymentRepository(dbHelper: db);
       // final int? customerId = widget.customer?.id;
       // if (customerId == null) {
       //   throw Exception('o cliente não possui ID válido');
       // }
+=======
+      var db = DatabaseHelper();
+      var paymentRepository = PaymentRepository(dbHelper: db);
+      final int saleId = widget.saleId;
+>>>>>>> origin/main:app/cesta_flow/lib/features/payment/presentation/payment_registration.dart
 
       // final String rawValue = _formData['paymentValue'] ?? "0,00";
       // final String cleanValue = rawValue
@@ -317,6 +324,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
       //     .replaceAll(',', '.');
       // final double realValue = double.tryParse(cleanValue) ?? 0.0;
 
+<<<<<<< HEAD:app/cesta_flow/lib/features/sale/presentation/payment_registration.dart
       // try {
       //   final List<Payment> allPayments = await paymentRepository
       //       .getPaymentsByCustumerId(customerId);
@@ -339,8 +347,32 @@ class _PaymentRegistration extends State<PaymentRegistration> {
       // } catch (e) {
       //   print("erro no banco de dados: $e");
       // }
+=======
+      try {
+        final List<Payment> allPayments = await paymentRepository
+            .getPaymentsBySaleId(saleId);
 
-      Navigator.of(context).push(
+        double amount = await paymentRepository.getPaymentsBySaleIdAmount(
+          saleId,
+        );
+
+        if (allPayments.isNotEmpty) {
+          amount = amount - realValue;
+        }
+        var paymentData = Payment(
+          saleId: saleId,
+          method: _formData['paymentTerm'],
+          amount: amount,
+          date: DateTime.now(),
+        );
+        await paymentRepository.registerPayment(paymentData);
+        print('Pagamento registrado com sucesso: ${paymentData.amount}');
+      } catch (e) {
+        print("erro no banco de dados: $e");
+      }
+>>>>>>> origin/main:app/cesta_flow/lib/features/payment/presentation/payment_registration.dart
+
+      Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => PaymentSuccess(
             paymentValue: _formData['paymentValue'],
