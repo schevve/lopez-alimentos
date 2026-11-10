@@ -1,4 +1,3 @@
-import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
@@ -7,8 +6,9 @@ import 'package:flutter/material.dart';
 
 class CustomerEdit extends StatelessWidget {
   final Customer customer;
+  final CustomerRepository? repository;
 
-  const CustomerEdit({super.key, required this.customer});
+  const CustomerEdit({super.key, required this.customer, this.repository});
 
   @override
   Widget build(BuildContext context) {
@@ -21,16 +21,18 @@ class CustomerEdit extends StatelessWidget {
           customer: customer,
           buttonText: 'Salvar alterações',
           title: 'Editar cliente',
-          onSubmit: _updateCustomer,
+          onSubmit: (data) => _updateCustomer(context, data),
         ),
       ),
     );
   }
 
-  Future<void> _updateCustomer(Map<String, dynamic> data) async {
-    final repository = CustomerRepository(dbHelper: DatabaseHelper());
-    final updatedcustomer = Customer(
-      id: customer.id,
+  Future<void> _updateCustomer(
+    BuildContext context,
+    Map<String, dynamic> data,
+  ) async {
+    final customerRepository = repository ?? CustomerRepository();
+    final updatedCustomer = customer.copyWith(
       name: data['nome'],
       dateOfBirth: cleanDate(data['data_nascimento']),
       email: data['email'],
@@ -43,7 +45,10 @@ class CustomerEdit extends StatelessWidget {
       documentCPF: data['cpf'],
       documentRG: data['rg'],
     );
-    await repository.updateCustomer(updatedcustomer);
+    await customerRepository.updateCustomer(updatedCustomer);
+    if (context.mounted) {
+      Navigator.of(context).pop(true);
+    }
   }
 
   DateTime cleanDate(String dateString) {

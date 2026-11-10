@@ -4,7 +4,7 @@ import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/payment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/customer/presentation/customer_details.dart';
-import 'package:cesta_flow/features/customer/presentation/customer_registration.dart';
+import 'package:cesta_flow/features/customer/presentation/customer_edit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -15,6 +15,7 @@ class _CustomerRepository extends CustomerRepository {
     dateOfBirth: DateTime(1990, 1, 2),
     phone: '(45) 99999-0000',
     address: 'Rua das Flores, 10',
+    adress_number: '10',
     city: 'Toledo',
     state: 'PR',
     documentCPF: '123.456.789-01',
@@ -110,7 +111,7 @@ void main() {
     await tester.tap(find.byTooltip('Editar cliente'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(CustomerRegistration), findsOneWidget);
+    expect(find.byType(CustomerEdit), findsOneWidget);
     expect(
       tester
           .widget<TextFormField>(find.byType(TextFormField).first)
@@ -121,6 +122,7 @@ void main() {
       find.byType(TextFormField).first,
       'Cliente atualizado',
     );
+    await tester.ensureVisible(find.text('Salvar alterações'));
     await tester.tap(find.text('Salvar alterações'));
     await tester.pumpAndSettle();
 
