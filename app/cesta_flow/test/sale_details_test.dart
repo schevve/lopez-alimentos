@@ -36,6 +36,7 @@ class _CustomerRepository extends CustomerRepository {
     dateOfBirth: DateTime(1990, 1, 2),
     phone: '(45) 99999-0000',
     address: 'Rua das Flores, 10',
+    adress_number: '10',
     city: 'Toledo',
     state: 'PR',
     documentCPF: '123.456.789-01',

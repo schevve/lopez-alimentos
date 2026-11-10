@@ -6,7 +6,7 @@ import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/payment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
-import 'package:cesta_flow/features/customer/presentation/customer_registration.dart';
+import 'package:cesta_flow/features/customer/presentation/customer_edit.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 
@@ -78,13 +78,11 @@ class _CustomerDetailsState extends State<CustomerDetails> {
     await details;
   }
 
-  Future<void> _editCustomer() async {
+  Future<void> _editCustomer(Customer customer) async {
     final updated = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => CustomerRegistration(
-          customerId: widget.customerId,
-          repository: _customerRepository,
-        ),
+        builder: (_) =>
+            CustomerEdit(customer: customer, repository: _customerRepository),
       ),
     );
     if (updated == true && mounted) _reload();
@@ -259,7 +257,7 @@ class _CustomerDetailsState extends State<CustomerDetails> {
                 ),
                 IconButton(
                   tooltip: 'Editar cliente',
-                  onPressed: _editCustomer,
+                  onPressed: () => _editCustomer(customer),
                   icon: const Icon(Icons.edit_outlined),
                 ),
               ],
