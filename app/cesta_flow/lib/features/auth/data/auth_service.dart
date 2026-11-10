@@ -11,21 +11,12 @@ class LoginException implements Exception {
   String toString() => message;
 }
 
-/// Concentra a autenticação com o Supabase Auth.
-///
-/// O Supabase Auth autentica por e-mail + senha, mas o app usa CPF + senha.
-/// Por isso o CPF (somente dígitos) é convertido em um e-mail interno, por
-/// exemplo `12345678901@cestaflow.example.com`. Os usuários precisam estar
-/// cadastrados no Supabase (Authentication → Users) com esse e-mail.
-///
-/// Se o grupo preferir outro formato (ex.: buscar o e-mail numa tabela),
-/// basta alterar [cpfParaEmail].
+/// Concentra a autenticação com o Supabase Auth (e-mail + senha).
 class AuthService {
   AuthService._();
 
   static final AuthService instance = AuthService._();
 
-  static const String _dominioEmail = 'cestaflow.example.com';
   static const String _chaveLembrarMe = 'auth_lembrar_me';
 
   SupabaseClient get _client => Supabase.instance.client;
@@ -33,21 +24,15 @@ class AuthService {
   /// Há uma sessão ativa (usuário logado)?
   bool get estaLogado => _client.auth.currentSession != null;
 
-  /// Converte um CPF (com ou sem máscara) no e-mail usado no Supabase Auth.
-  static String cpfParaEmail(String cpf) {
-    final digitos = cpf.replaceAll(RegExp(r'\D'), '');
-    return '$digitos@$_dominioEmail';
-  }
-
-  /// Faz login com CPF e senha. Lança [LoginException] em caso de falha.
+  /// Faz login com e-mail e senha. Lança [LoginException] em caso de falha.
   Future<void> entrar({
-    required String cpf,
+    required String email,
     required String senha,
     required bool lembrarMe,
   }) async {
     try {
       await _client.auth.signInWithPassword(
-        email: cpfParaEmail(cpf),
+        email: email.trim(),
         password: senha,
       );
     } on AuthRetryableFetchException {
@@ -91,7 +76,7 @@ class AuthService {
   String _traduzirErro(AuthException e) {
     switch (e.code) {
       case 'invalid_credentials':
-        return 'CPF ou senha incorretos.';
+        return 'E-mail ou senha incorretos.';
       case 'email_not_confirmed':
         return 'Esta conta ainda não foi ativada. Procure o administrador.';
       case 'over_request_rate_limit':
@@ -102,7 +87,7 @@ class AuthService {
     }
     // Versões antigas do servidor não enviam `code`, só a mensagem.
     if (e.message.toLowerCase().contains('invalid login credentials')) {
-      return 'CPF ou senha incorretos.';
+      return 'E-mail ou senha incorretos.';
     }
     return 'Não foi possível entrar. Tente novamente.';
   }

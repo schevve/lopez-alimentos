@@ -1,6 +1,6 @@
 // Widgets e formatação nativos do Flutter.
 import 'package:cesta_flow/features/auth/data/auth_service.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'widgets/logo_widget.dart';
@@ -20,7 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Controllers e estado dos controles do formulário.
   final _formKey = GlobalKey<FormState>();
-  final _cpfController = TextEditingController();
+  final _emailController = TextEditingController();
   final _senhaController = TextEditingController();
   bool _senhaVisivel = false;
   bool _lembrarMe = true;
@@ -29,16 +29,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _cpfController.dispose();
+    _emailController.dispose();
     _senhaController.dispose();
     super.dispose();
   }
 
-  // O CPF é digitado com máscara; para validar, só contam os 11 dígitos.
-  String? _validarCpf(String? valor) {
-    final digitos = (valor ?? '').replaceAll(RegExp(r'\D'), '');
-    if (digitos.isEmpty) return 'Informe seu CPF.';
-    if (digitos.length != 11) return 'O CPF deve ter 11 dígitos.';
+  // Validação simples de formato; quem confere se o e-mail existe é o servidor.
+  String? _validarEmail(String? valor) {
+    final email = (valor ?? '').trim();
+    if (email.isEmpty) return 'Informe seu e-mail.';
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      return 'Informe um e-mail válido.';
+    }
     return null;
   }
 
@@ -57,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _carregando = true);
     try {
       await AuthService.instance.entrar(
-        cpf: _cpfController.text,
+        email: _emailController.text,
         senha: _senhaController.text,
         lembrarMe: _lembrarMe,
       );
@@ -206,20 +208,23 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 32),
-                                  _label('CPF'),
+                                  _label('E-mail'),
                                   _campoComSombra(
                                     TextFormField(
-                                      controller: _cpfController,
-                                      keyboardType: TextInputType.number,
+                                      controller: _emailController,
+                                      keyboardType: TextInputType.emailAddress,
                                       textInputAction: TextInputAction.next,
+                                      autocorrect: false,
+                                      enableSuggestions: false,
                                       inputFormatters: [
-                                        FilteringTextInputFormatter.digitsOnly,
-                                        LengthLimitingTextInputFormatter(11),
-                                        _CpfInputFormatter(),
+                                        // Impede espaços digitados sem querer.
+                                        FilteringTextInputFormatter.deny(
+                                          RegExp(r'\s'),
+                                        ),
                                       ],
-                                      validator: _validarCpf,
+                                      validator: _validarEmail,
                                       decoration: _decoracaoCampo(
-                                        placeholder: '123.456.456-78',
+                                        placeholder: 'seu@email.com',
                                       ),
                                     ),
                                   ),
@@ -417,29 +422,6 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         },
       ),
-    );
-  }
-}
-
-// Máscara incremental preservando a posição do cursor ao editar o CPF.
-class _CpfInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digits = newValue.text;
-    final buffer = StringBuffer();
-    var cursor = 0;
-    for (var i = 0; i < digits.length; i++) {
-      if (i == 3 || i == 6) buffer.write('.');
-      if (i == 9) buffer.write('-');
-      buffer.write(digits[i]);
-      if (i < newValue.selection.extentOffset) cursor = buffer.length;
-    }
-    return TextEditingValue(
-      text: buffer.toString(),
-      selection: TextSelection.collapsed(offset: cursor),
     );
   }
 }
