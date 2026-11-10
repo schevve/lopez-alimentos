@@ -1,11 +1,7 @@
-
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:cesta_flow/core/data/local/db_helper.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-import 'package:sqflite/sqflite.dart';
-import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -20,9 +16,26 @@ import 'package:cesta_flow/features/shared/bottom_bar.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializa o banco SQLite para Flutter Web.
-  if (kIsWeb) {
-    databaseFactory = databaseFactoryFfiWeb;
+  // Só libera as telas depois de concluir a migração local.
+  try {
+    await DatabaseHelper().store;
+  } catch (error) {
+    runApp(
+      MaterialApp(
+        home: Scaffold(
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: SelectableText(
+                'Não foi possível abrir o banco local. '
+                'Os dados anteriores foram preservados.\n\n$error',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    return;
   }
 
   // Inicializa o Supabase.
@@ -62,7 +75,7 @@ class _MainAppState extends State<MainApp> {
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: PaymentRegistration(),
+      home: MainScreen(),
     );
   }
 }
@@ -126,40 +139,19 @@ class _MainScreenState extends State<MainScreen> {
         children: [
           const SizedBox(height: 20),
           const NavigationDrawerDestination(
-            icon: Icon(
-              Icons.home_rounded,
-              color: AppColors.white,
-            ),
-            label: Text(
-              'Início',
-              style: TextStyle(color: AppColors.white),
-            ),
+            icon: Icon(Icons.home_rounded, color: AppColors.white),
+            label: Text('Início', style: TextStyle(color: AppColors.white)),
           ),
           const NavigationDrawerDestination(
-            icon: Icon(
-              Icons.shopping_cart_rounded,
-              color: AppColors.white,
-            ),
-            label: Text(
-              'Vendas',
-              style: TextStyle(color: AppColors.white),
-            ),
+            icon: Icon(Icons.shopping_cart_rounded, color: AppColors.white),
+            label: Text('Vendas', style: TextStyle(color: AppColors.white)),
           ),
           const NavigationDrawerDestination(
-            icon: Icon(
-              Icons.people_rounded,
-              color: AppColors.white,
-            ),
-            label: Text(
-              'Clientes',
-              style: TextStyle(color: AppColors.white),
-            ),
+            icon: Icon(Icons.people_rounded, color: AppColors.white),
+            label: Text('Clientes', style: TextStyle(color: AppColors.white)),
           ),
           const NavigationDrawerDestination(
-            icon: Icon(
-              Icons.upload_rounded,
-              color: AppColors.white,
-            ),
+            icon: Icon(Icons.upload_rounded, color: AppColors.white),
             label: Text(
               'Exportar Dados',
               style: TextStyle(color: AppColors.white),

@@ -36,7 +36,7 @@ class CustomerEdit extends StatelessWidget {
       email: data['email'],
       phone: data['telefone'],
       address: data['rua'],
-      adress_number: data['numero'],
+      adressNumber: data['numero'],
       city: data['cidade'],
       state: data['estado'],
       cep: data['cep'],

@@ -1,104 +1,106 @@
-import 'package:cesta_flow/core/data/local/db_helper.dart';
-import 'package:cesta_flow/core/data/local/model/sale_model.dart';
-import 'package:sqflite/sqflite.dart';
+import '../../../../objectbox.g.dart';
+import '../db_helper.dart';
+import '../model/customer_model.dart';
+import '../model/sale_model.dart';
+import '../model/payment_model.dart';
 
 class SaleRepository {
   final DatabaseHelper _dbHelper;
-
   SaleRepository({DatabaseHelper? dbHelper})
     : _dbHelper = dbHelper ?? DatabaseHelper();
 
-  Future<int> registerSale(Sale sale) async {
-    final db = await _dbHelper.database;
-    return await db.insert(
-      'sales',
-      sale.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+  Future<int> registerSale(Sale value) async {
+    final db = await _dbHelper.store;
+    return db.runInTransaction(TxMode.write, () {
+      if (db.box<Customer>().get(value.customerId) == null) {
+        throw StateError('Cliente não encontrado.');
+      }
+      return db.box<Sale>().put(value);
+    });
   }
 
-  Future<Sale?> getSaleById(int id) async {
-    final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'sales',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    if (maps.isNotEmpty) {
-      return Sale.fromMap(maps.first);
+  Future<Sale?> getSaleById(int id) async =>
+      (await _dbHelper.store).box<Sale>().get(id);
+  Future<List<Sale>> getAllSales() async =>
+      (await _dbHelper.store).box<Sale>().getAll();
+  Future<int> updateSale(Sale value) async {
+    if (value.id == null || value.id == 0) {
+      throw ArgumentError('ID obrigatório para atualizar.');
     }
-    return null;
+    final db = await _dbHelper.store;
+    return db.runInTransaction(TxMode.write, () {
+      if (db.box<Sale>().get(value.id!) == null) return 0;
+      if (db.box<Customer>().get(value.customerId) == null) {
+        throw StateError('Cliente não encontrado.');
+      }
+      db.box<Sale>().put(value, mode: PutMode.update);
+      return 1;
+    });
   }
 
   Future<List<Sale>> getSalesByCustomerId(int customerId) async {
-    final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'sales',
-      where: 'customer_id = ?',
-      whereArgs: [customerId],
-      orderBy: 'date DESC, id DESC',
-    );
-    return maps.map((map) => Sale.fromMap(map)).toList();
+    final db = await _dbHelper.store;
+    final query = db
+        .box<Sale>()
+        .query(Sale_.customerId.equals(customerId))
+        .order(Sale_.date, flags: Order.descending)
+        .order(Sale_.id, flags: Order.descending)
+        .build();
+    try {
+      return query.find();
+    } finally {
+      query.close();
+    }
   }
 
   @Deprecated('Use getSalesByCustomerId instead.')
-  Future<List<Sale>> getSalesBycustumerId(int custumerId) =>
-      getSalesByCustomerId(custumerId);
-
-  Future<List<Sale>> getAllSales() async {
-    final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query('sales');
-    return maps.map((map) => Sale.fromMap(map)).toList();
-  }
+  Future<List<Sale>> getSalesBycustumerId(int id) => getSalesByCustomerId(id);
 
   Future<List<Sale>> getLatestSales({int limit = 5}) async {
-    final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'sales',
-      orderBy: 'date DESC',
-      limit: limit,
-    );
-    return maps.map((map) => Sale.fromMap(map)).toList();
+    if (limit <= 0) return [];
+    final db = await _dbHelper.store;
+    final query = db
+        .box<Sale>()
+        .query()
+        .order(Sale_.date, flags: Order.descending)
+        .build();
+    try {
+      query.limit = limit;
+      return query.find();
+    } finally {
+      query.close();
+    }
   }
 
   Future<double> getTotalSalesAmountSince(DateTime date) async {
-    final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> result = await db.rawQuery(
-      'SELECT COALESCE(SUM(price * quantity), 0) AS total '
-      'FROM sales WHERE date >= ?',
-      [date.toIso8601String()],
-    );
-    return (result.first['total'] as num).toDouble();
+    final sales = await getAllSales();
+    return sales
+        .where((s) => !s.date.isBefore(date))
+        .fold<double>(0, (total, sale) => total + sale.price * sale.quantity);
   }
 
   Future<int> getPendingCustomersCount() async {
-    final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> result = await db.rawQuery('''
-      SELECT COUNT(DISTINCT s.customer_id) AS total
-      FROM sales s
-      WHERE NOT EXISTS (
-        SELECT 1 FROM payments p WHERE p.sale_id = s.id
-      )
-    ''');
-    return (result.first['total'] as num).toInt();
-  }
-
-  Future<int> updateSale(Sale sale) async {
-    if (sale.id == null) {
-      throw ArgumentError('Sale id cannot be null when updating.');
-    }
-    final db = await _dbHelper.database;
-    return await db.update(
-      'sales',
-      sale.toMap(),
-      where: 'id = ?',
-      whereArgs: [sale.id],
-    );
+    final db = await _dbHelper.store;
+    final paidSales = db.box<Payment>().getAll().map((p) => p.saleId).toSet();
+    return db
+        .box<Sale>()
+        .getAll()
+        .where((s) => !paidSales.contains(s.id))
+        .map((s) => s.customerId)
+        .toSet()
+        .length;
   }
 
   Future<int> deleteSale(int id) async {
-    final db = await _dbHelper.database;
-    return await db.delete('sales', where: 'id = ?', whereArgs: [id]);
+    final db = await _dbHelper.store;
+    return db.runInTransaction(TxMode.write, () {
+      final query = db.box<Payment>().query(Payment_.saleId.equals(id)).build();
+      try {
+        query.remove();
+      } finally {
+        query.close();
+      }
+      return db.box<Sale>().remove(id) ? 1 : 0;
+    });
   }
 }

@@ -96,7 +96,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
       email: data['email'],
       phone: data['telefone'],
       address: data['rua'],
-      adress_number: data['numero'],
+      adressNumber: data['numero'],
       city: data['cidade'],
       state: data['estado'],
       cep: data['cep'],

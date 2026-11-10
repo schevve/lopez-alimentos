@@ -171,7 +171,7 @@ class _CustomerFormState extends State<CustomerForm> {
                 ),
 
                 TextFormField(
-                  initialValue: customer?.adress_number ?? '',
+                  initialValue: customer?.adressNumber ?? '',
                   decoration: InputDecoration(
                     labelText: 'Número *',
                     border: OutlineInputBorder(

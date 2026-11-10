@@ -1,0 +1,192 @@
+{
+  "_note1": "KEEP THIS FILE! Check it into a version control system (VCS) like git.",
+  "_note2": "ObjectBox manages crucial IDs for your object model. See docs for details.",
+  "_note3": "If you have VCS merge conflicts, you must resolve them according to ObjectBox docs.",
+  "entities": [
+    {
+      "id": "1:4701824812835680819",
+      "lastPropertyId": "13:6994353464100272602",
+      "name": "Customer",
+      "properties": [
+        {
+          "id": "1:1459838629662259351",
+          "name": "id",
+          "type": 6,
+          "flags": 129
+        },
+        {
+          "id": "2:6034997283830943667",
+          "name": "name",
+          "type": 9
+        },
+        {
+          "id": "3:4607966990396995017",
+          "name": "dateOfBirth",
+          "type": 12
+        },
+        {
+          "id": "4:6764854853707729600",
+          "name": "email",
+          "type": 9
+        },
+        {
+          "id": "5:5339693529484732173",
+          "name": "phone",
+          "type": 9
+        },
+        {
+          "id": "6:7481537747433887838",
+          "name": "address",
+          "type": 9
+        },
+        {
+          "id": "7:818118996813678362",
+          "name": "adress_number",
+          "type": 9
+        },
+        {
+          "id": "8:3597799477932496997",
+          "name": "city",
+          "type": 9
+        },
+        {
+          "id": "9:7642851156085785107",
+          "name": "state",
+          "type": 9
+        },
+        {
+          "id": "10:8841929847583247446",
+          "name": "cep",
+          "type": 9
+        },
+        {
+          "id": "11:6364125791057374228",
+          "name": "documentCPF",
+          "indexId": "1:4076362518486434024",
+          "type": 9,
+          "flags": 2080
+        },
+        {
+          "id": "12:1615331130241973780",
+          "name": "documentRG",
+          "indexId": "2:3465595113863357680",
+          "type": 9,
+          "flags": 2080
+        },
+        {
+          "id": "13:6994353464100272602",
+          "name": "score",
+          "type": 6
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "2:8234913649267644606",
+      "lastPropertyId": "1:2379442855627600136",
+      "name": "MigrationState",
+      "properties": [
+        {
+          "id": "1:2379442855627600136",
+          "name": "id",
+          "type": 6,
+          "flags": 129
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "3:1939311216846362540",
+      "lastPropertyId": "5:8689637147799756084",
+      "name": "Payment",
+      "properties": [
+        {
+          "id": "1:2180209081616168822",
+          "name": "id",
+          "type": 6,
+          "flags": 129
+        },
+        {
+          "id": "2:1398062338006626978",
+          "name": "saleId",
+          "indexId": "3:4948995821682631085",
+          "type": 6,
+          "flags": 8
+        },
+        {
+          "id": "3:1352404316521043338",
+          "name": "method",
+          "type": 9
+        },
+        {
+          "id": "4:6144590198637850059",
+          "name": "amount",
+          "type": 8
+        },
+        {
+          "id": "5:8689637147799756084",
+          "name": "date",
+          "type": 12
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "4:5530438478604448331",
+      "lastPropertyId": "7:7821167298407210678",
+      "name": "Sale",
+      "properties": [
+        {
+          "id": "1:1764705107315131026",
+          "name": "id",
+          "type": 6,
+          "flags": 129
+        },
+        {
+          "id": "2:2959096317426582125",
+          "name": "customerId",
+          "indexId": "4:4838837909162506486",
+          "type": 6,
+          "flags": 8
+        },
+        {
+          "id": "3:821365319983928006",
+          "name": "productName",
+          "type": 9
+        },
+        {
+          "id": "4:2477251990108415896",
+          "name": "price",
+          "type": 8
+        },
+        {
+          "id": "5:9054271273497702786",
+          "name": "quantity",
+          "type": 6
+        },
+        {
+          "id": "6:1834108804518327479",
+          "name": "date",
+          "type": 12
+        },
+        {
+          "id": "7:7821167298407210678",
+          "name": "description",
+          "type": 9
+        }
+      ],
+      "relations": []
+    }
+  ],
+  "lastEntityId": "4:5530438478604448331",
+  "lastIndexId": "4:4838837909162506486",
+  "lastRelationId": "0:0",
+  "lastSequenceId": "0:0",
+  "modelVersion": 5,
+  "modelVersionParserMinimum": 5,
+  "retiredEntityUids": [],
+  "retiredIndexUids": [],
+  "retiredPropertyUids": [],
+  "retiredRelationUids": [],
+  "version": 1
+}
