@@ -1,3 +1,5 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../../../objectbox.g.dart';
 import '../db_helper.dart';
 import '../model/customer_model.dart';
@@ -10,9 +12,16 @@ class CustomerRepository {
     : _dbHelper = dbHelper ?? DatabaseHelper();
 
   Future<int> registerCustomer(Customer value) async {
+    bool isSynced = true;
+    try {
+      Supabase.instance.client.from('customers').insert(value.toMap());
+    } catch (_) {
+      isSynced = false;
+    }
     final db = await _dbHelper.store;
+    final valueAfterSync = value.copyWith(isSynced: isSynced);
     return db.runInTransaction(TxMode.write, () {
-      return db.box<Customer>().put(value);
+      return db.box<Customer>().put(valueAfterSync);
     });
   }
 
@@ -24,11 +33,21 @@ class CustomerRepository {
     if (value.id == null || value.id == 0) {
       throw ArgumentError('ID obrigatório para atualizar.');
     }
+    bool isSynced = true;
+    try {
+      Supabase.instance.client
+          .from('customers')
+          .update(value.toMap())
+          .eq('id', value.uuid);
+    } catch (_) {
+      isSynced = false;
+    }
+    final valueAfterSync = value.copyWith(isSynced: isSynced);
     final db = await _dbHelper.store;
     return db.runInTransaction(TxMode.write, () {
-      if (db.box<Customer>().get(value.id!) == null) return 0;
+      if (db.box<Customer>().get(valueAfterSync.id!) == null) return 0;
 
-      db.box<Customer>().put(value, mode: PutMode.update);
+      db.box<Customer>().put(valueAfterSync, mode: PutMode.update);
       return 1;
     });
   }
