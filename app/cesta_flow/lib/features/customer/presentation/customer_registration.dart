@@ -4,6 +4,7 @@ import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:cesta_flow/features/shared/customer_form.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:objectbox/objectbox.dart';
 
 class CustomerRegistration extends StatefulWidget {
   const CustomerRegistration({super.key, this.customerId, this.repository});
@@ -82,35 +83,70 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
       ),
 
       body: CustomerForm(
+        customer: _cliente,
         onSubmit: _registerCustomer,
-        buttonText: "Registrar cliente",
-        title: "Registrar cliente",
+        buttonText: widget.customerId == null
+            ? 'Registrar cliente'
+            : 'Salvar alterações',
+        title: widget.customerId == null
+            ? 'Registrar cliente'
+            : 'Editar cliente',
       ),
     );
   }
 
   Future<void> _registerCustomer(Map<String, dynamic> data) async {
-    final customer = Customer(
-      name: data['nome'],
-      dateOfBirth: cleanDate(data['data_nascimento']),
-      email: data['email'],
-      phone: data['telefone'],
-      address: data['rua'],
-      adressNumber: data['numero'],
-      city: data['cidade'],
-      state: data['estado'],
-      cep: data['cep'],
-      documentCPF: data['cpf'],
-      documentRG: data['rg'],
-    );
-    await _customerRepository.registerCustomer(customer);
-    print('Cliente registrado com sucesso: ${customer.name}');
+    try {
+      final customer = Customer(
+        id: _cliente?.id,
+        name: data['nome'],
+        dateOfBirth: cleanDate(data['data_nascimento']),
+        email: data['email'],
+        phone: data['telefone'],
+        address: data['rua'],
+        adressNumber: data['numero'],
+        city: data['cidade'],
+        state: data['estado'],
+        cep: data['cep'],
+        documentCPF: data['cpf'],
+        documentRG: data['rg'],
+        score: _cliente?.score,
+      );
+
+      if (widget.customerId == null) {
+        final id = await _customerRepository.registerCustomer(customer);
+        final savedCustomer = await _customerRepository.getCustomerById(id);
+        if (savedCustomer == null) {
+          throw StateError('Cliente salvo não foi encontrado.');
+        }
+        if (mounted) {
+          Navigator.of(context).pop(savedCustomer);
+        }
+        return;
+      }
+
+      final updated = await _customerRepository.updateCustomer(customer);
+      if (updated == 0) {
+        throw StateError('Cliente não encontrado para atualização.');
+      }
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+    } on UniqueViolationException {
+      _showSaveError('Já existe um cliente cadastrado com este CPF ou RG.');
+    } catch (error, stackTrace) {
+      debugPrint('Erro ao salvar cliente: $error\n$stackTrace');
+      _showSaveError('Não foi possível salvar o cliente. Tente novamente.');
+    }
+  }
+
+  void _showSaveError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 }
-
-String _formatDate(DateTime date) =>
-    '${date.day.toString().padLeft(2, '0')}/'
-    '${date.month.toString().padLeft(2, '0')}/${date.year}';
 
 DateTime cleanDate(String dateString) {
   final parts = dateString.split('/');

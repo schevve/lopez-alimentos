@@ -122,6 +122,7 @@ void main() {
       find.byType(TextFormField).first,
       'Cliente atualizado',
     );
+    await tester.ensureVisible(find.text('Salvar alterações'));
     await tester.tap(find.text('Salvar alterações'));
     await tester.pumpAndSettle();
 

@@ -5,6 +5,7 @@ import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 
 import '../../shared/top_bar.dart';
 import 'customer_registration.dart';
+
 import 'package:cesta_flow/features/sale/presentation/sale_registration.dart';
 
 import 'widgets/cliente_card.dart';
@@ -54,10 +55,20 @@ class _ClientesScreenState extends State<ClientesScreen> {
   }
 
   Future<void> _novoCliente() async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(builder: (_) => const CustomerRegistration()),
+    final customer = await Navigator.of(context).push<Customer>(
+      MaterialPageRoute(
+        builder: (_) => CustomerRegistration(repository: _repository),
+      ),
     );
-    if (mounted) _recarregar();
+    if (!mounted) return;
+    _recarregar();
+    if (customer != null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('${customer.name} cadastrado com sucesso.')),
+        );
+    }
   }
 
   // Busca local por nome (sem acentos) ou CPF, combinada com o filtro de score.
@@ -112,9 +123,9 @@ class _ClientesScreenState extends State<ClientesScreen> {
     }
 
     if (acao == 'Nova Venda') {
-      await Navigator.of(context).push<void>(
-        MaterialPageRoute(builder: (_) => const SaleRegistration()),
-      );
+      await Navigator.of(
+        context,
+      ).push<void>(MaterialPageRoute(builder: (_) => const SaleRegistration()));
       return;
     }
 
@@ -238,7 +249,11 @@ class _ClientesScreenState extends State<ClientesScreen> {
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.person_add_alt_1_outlined, color: Colors.white, size: 26),
+                  Icon(
+                    Icons.person_add_alt_1_outlined,
+                    color: Colors.white,
+                    size: 26,
+                  ),
                   SizedBox(width: 8),
                   Text(
                     'Novo Cliente',
