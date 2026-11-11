@@ -29,9 +29,9 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'app_database.db');
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _onCreate,
-      onUpgrade: _onUpgrade,
+      onUpgrade: onUpgrade,
       onConfigure: _onConfigure,
     );
   }
@@ -47,7 +47,7 @@ class DatabaseHelper {
   }
 
   // Handle schema migrations across database versions
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+  Future<void> onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 3) {
       // Ensure all tables exist for upgrades from earlier versions where tables were missing
       await _createTables(db);
@@ -55,15 +55,20 @@ class DatabaseHelper {
     if (oldVersion < 4) {
       await _migratePaymentsToSales(db);
     }
-    if (oldVersion < 4) {
-      // Bases antigas preservam os clientes; o novo campo começa como NULL.
-      final columns = await db.rawQuery('PRAGMA table_info(customers)');
-      if (!columns.any((column) => column['name'] == 'score')) {
-        await db.execute('ALTER TABLE customers ADD COLUMN score INTEGER');
-      }
+    final customerColumns = await db.rawQuery('PRAGMA table_info(customers)');
+    if (!customerColumns.any((column) => column['name'] == 'score')) {
+      await db.execute('ALTER TABLE customers ADD COLUMN score INTEGER');
+    }
+    if (!customerColumns.any((column) => column['name'] == 'adress_number')) {
+      await db.execute(
+        "ALTER TABLE customers ADD COLUMN adress_number TEXT NOT NULL DEFAULT ''",
+      );
     }
     if (oldVersion < 5) {
       await _migrateToInstallments(db);
+    }
+    if (oldVersion < 6) {
+      await _migrateInstallmentPayments(db);
     }
   }
 
@@ -109,6 +114,9 @@ class DatabaseHelper {
         number INTEGER NOT NULL,
         amount REAL NOT NULL,
         due_date TEXT,
+        paid_amount REAL NOT NULL DEFAULT 0,
+        paid_at TEXT,
+        payment_method TEXT,
         FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE CASCADE
       )
     ''');
@@ -154,6 +162,9 @@ class DatabaseHelper {
         number INTEGER NOT NULL,
         amount REAL NOT NULL,
         due_date TEXT,
+        paid_amount REAL NOT NULL DEFAULT 0,
+        paid_at TEXT,
+        payment_method TEXT,
         FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE CASCADE
       )
     ''');
@@ -175,52 +186,80 @@ class DatabaseHelper {
         SELECT 1 FROM installments i WHERE i.sale_id = s.id
       )
     ''');
-    await db.execute('''
-      UPDATE payments
-      SET installment_id = (
-        SELECT i.id
-        FROM installments i
-        WHERE i.sale_id = payments.sale_id
-        ORDER BY i.number, i.id
-        LIMIT 1
-      )
-      WHERE installment_id IS NULL
-        AND EXISTS (
-          SELECT 1 FROM installments i WHERE i.sale_id = payments.sale_id
-        )
-    ''');
   }
 
   Future<void> _migratePaymentsToSales(Database db) async {
+    final columns = await db.rawQuery('PRAGMA table_info(payments)');
+    if (columns.isEmpty ||
+        columns.any((column) => column['name'] == 'sale_id')) {
+      return;
+    }
+
+    await db.execute('ALTER TABLE payments ADD COLUMN sale_id INTEGER');
+    if (columns.any((column) => column['name'] == 'customer_id')) {
+      await db.execute('''
+        UPDATE payments
+        SET sale_id = (
+          SELECT s.id
+          FROM sales s
+          WHERE s.customer_id = payments.customer_id
+          ORDER BY s.date DESC, s.id DESC
+          LIMIT 1
+        )
+        WHERE sale_id IS NULL
+          AND EXISTS (
+            SELECT 1 FROM sales s
+            WHERE s.customer_id = payments.customer_id
+          )
+      ''');
+    }
+  }
+
+  Future<void> _migrateInstallmentPayments(Database db) async {
+    final columns = await db.rawQuery('PRAGMA table_info(installments)');
+    if (!columns.any((column) => column['name'] == 'paid_amount')) {
+      await db.execute(
+        'ALTER TABLE installments '
+        'ADD COLUMN paid_amount REAL NOT NULL DEFAULT 0',
+      );
+    }
+    if (!columns.any((column) => column['name'] == 'paid_at')) {
+      await db.execute('ALTER TABLE installments ADD COLUMN paid_at TEXT');
+    }
+    if (!columns.any((column) => column['name'] == 'payment_method')) {
+      await db.execute(
+        'ALTER TABLE installments ADD COLUMN payment_method TEXT',
+      );
+    }
+
+    final paymentColumns = await db.rawQuery('PRAGMA table_info(payments)');
+    if (!paymentColumns.any((column) => column['name'] == 'installment_id') ||
+        !paymentColumns.any((column) => column['name'] == 'amount') ||
+        !paymentColumns.any((column) => column['name'] == 'date')) {
+      return;
+    }
+
     await db.execute('''
-      CREATE TABLE payments_new (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sale_id INTEGER NOT NULL,
-        method TEXT NOT NULL,
-        amount REAL NOT NULL,
-        date TEXT NOT NULL,
-        FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE CASCADE
-      )
+      UPDATE installments
+      SET paid_amount = COALESCE((
+            SELECT SUM(p.amount)
+            FROM payments p
+            WHERE p.installment_id = installments.id
+          ), 0),
+          paid_at = (
+            SELECT p.date
+            FROM payments p
+            WHERE p.installment_id = installments.id
+            ORDER BY p.date DESC, p.id DESC
+            LIMIT 1
+          ),
+          payment_method = (
+            SELECT p.method
+            FROM payments p
+            WHERE p.installment_id = installments.id
+            ORDER BY p.date DESC, p.id DESC
+            LIMIT 1
+          )
     ''');
-    await db.execute('''
-      INSERT INTO payments_new (id, sale_id, method, amount, date)
-      SELECT p.id,
-             (
-               SELECT s.id
-               FROM sales s
-               WHERE s.customer_id = p.customer_id
-               ORDER BY s.date DESC, s.id DESC
-               LIMIT 1
-             ),
-             p.method,
-             p.amount,
-             p.date
-      FROM payments p
-      WHERE EXISTS (
-        SELECT 1 FROM sales s WHERE s.customer_id = p.customer_id
-      )
-    ''');
-    await db.execute('DROP TABLE payments');
-    await db.execute('ALTER TABLE payments_new RENAME TO payments');
   }
 }

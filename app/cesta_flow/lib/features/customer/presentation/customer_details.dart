@@ -53,7 +53,7 @@ class _CustomerDetailsState extends State<CustomerDetails> {
 
     final sales = await _saleRepository.getSalesByCustomerId(widget.customerId);
     final saleIds = sales.map((sale) => sale.id).whereType<int>().toList();
-    final paymentTotals = await _paymentRepository.getPaymentTotalsBySaleIds(
+    final paymentTotals = await _paymentRepository.getPaidTotalsBySaleIds(
       saleIds,
     );
 
@@ -187,8 +187,7 @@ class _CustomerDetailsState extends State<CustomerDetails> {
               const _SectionTitle(title: 'Vendas com saldo pendente'),
               const SizedBox(height: 6),
               const Text(
-                'O sistema registra pagamentos por venda, mas não possui '
-                'parcelas ou datas de vencimento.',
+                'Consulte as parcelas e os recebimentos nos detalhes de cada venda.',
                 style: TextStyle(color: Color(0xFF59665E), height: 1.4),
               ),
               const SizedBox(height: 12),

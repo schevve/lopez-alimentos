@@ -3,7 +3,6 @@ import 'package:cesta_flow/core/data/local/model/installment_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
-import 'package:cesta_flow/core/data/local/repository/payment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_details.dart';
 import 'package:flutter/material.dart';
@@ -24,25 +23,12 @@ class _SaleRepository extends SaleRepository {
   Future<Sale?> getSaleById(int id) async => sale?.id == id ? sale : null;
 }
 
-class _PaymentRepository extends PaymentRepository {
-  _PaymentRepository({
-    this.totalPaid = 40,
-    this.installmentTotals = const {21: 40},
-  });
-
-  final double totalPaid;
-  final Map<int, double> installmentTotals;
-
-  @override
-  Future<double> getPaymentsBySaleIdAmount(int saleId) async => totalPaid;
-
-  @override
-  Future<Map<int, double>> getPaymentTotalsByInstallmentIds(
-    List<int> installmentIds,
-  ) async => installmentTotals;
-}
-
 class _InstallmentRepository extends InstallmentRepository {
+  _InstallmentRepository({this.firstPaid = 40, this.secondPaid = 0});
+
+  final double firstPaid;
+  final double secondPaid;
+
   @override
   Future<List<Installment>> getInstallmentsBySaleId(int saleId) async => [
     Installment(
@@ -51,6 +37,9 @@ class _InstallmentRepository extends InstallmentRepository {
       number: 1,
       amount: 50,
       dueDate: DateTime(2026, 11, 1),
+      paidAmount: firstPaid,
+      paidAt: firstPaid > 0 ? DateTime(2026, 11, 2) : null,
+      paymentMethod: firstPaid > 0 ? 'Pix' : null,
     ),
     Installment(
       id: 22,
@@ -58,6 +47,9 @@ class _InstallmentRepository extends InstallmentRepository {
       number: 2,
       amount: 50,
       dueDate: DateTime(2026, 12, 1),
+      paidAmount: secondPaid,
+      paidAt: secondPaid > 0 ? DateTime(2026, 12, 1) : null,
+      paymentMethod: secondPaid > 0 ? 'Dinheiro' : null,
     ),
   ];
 }
@@ -84,7 +76,6 @@ void main() {
         home: SaleDetails(
           saleId: 11,
           saleRepository: _SaleRepository(),
-          paymentRepository: _PaymentRepository(),
           customerRepository: _CustomerRepository(),
           installmentRepository: _InstallmentRepository(),
         ),
@@ -122,7 +113,6 @@ void main() {
         home: SaleDetails(
           saleId: 999,
           saleRepository: _SaleRepository()..sale = null,
-          paymentRepository: _PaymentRepository(),
           customerRepository: _CustomerRepository(),
           installmentRepository: _InstallmentRepository(),
         ),
@@ -142,12 +132,11 @@ void main() {
         home: SaleDetails(
           saleId: 11,
           saleRepository: _SaleRepository(),
-          paymentRepository: _PaymentRepository(
-            totalPaid: 100,
-            installmentTotals: const {21: 50, 22: 50},
-          ),
           customerRepository: _CustomerRepository(),
-          installmentRepository: _InstallmentRepository(),
+          installmentRepository: _InstallmentRepository(
+            firstPaid: 50,
+            secondPaid: 50,
+          ),
         ),
       ),
     );

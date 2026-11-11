@@ -21,6 +21,7 @@ void main() {
             amountCents: 1000,
             paidCents: 1000,
             dueDate: DateTime(2026, 7, 1),
+            paidAt: DateTime(2026, 7, 4),
           ),
           CustomerScoreInstallment(
             id: 12,
@@ -28,6 +29,7 @@ void main() {
             amountCents: 1000,
             paidCents: 500,
             dueDate: DateTime(2026, 10, 1),
+            paidAt: DateTime(2026, 10, 5),
           ),
           CustomerScoreInstallment(
             id: 13,
@@ -35,20 +37,7 @@ void main() {
             amountCents: 1000,
             paidCents: 0,
             dueDate: DateTime(2026, 10, 1),
-          ),
-        ],
-        payments: [
-          CustomerScorePayment(
-            id: 1,
-            installmentId: 11,
-            amountCents: 1000,
-            date: DateTime(2026, 7, 4),
-          ),
-          CustomerScorePayment(
-            id: 2,
-            installmentId: 12,
-            amountCents: 500,
-            date: DateTime(2026, 10, 5),
+            paidAt: null,
           ),
         ],
         asOf: DateTime(2026, 10, 10),
@@ -78,20 +67,7 @@ void main() {
             amountCents: 1000,
             paidCents: 1000,
             dueDate: DateTime(2026, 10, 10),
-          ),
-        ],
-        payments: [
-          CustomerScorePayment(
-            id: 1,
-            installmentId: 11,
-            amountCents: 400,
-            date: DateTime(2026, 10, 1),
-          ),
-          CustomerScorePayment(
-            id: 2,
-            installmentId: 11,
-            amountCents: 600,
-            date: DateTime(2026, 10, 8),
+            paidAt: DateTime(2026, 10, 8),
           ),
         ],
         asOf: DateTime(2026, 10, 10),
@@ -119,7 +95,6 @@ void main() {
         ),
       ],
       installments: const [],
-      payments: const [],
       asOf: DateTime(2026, 10, 10),
     );
 
