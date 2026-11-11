@@ -1,3 +1,5 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../../../objectbox.g.dart';
 import '../db_helper.dart';
 import '../model/sale_model.dart';
@@ -10,11 +12,21 @@ class PaymentRepository {
 
   Future<int> registerPayment(Payment value) async {
     final db = await _dbHelper.store;
+    if (db.box<Sale>().get(value.saleId) == null) {
+      throw StateError('Venda não encontrada.');
+    }
+    bool isSynced = true;
+    try {
+      await Supabase.instance.client.from('payments').insert(value.toMap());
+    } catch (_) {
+      isSynced = false;
+    }
+    final valueAfterSync = value.copyWith(isSynced: isSynced);
     return db.runInTransaction(TxMode.write, () {
-      if (db.box<Sale>().get(value.saleId) == null) {
+      if (db.box<Sale>().get(valueAfterSync.saleId) == null) {
         throw StateError('Venda não encontrada.');
       }
-      return db.box<Payment>().put(value);
+      return db.box<Payment>().put(valueAfterSync);
     });
   }
 
@@ -26,13 +38,23 @@ class PaymentRepository {
     if (value.id == null || value.id == 0) {
       throw ArgumentError('ID obrigatório para atualizar.');
     }
+    bool isSynced = true;
+    try {
+      await Supabase.instance.client
+          .from('payments')
+          .update(value.toMap())
+          .eq('id', value.uuid);
+    } catch (_) {
+      isSynced = false;
+    }
+    final valueAfterSync = value.copyWith(isSynced: isSynced);
     final db = await _dbHelper.store;
     return db.runInTransaction(TxMode.write, () {
-      if (db.box<Payment>().get(value.id!) == null) return 0;
-      if (db.box<Sale>().get(value.saleId) == null) {
+      if (db.box<Payment>().get(valueAfterSync.id!) == null) return 0;
+      if (db.box<Sale>().get(valueAfterSync.saleId) == null) {
         throw StateError('Venda não encontrada.');
       }
-      db.box<Payment>().put(value, mode: PutMode.update);
+      db.box<Payment>().put(valueAfterSync, mode: PutMode.update);
       return 1;
     });
   }
