@@ -1,8 +1,8 @@
 # Banco local ObjectBox
 
-O aplicativo nativo usa ObjectBox para clientes, vendas e pagamentos. O Supabase
-continua configurado como serviço remoto PostgreSQL. Esta mudança não importa
-registros do Supabase nem implementa sincronização com ele.
+O aplicativo nativo usa ObjectBox para clientes, vendas e pagamentos.
+`DatabaseHelper` abre um único store na pasta de suporte do app antes de liberar
+as telas. Os cadastros e consultas usam diretamente esse armazenamento.
 
 ## Executar
 
@@ -14,40 +14,20 @@ flutter devices
 flutter run -d <id-do-dispositivo>
 ```
 
-ObjectBox não suporta Flutter Web. Os registros SQLite que ficaram no navegador
-não são acessíveis pelo aplicativo nativo; precisam de uma exportação/importação
-separada. A migração automática abaixo lê somente o arquivo SQLite da mesma
-instalação nativa. Não desinstale o app nem limpe seus dados antes de migrar.
+ObjectBox não suporta Flutter Web. O Supabase continua configurado como serviço
+remoto PostgreSQL; sua integração com o armazenamento local será feita depois.
 
-## Migração de dados existentes
+## Repositórios e regras
 
-- Na inicialização, `DatabaseHelper` abre ObjectBox na pasta de suporte do app.
-- `SqliteMigration` procura `app_database.db` no diretório padrão do sqflite.
-- A base antiga é aberta somente para leitura, sem executar os antigos upgrades.
-- Clientes, vendas e pagamentos são copiados em uma única transação, preservando
-  IDs, vínculos, CPF/RG únicos, score nulo e o número do endereço (aceita tanto
-  `adress_number` quanto `addres_number`).
-- Um registro interno marca a conclusão dentro da mesma transação. A importação
-  não se repete em futuras aberturas, mesmo se registros forem excluídos no app.
-- O SQLite original não é removido. O sqflite permanece como dependência somente
-  para ler esse arquivo durante a transição.
-- IDs inválidos, vínculos órfãos e pagamentos antigos que tenham apenas
-  `customer_id` interrompem a migração, sem gravação parcial. Não é possível
-  inferir com segurança a venda de um pagamento pelo cliente. Esses vínculos
-  precisam ser resolvidos na origem antes de tentar novamente.
-- Se a migração falhar, o app apresenta o erro e não abre as telas de cadastro.
-  Após corrigir a causa, reinicie o app para tentar novamente.
+As telas usam `CustomerRepository`, `SaleRepository` e `PaymentRepository`.
+As APIs, totais, ordenação, CPF/RG únicos, score opcional e exclusões em cascata
+continuam com a mesma lógica. Os repositórios verificam a existência do cliente
+antes de gravar uma venda e da venda antes de gravar um pagamento.
 
-Não volte simplesmente à versão SQLite depois de cadastrar dados no ObjectBox:
-o arquivo antigo é uma cópia do estado anterior e não recebe novas alterações.
+O critério de clientes pendentes continua sendo a existência de alguma venda
+sem pagamento. A exportação CSV existente lê os registros atuais do ObjectBox.
 
 ## Manutenção
-
-As telas continuam usando `CustomerRepository`, `SaleRepository` e
-`PaymentRepository`. Os repositórios verificam a existência dos pais e fazem a
-exclusão em cascata em transações. Não grave diretamente nas boxes fora dessa
-camada. Os totais e o critério de clientes pendentes mantêm o comportamento
-anterior (cliente com alguma venda sem pagamento).
 
 Após alterar uma entidade:
 
@@ -57,6 +37,9 @@ dart run build_runner build
 
 Versione **lib/objectbox-model.json** e **lib/objectbox.g.dart** junto com as
 entidades. Não apague/recrie o JSON: seus UIDs identificam o esquema persistido.
+Ao excluir entidades, o gerador registra seus UIDs como aposentados para manter
+a identidade das demais entidades.
+
 ObjectBox, seu plugin nativo e seu gerador estão fixados em 5.3.2. O limite do
 build_runner mantém compatibilidade com o gerador estável.
 
@@ -73,20 +56,8 @@ flutter test test/objectbox_storage_test.dart test/customer_model_test.dart test
 
 O modo `--quiet` copia a biblioteca para `lib/`, sem instalá-la no sistema.
 Bibliotecas baixadas e a pasta `download/` ficam fora do Git. Os testes criam
-bases temporárias, não abrem os dados reais do usuário.
+bases temporárias e cobrem CRUD, unicidade, RGs nulos, score nulo, vínculos,
+agregações, ordenação, cascatas e persistência ao fechar e reabrir o store.
 
-Cobertura: CRUD, unicidade, RGs nulos, score nulo, agregações, ordenação, cascatas,
-persistência após reabrir, importação única, rollback e leitura de SQLite real
-sem mudar o arquivo original.
-
-## Integração futura com Supabase
-
-O esquema remoto não é uma cópia do local: usa UUIDs, `score` decimal e parcelas
-em `tb_parcela`. A sincronização futura precisa definir o mapeamento desses
-campos, IDs remotos, conflitos e autenticação. A migração local não inventa
-conversões nem regras de score.
-
-## Resultados da validação
-
-Consulte [o relatório de testes executados](objectbox-validacao.md), incluindo
-as falhas de interface reproduzidas na base e os limites de compilação nativa.
+Consulte [o relatório de validação](objectbox-validacao.md) para os resultados
+executados e os limites da verificação.

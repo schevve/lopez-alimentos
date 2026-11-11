@@ -10,6 +10,7 @@ class Customer {
   final String? email;
   final String phone;
   final String address;
+  @Property(uid: 818118996813678362)
   final String adressNumber;
   final String city;
   final String state;
@@ -65,8 +66,7 @@ class Customer {
       email: map['email'] as String?,
       phone: map['phone'] as String,
       address: map['address'] as String,
-      adressNumber:
-          (map['adress_number'] ?? map['addres_number']) as String? ?? '',
+      adressNumber: map['adress_number'] as String? ?? '',
       city: map['city'] as String,
       state: map['state'] as String? ?? '',
       cep: map['cep'] as String?,

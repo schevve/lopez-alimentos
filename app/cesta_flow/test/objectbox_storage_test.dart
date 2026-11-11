@@ -2,16 +2,13 @@ import 'dart:io';
 
 import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
-import 'package:cesta_flow/core/data/local/model/migration_state.dart';
 import 'package:cesta_flow/core/data/local/model/payment_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/payment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
-import 'package:cesta_flow/core/data/local/sqlite_migration.dart';
 import 'package:cesta_flow/objectbox.g.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart' as sqlite;
 
 Customer customer({int? id, String cpf = '12345678901', String? rg}) =>
     Customer(
@@ -113,119 +110,19 @@ void main() {
     expect(await payments.getAllPayments(), isEmpty);
   });
 
-  test(
-    'Migração preserva IDs, endereço antigo, nulos e é executada uma vez',
-    () {
-      final oldCustomer = customer(id: 12).toMap();
-      oldCustomer['addres_number'] = oldCustomer.remove('adress_number');
-      void migrate() => SqliteMigration.importRows(
-        store,
-        customers: [oldCustomer],
-        sales: [sale(12, id: 40).toMap()],
-        payments: [payment(40, id: 70).toMap()],
-      );
-      migrate();
-      expect(store.box<Customer>().get(12)!.adressNumber, '12');
-      expect(store.box<Customer>().get(12)!.score, isNull);
-      expect(store.box<Payment>().get(70)!.saleId, 40);
-      final newId = store.box<Customer>().put(customer(cpf: '98765432100'));
-      expect(newId, greaterThan(12));
-      migrate();
-      expect(store.box<Customer>().count(), 2);
-      expect(store.box<Payment>().count(), 1);
-      store.close();
-      store = Store(
-        getObjectBoxModel(),
-        directory: '${directory.path}/objectbox',
-      );
-      expect(store.box<Sale>().get(40)!.customerId, 12);
-      expect(store.box<MigrationState>().get(1), isNotNull);
-    },
-  );
-
-  test(
-    'Pagamento antigo ambíguo causa rollback total e permite nova tentativa',
-    () {
-      expect(
-        () => SqliteMigration.importRows(
-          store,
-          customers: [customer(id: 1).toMap()],
-          sales: [sale(1, id: 1).toMap()],
-          payments: [
-            {'id': 1, 'customer_id': 1, 'amount': 25},
-          ],
-        ),
-        throwsStateError,
-      );
-      expect(store.box<Customer>().isEmpty(), isTrue);
-      expect(store.box<Sale>().isEmpty(), isTrue);
-      expect(store.box<MigrationState>().isEmpty(), isTrue);
-      SqliteMigration.importRows(
-        store,
-        customers: [customer(id: 1).toMap()],
-        sales: [sale(1, id: 1).toMap()],
-        payments: [payment(1, id: 1).toMap()],
-      );
-      expect(store.box<Payment>().count(), 1);
-    },
-  );
-
-  test('Rejeita órfãos e dados existentes sem sobrescrever o destino', () {
-    expect(
-      () => SqliteMigration.importRows(
-        store,
-        customers: [],
-        sales: [sale(99, id: 1).toMap()],
-        payments: [],
-      ),
-      throwsStateError,
+  test('Preserva clientes, vendas e pagamentos ao reabrir o banco', () async {
+    final customerId = await customers.registerCustomer(customer());
+    final saleId = await sales.registerSale(sale(customerId));
+    final paymentId = await payments.registerPayment(payment(saleId));
+    store.close();
+    store = Store(
+      getObjectBoxModel(),
+      directory: '${directory.path}/objectbox',
     );
-    store.box<Customer>().put(customer(id: 1));
-    expect(
-      () => SqliteMigration.importRows(
-        store,
-        customers: [customer(id: 1, cpf: '98765432100').toMap()],
-        sales: [],
-        payments: [],
-      ),
-      throwsStateError,
-    );
-    expect(store.box<Customer>().get(1)!.documentCPF, '12345678901');
+    expect(store.box<Customer>().get(customerId)!.adressNumber, '12');
+    expect(store.box<Customer>().get(customerId)!.score, isNull);
+    expect(store.box<Sale>().get(saleId)!.customerId, customerId);
+    expect(store.box<Payment>().get(paymentId)!.saleId, saleId);
+    expect(store.box<Payment>().get(paymentId)!.amount, 25);
   });
-
-  test(
-    'Importa arquivo SQLite real em leitura sem alterar versão ou conteúdo',
-    () async {
-      sqlite.sqfliteFfiInit();
-      final file = '${directory.path}/app_database.db';
-      final db = await sqlite.databaseFactoryFfi.openDatabase(file);
-      await db.execute('PRAGMA user_version = 3');
-      await db.execute(
-        'CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT, '
-        'date_of_birth TEXT, phone TEXT, address TEXT, addres_number TEXT, city TEXT, '
-        'state TEXT, document_cpf TEXT)',
-      );
-      await db.insert('customers', {
-        'id': 7,
-        'name': 'Cliente existente',
-        'date_of_birth': '1990-01-01',
-        'phone': '4500000000',
-        'address': 'Rua Um',
-        'addres_number': '20',
-        'city': 'Cascavel',
-        'state': 'PR',
-        'document_cpf': '12345678901',
-      });
-      await db.close();
-      final before = File(file).readAsBytesSync();
-      await SqliteMigration.importFile(
-        store,
-        file,
-        factory: sqlite.databaseFactoryFfi,
-      );
-      expect(store.box<Customer>().get(7)!.adressNumber, '20');
-      expect(store.box<Customer>().get(7)!.score, isNull);
-      expect(File(file).readAsBytesSync(), before);
-    },
-  );
 }
