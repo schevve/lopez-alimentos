@@ -1,24 +1,12 @@
 import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/customer_score_updater.dart';
-import 'package:cesta_flow/core/data/local/model/payment_model.dart';
 import 'package:cesta_flow/core/domain/payment_allocation.dart';
-import 'package:sqflite/sqflite.dart';
 
 class PaymentRepository {
   final DatabaseHelper _dbHelper;
 
   PaymentRepository({DatabaseHelper? dbHelper})
     : _dbHelper = dbHelper ?? DatabaseHelper();
-
-  Future<int> registerPayment(Payment payment) async {
-    final result = await registerSalePayment(
-      saleId: payment.saleId,
-      amountCents: (payment.amount * 100).round(),
-      method: payment.method,
-      date: payment.date,
-    );
-    return result.paymentIds.first;
-  }
 
   Future<PaymentRegistrationResult> registerSalePayment({
     required int saleId,
@@ -45,16 +33,20 @@ class PaymentRepository {
                       (sale['quantity'] as num).toInt()) *
                   100)
               .round();
-      final salePayments = await txn.query(
-        'payments',
-        columns: ['amount'],
+      final installmentRows = await txn.query(
+        'installments',
         where: 'sale_id = ?',
         whereArgs: [saleId],
+        orderBy: 'number ASC, id ASC',
       );
-      final paidCents = salePayments.fold<int>(
+      final paidByInstallment = <int, int>{
+        for (final row in installmentRows)
+          row['id'] as int:
+              (((row['paid_amount'] as num?)?.toDouble() ?? 0) * 100).round(),
+      };
+      final paidCents = paidByInstallment.values.fold<int>(
         0,
-        (total, payment) =>
-            total + (((payment['amount'] as num).toDouble()) * 100).round(),
+        (total, paid) => total + paid,
       );
       final balanceCents = saleTotalCents - paidCents;
       if (amountCents > balanceCents) {
@@ -64,30 +56,6 @@ class PaymentRepository {
         );
       }
 
-      final installmentRows = await txn.query(
-        'installments',
-        where: 'sale_id = ?',
-        whereArgs: [saleId],
-        orderBy: 'number ASC, id ASC',
-      );
-      final installmentPayments = await txn.query(
-        'payments',
-        columns: ['installment_id', 'amount'],
-        where: 'sale_id = ?',
-        whereArgs: [saleId],
-      );
-      final paidByInstallment = <int, int>{};
-      for (final payment in installmentPayments) {
-        final installmentId = payment['installment_id'] as int?;
-        if (installmentId == null) continue;
-        paidByInstallment.update(
-          installmentId,
-          (total) =>
-              total + (((payment['amount'] as num).toDouble()) * 100).round(),
-          ifAbsent: () =>
-              (((payment['amount'] as num).toDouble()) * 100).round(),
-        );
-      }
       final installmentBalances = installmentRows
           .map(
             (row) => InstallmentBalance(
@@ -112,24 +80,37 @@ class PaymentRepository {
           'installments',
           installment.toMap(),
         );
+        paidByInstallment[newInstallmentId] = 0;
       }
-      final paymentIds = <int>[];
+
+      final appliedByInstallment = <int, int>{};
       for (final allocation in plan.allocations) {
         final installmentId = allocation.isForNewInstallment
             ? newInstallmentId
             : allocation.installmentId!;
-        paymentIds.add(
-          await txn.insert(
-            'payments',
-            Payment(
-              saleId: saleId,
-              installmentId: installmentId,
-              method: method,
-              amount: allocation.amountCents / 100,
-              date: date,
-            ).toMap(),
-          ),
+        appliedByInstallment.update(
+          installmentId,
+          (total) => total + allocation.amountCents,
+          ifAbsent: () => allocation.amountCents,
         );
+      }
+      for (final entry in appliedByInstallment.entries) {
+        final updated = await txn.update(
+          'installments',
+          {
+            'paid_amount':
+                ((paidByInstallment[entry.key] ?? 0) + entry.value) / 100,
+            'paid_at': date.toIso8601String(),
+            'payment_method': method,
+          },
+          where: 'id = ?',
+          whereArgs: [entry.key],
+        );
+        if (updated != 1) {
+          throw StateError(
+            'Parcela ${entry.key} não encontrada para atualizar.',
+          );
+        }
       }
 
       await CustomerScoreUpdater.refresh(txn, sale['customer_id'] as int);
@@ -137,68 +118,31 @@ class PaymentRepository {
         saleTotalCents: saleTotalCents,
         paidCents: paidCents + amountCents,
         allocations: plan.allocations,
-        paymentIds: paymentIds,
       );
     });
   }
 
-  Future<Payment?> getPaymentById(int id) async {
-    final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'payments',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    if (maps.isNotEmpty) {
-      return Payment.fromMap(maps.first);
-    }
-    return null;
+  Future<double> getPaidTotalBySaleId(int saleId) async {
+    final totals = await getPaidTotalsBySaleIds([saleId]);
+    return totals[saleId] ?? 0;
   }
 
-  Future<List<Payment>> getPaymentsBySaleId(int saleId) async {
-    final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'payments',
-      where: 'sale_id = ?',
-      whereArgs: [saleId],
-    );
-    return maps.map((map) => Payment.fromMap(map)).toList();
-  }
-
-  Future<double> getPaymentsBySaleIdAmount(int saleId) async {
-    final db = await _dbHelper.database;
-    final result = await db.query(
-      'payments',
-      columns: ['amount'],
-      where: 'sale_id = ?',
-      whereArgs: [saleId],
-    );
-    final totalCents = result.fold<int>(
-      0,
-      (total, payment) =>
-          total + (((payment['amount'] as num).toDouble()) * 100).round(),
-    );
-    return totalCents / 100;
-  }
-
-  Future<Map<int, double>> getPaymentTotalsBySaleIds(List<int> saleIds) async {
-    if (saleIds.isEmpty) {
-      return {};
-    }
+  Future<Map<int, double>> getPaidTotalsBySaleIds(List<int> saleIds) async {
+    if (saleIds.isEmpty) return {};
 
     final db = await _dbHelper.database;
     final placeholders = List.filled(saleIds.length, '?').join(', ');
-    final result = await db.query(
-      'payments',
-      columns: ['sale_id', 'amount'],
+    final rows = await db.query(
+      'installments',
+      columns: ['sale_id', 'paid_amount'],
       where: 'sale_id IN ($placeholders)',
       whereArgs: saleIds,
     );
     final totalsInCents = <int, int>{};
-    for (final row in result) {
+    for (final row in rows) {
       final saleId = row['sale_id'] as int;
-      final amountCents = (((row['amount'] as num).toDouble()) * 100).round();
+      final amountCents =
+          ((((row['paid_amount'] as num?)?.toDouble() ?? 0)) * 100).round();
       totalsInCents.update(
         saleId,
         (total) => total + amountCents,
@@ -210,7 +154,7 @@ class PaymentRepository {
     };
   }
 
-  Future<Map<int, double>> getPaymentTotalsByInstallmentIds(
+  Future<Map<int, double>> getPaidTotalsByInstallmentIds(
     List<int> installmentIds,
   ) async {
     if (installmentIds.isEmpty) return {};
@@ -218,48 +162,15 @@ class PaymentRepository {
     final db = await _dbHelper.database;
     final placeholders = List.filled(installmentIds.length, '?').join(', ');
     final rows = await db.query(
-      'payments',
-      columns: ['installment_id', 'amount'],
-      where: 'installment_id IN ($placeholders)',
+      'installments',
+      columns: ['id', 'paid_amount'],
+      where: 'id IN ($placeholders)',
       whereArgs: installmentIds,
     );
-    final totalsInCents = <int, int>{};
-    for (final row in rows) {
-      final installmentId = row['installment_id'] as int;
-      final amountCents = (((row['amount'] as num).toDouble()) * 100).round();
-      totalsInCents.update(
-        installmentId,
-        (total) => total + amountCents,
-        ifAbsent: () => amountCents,
-      );
-    }
     return {
-      for (final entry in totalsInCents.entries) entry.key: entry.value / 100,
+      for (final row in rows)
+        row['id'] as int: (((row['paid_amount'] as num?)?.toDouble() ?? 0)),
     };
-  }
-
-  Future<List<Payment>> getAllPayments() async {
-    final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query('payments');
-    return maps.map((map) => Payment.fromMap(map)).toList();
-  }
-
-  Future<int> updatePayment(Payment payment) async {
-    if (payment.id == null) {
-      throw ArgumentError('Payment id cannot be null when updating.');
-    }
-    final db = await _dbHelper.database;
-    return await db.update(
-      'payments',
-      payment.toMap(),
-      where: 'id = ?',
-      whereArgs: [payment.id],
-    );
-  }
-
-  Future<int> deletePayment(int id) async {
-    final db = await _dbHelper.database;
-    return await db.delete('payments', where: 'id = ?', whereArgs: [id]);
   }
 }
 
@@ -268,13 +179,11 @@ class PaymentRegistrationResult {
     required this.saleTotalCents,
     required this.paidCents,
     required this.allocations,
-    required this.paymentIds,
   });
 
   final int saleTotalCents;
   final int paidCents;
   final List<PaymentAllocation> allocations;
-  final List<int> paymentIds;
 
   bool get saleIsSettled => paidCents >= saleTotalCents;
 }

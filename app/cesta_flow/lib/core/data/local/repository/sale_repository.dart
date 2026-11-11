@@ -96,9 +96,9 @@ class SaleRepository {
       FROM sales s
       WHERE ROUND(s.price * s.quantity * 100) > ROUND(
         COALESCE((
-          SELECT SUM(p.amount * 100)
-          FROM payments p
-          WHERE p.sale_id = s.id
+          SELECT SUM(i.paid_amount * 100)
+          FROM installments i
+          WHERE i.sale_id = s.id
         ), 0)
       )
     ''');

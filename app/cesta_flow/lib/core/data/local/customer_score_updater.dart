@@ -24,44 +24,16 @@ class CustomerScoreUpdater {
             whereArgs: saleIds,
             orderBy: 'sale_id ASC, number ASC, id ASC',
           );
-    final paymentRows = saleIds.isEmpty
-        ? <Map<String, Object?>>[]
-        : await db.query(
-            'payments',
-            where: 'sale_id IN ($saleIdPlaceholders)',
-            whereArgs: saleIds,
-            orderBy: 'date ASC, id ASC',
-          );
-
-    final payments = paymentRows
-        .map(
-          (row) => CustomerScorePayment(
-            id: row['id'] as int,
-            installmentId: row['installment_id'] as int?,
-            amountCents: (((row['amount'] as num).toDouble()) * 100).round(),
-            date: DateTime.parse(row['date'] as String),
-          ),
-        )
-        .toList();
     final paidBySale = <int, int>{};
-    final paidByInstallment = <int, int>{};
-    for (var index = 0; index < paymentRows.length; index++) {
-      final row = paymentRows[index];
-      final payment = payments[index];
+    for (final row in installmentRows) {
       final saleId = row['sale_id'] as int;
+      final paidCents =
+          ((((row['paid_amount'] as num?)?.toDouble() ?? 0)) * 100).round();
       paidBySale.update(
         saleId,
-        (total) => total + payment.amountCents,
-        ifAbsent: () => payment.amountCents,
+        (total) => total + paidCents,
+        ifAbsent: () => paidCents,
       );
-      final installmentId = payment.installmentId;
-      if (installmentId != null) {
-        paidByInstallment.update(
-          installmentId,
-          (total) => total + payment.amountCents,
-          ifAbsent: () => payment.amountCents,
-        );
-      }
     }
 
     final sales = salesRows
@@ -85,15 +57,18 @@ class CustomerScoreUpdater {
         id: id,
         saleId: row['sale_id'] as int,
         amountCents: (((row['amount'] as num).toDouble()) * 100).round(),
-        paidCents: paidByInstallment[id] ?? 0,
+        paidCents: ((((row['paid_amount'] as num?)?.toDouble() ?? 0)) * 100)
+            .round(),
         dueDate: dueDate == null ? null : DateTime.parse(dueDate),
+        paidAt: row['paid_at'] == null
+            ? null
+            : DateTime.parse(row['paid_at'] as String),
       );
     }).toList();
     final category = calculateCustomerScore(
       createCustomerScoreInput(
         sales: sales,
         installments: installments,
-        payments: payments,
         asOf: asOf ?? DateTime.now(),
       ),
     );

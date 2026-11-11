@@ -4,7 +4,6 @@ import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
-import 'package:cesta_flow/core/data/local/repository/payment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
@@ -14,14 +13,12 @@ class SaleDetails extends StatefulWidget {
     super.key,
     required this.saleId,
     this.saleRepository,
-    this.paymentRepository,
     this.customerRepository,
     this.installmentRepository,
   });
 
   final int saleId;
   final SaleRepository? saleRepository;
-  final PaymentRepository? paymentRepository;
   final CustomerRepository? customerRepository;
   final InstallmentRepository? installmentRepository;
 
@@ -32,8 +29,6 @@ class SaleDetails extends StatefulWidget {
 class _SaleDetailsState extends State<SaleDetails> {
   late final SaleRepository _saleRepository =
       widget.saleRepository ?? SaleRepository();
-  late final PaymentRepository _paymentRepository =
-      widget.paymentRepository ?? PaymentRepository();
   late final CustomerRepository _customerRepository =
       widget.customerRepository ?? CustomerRepository();
   late final InstallmentRepository _installmentRepository =
@@ -52,16 +47,13 @@ class _SaleDetailsState extends State<SaleDetails> {
       return const _SaleDetailsData(sale: null);
     }
 
-    final paid = await _paymentRepository.getPaymentsBySaleIdAmount(
-      widget.saleId,
-    );
     final installments = await _installmentRepository.getInstallmentsBySaleId(
       widget.saleId,
     );
-    final installmentPaymentTotals = await _paymentRepository
-        .getPaymentTotalsByInstallmentIds(
-          installments.map((installment) => installment.id!).toList(),
-        );
+    final paid = installments.fold<double>(
+      0,
+      (total, installment) => total + installment.paidAmount,
+    );
     final customer = await _customerRepository.getCustomerById(sale.customerId);
 
     return _SaleDetailsData(
@@ -69,7 +61,6 @@ class _SaleDetailsState extends State<SaleDetails> {
       paid: paid,
       customer: customer,
       installments: installments,
-      installmentPaymentTotals: installmentPaymentTotals,
     );
   }
 
@@ -170,7 +161,7 @@ class _SaleDetailsState extends State<SaleDetails> {
                 for (final installment in data.installments)
                   _InstallmentCard(
                     installment: installment,
-                    paid: data.installmentPaymentTotals[installment.id] ?? 0,
+                    paid: installment.paidAmount,
                   ),
             ],
           ),
@@ -248,14 +239,12 @@ class _SaleDetailsData {
     this.paid = 0,
     this.customer,
     this.installments = const [],
-    this.installmentPaymentTotals = const {},
   });
 
   final Sale? sale;
   final double paid;
   final Customer? customer;
   final List<Installment> installments;
-  final Map<int, double> installmentPaymentTotals;
 }
 
 class _MetricCard extends StatelessWidget {
@@ -393,6 +382,16 @@ class _InstallmentCard extends StatelessWidget {
               _InfoLine(
                 label: 'Vencimento',
                 value: _formatDueDate(installment.dueDate!),
+              ),
+            if (installment.paidAt != null)
+              _InfoLine(
+                label: 'Data do pagamento',
+                value: _formatDueDate(installment.paidAt!),
+              ),
+            if (installment.paymentMethod != null)
+              _InfoLine(
+                label: 'Forma de pagamento',
+                value: installment.paymentMethod!,
               ),
           ],
         ),

@@ -21,6 +21,7 @@ class CustomerScoreInstallment {
     required this.amountCents,
     required this.paidCents,
     required this.dueDate,
+    required this.paidAt,
   });
 
   final int id;
@@ -28,26 +29,12 @@ class CustomerScoreInstallment {
   final int amountCents;
   final int paidCents;
   final DateTime? dueDate;
-}
-
-class CustomerScorePayment {
-  const CustomerScorePayment({
-    required this.id,
-    required this.installmentId,
-    required this.amountCents,
-    required this.date,
-  });
-
-  final int id;
-  final int? installmentId;
-  final int amountCents;
-  final DateTime date;
+  final DateTime? paidAt;
 }
 
 CustomerScoreInput createCustomerScoreInput({
   required List<CustomerScoreSale> sales,
   required List<CustomerScoreInstallment> installments,
-  required List<CustomerScorePayment> payments,
   required DateTime asOf,
 }) {
   final orderedSales = [...sales]
@@ -82,23 +69,7 @@ CustomerScoreInput createCustomerScoreInput({
     }
 
     if (installment.paidCents < installment.amountCents) continue;
-    final installmentPayments =
-        payments
-            .where((payment) => payment.installmentId == installment.id)
-            .toList()
-          ..sort((a, b) {
-            final byDate = a.date.compareTo(b.date);
-            return byDate != 0 ? byDate : a.id.compareTo(b.id);
-          });
-    var paidCents = 0;
-    DateTime? settledAt;
-    for (final payment in installmentPayments) {
-      paidCents += payment.amountCents;
-      if (paidCents >= installment.amountCents) {
-        settledAt = payment.date;
-        break;
-      }
-    }
+    final settledAt = installment.paidAt;
     if (settledAt == null) continue;
 
     final settledDay = DateTime(settledAt.year, settledAt.month, settledAt.day);
