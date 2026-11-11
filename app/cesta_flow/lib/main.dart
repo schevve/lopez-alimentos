@@ -16,7 +16,7 @@ import 'package:cesta_flow/features/shared/bottom_bar.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Só libera as telas depois de concluir a migração local.
+  // Abre o armazenamento local antes de liberar as telas.
   try {
     await DatabaseHelper().store;
   } catch (error) {
@@ -28,7 +28,7 @@ Future<void> main() async {
               padding: const EdgeInsets.all(24),
               child: SelectableText(
                 'Não foi possível abrir o banco local. '
-                'Os dados anteriores foram preservados.\n\n$error',
+                'Tente abrir o aplicativo novamente.\n\n$error',
               ),
             ),
           ),

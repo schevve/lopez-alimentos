@@ -41,7 +41,7 @@
         },
         {
           "id": "7:818118996813678362",
-          "name": "adress_number",
+          "name": "adressNumber",
           "type": 9
         },
         {
@@ -77,20 +77,6 @@
           "id": "13:6994353464100272602",
           "name": "score",
           "type": 6
-        }
-      ],
-      "relations": []
-    },
-    {
-      "id": "2:8234913649267644606",
-      "lastPropertyId": "1:2379442855627600136",
-      "name": "MigrationState",
-      "properties": [
-        {
-          "id": "1:2379442855627600136",
-          "name": "id",
-          "type": 6,
-          "flags": 129
         }
       ],
       "relations": []
@@ -184,9 +170,13 @@
   "lastSequenceId": "0:0",
   "modelVersion": 5,
   "modelVersionParserMinimum": 5,
-  "retiredEntityUids": [],
+  "retiredEntityUids": [
+    8234913649267644606
+  ],
   "retiredIndexUids": [],
-  "retiredPropertyUids": [],
+  "retiredPropertyUids": [
+    2379442855627600136
+  ],
   "retiredRelationUids": [],
   "version": 1
 }

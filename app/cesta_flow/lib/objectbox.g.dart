@@ -15,7 +15,6 @@ import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
 import 'core/data/local/model/customer_model.dart';
-import 'core/data/local/model/migration_state.dart';
 import 'core/data/local/model/payment_model.dart';
 import 'core/data/local/model/sale_model.dart';
 
@@ -66,7 +65,7 @@ final _entities = <obx_int.ModelEntity>[
       ),
       obx_int.ModelProperty(
         id: const obx_int.IdUid(7, 818118996813678362),
-        name: 'adress_number',
+        name: 'adressNumber',
         type: 9,
         flags: 0,
       ),
@@ -107,22 +106,6 @@ final _entities = <obx_int.ModelEntity>[
         name: 'score',
         type: 6,
         flags: 0,
-      ),
-    ],
-    relations: <obx_int.ModelRelation>[],
-    backlinks: <obx_int.ModelBacklink>[],
-  ),
-  obx_int.ModelEntity(
-    id: const obx_int.IdUid(2, 8234913649267644606),
-    name: 'MigrationState',
-    lastPropertyId: const obx_int.IdUid(1, 2379442855627600136),
-    flags: 0,
-    properties: <obx_int.ModelProperty>[
-      obx_int.ModelProperty(
-        id: const obx_int.IdUid(1, 2379442855627600136),
-        name: 'id',
-        type: 6,
-        flags: 129,
       ),
     ],
     relations: <obx_int.ModelRelation>[],
@@ -271,9 +254,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
     lastIndexId: const obx_int.IdUid(4, 4838837909162506486),
     lastRelationId: const obx_int.IdUid(0, 0),
     lastSequenceId: const obx_int.IdUid(0, 0),
-    retiredEntityUids: const [],
+    retiredEntityUids: const [8234913649267644606],
     retiredIndexUids: const [],
-    retiredPropertyUids: const [],
+    retiredPropertyUids: const [2379442855627600136],
     retiredRelationUids: const [],
     modelVersion: 5,
     modelVersionParserMinimum: 5,
@@ -296,7 +279,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
             : fbb.writeString(object.email!);
         final phoneOffset = fbb.writeString(object.phone);
         final addressOffset = fbb.writeString(object.address);
-        final adress_numberOffset = fbb.writeString(object.adressNumber);
+        final adressNumberOffset = fbb.writeString(object.adressNumber);
         final cityOffset = fbb.writeString(object.city);
         final stateOffset = fbb.writeString(object.state);
         final cepOffset = object.cep == null
@@ -313,7 +296,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.addOffset(3, emailOffset);
         fbb.addOffset(4, phoneOffset);
         fbb.addOffset(5, addressOffset);
-        fbb.addOffset(6, adress_numberOffset);
+        fbb.addOffset(6, adressNumberOffset);
         fbb.addOffset(7, cityOffset);
         fbb.addOffset(8, stateOffset);
         fbb.addOffset(9, cepOffset);
@@ -347,7 +330,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final addressParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 14, '');
-        final adress_numberParam = const fb.StringReader(
+        final adressNumberParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 16, '');
         final cityParam = const fb.StringReader(
@@ -377,7 +360,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           email: emailParam,
           phone: phoneParam,
           address: addressParam,
-          adressNumber: adress_numberParam,
+          adressNumber: adressNumberParam,
           city: cityParam,
           state: stateParam,
           cep: cepParam,
@@ -389,36 +372,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
         return object;
       },
     ),
-    MigrationState: obx_int.EntityDefinition<MigrationState>(
-      model: _entities[1],
-      toOneRelations: (MigrationState object) => [],
-      toManyRelations: (MigrationState object) => {},
-      getId: (MigrationState object) => object.id,
-      setId: (MigrationState object, int id) {
-        object.id = id;
-      },
-      objectToFB: (MigrationState object, fb.Builder fbb) {
-        fbb.startTable(2);
-        fbb.addInt64(0, object.id);
-        fbb.finish(fbb.endTable());
-        return object.id;
-      },
-      objectFromFB: (obx.Store store, ByteData fbData) {
-        final buffer = fb.BufferContext(fbData);
-        final rootOffset = buffer.derefObject(0);
-        final idParam = const fb.Int64Reader().vTableGet(
-          buffer,
-          rootOffset,
-          4,
-          0,
-        );
-        final object = MigrationState(id: idParam);
-
-        return object;
-      },
-    ),
     Payment: obx_int.EntityDefinition<Payment>(
-      model: _entities[2],
+      model: _entities[1],
       toOneRelations: (Payment object) => [],
       toManyRelations: (Payment object) => {},
       getId: (Payment object) => object.id,
@@ -475,7 +430,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
       },
     ),
     Sale: obx_int.EntityDefinition<Sale>(
-      model: _entities[3],
+      model: _entities[2],
       toOneRelations: (Sale object) => [],
       toManyRelations: (Sale object) => {},
       getId: (Sale object) => object.id,
@@ -582,8 +537,8 @@ class Customer_ {
     _entities[0].properties[5],
   );
 
-  /// See [Customer.adress_number].
-  static final adress_number = obx.QueryStringProperty<Customer>(
+  /// See [Customer.adressNumber].
+  static final adressNumber = obx.QueryStringProperty<Customer>(
     _entities[0].properties[6],
   );
 
@@ -618,74 +573,66 @@ class Customer_ {
   );
 }
 
-/// [MigrationState] entity fields to define ObjectBox queries.
-class MigrationState_ {
-  /// See [MigrationState.id].
-  static final id = obx.QueryIntegerProperty<MigrationState>(
-    _entities[1].properties[0],
-  );
-}
-
 /// [Payment] entity fields to define ObjectBox queries.
 class Payment_ {
   /// See [Payment.id].
   static final id = obx.QueryIntegerProperty<Payment>(
-    _entities[2].properties[0],
+    _entities[1].properties[0],
   );
 
   /// See [Payment.saleId].
   static final saleId = obx.QueryIntegerProperty<Payment>(
-    _entities[2].properties[1],
+    _entities[1].properties[1],
   );
 
   /// See [Payment.method].
   static final method = obx.QueryStringProperty<Payment>(
-    _entities[2].properties[2],
+    _entities[1].properties[2],
   );
 
   /// See [Payment.amount].
   static final amount = obx.QueryDoubleProperty<Payment>(
-    _entities[2].properties[3],
+    _entities[1].properties[3],
   );
 
   /// See [Payment.date].
   static final date = obx.QueryDateNanoProperty<Payment>(
-    _entities[2].properties[4],
+    _entities[1].properties[4],
   );
 }
 
 /// [Sale] entity fields to define ObjectBox queries.
 class Sale_ {
   /// See [Sale.id].
-  static final id = obx.QueryIntegerProperty<Sale>(_entities[3].properties[0]);
+  static final id = obx.QueryIntegerProperty<Sale>(_entities[2].properties[0]);
 
   /// See [Sale.customerId].
   static final customerId = obx.QueryIntegerProperty<Sale>(
-    _entities[3].properties[1],
+    _entities[2].properties[1],
   );
 
   /// See [Sale.productName].
   static final productName = obx.QueryStringProperty<Sale>(
-    _entities[3].properties[2],
+    _entities[2].properties[2],
   );
 
   /// See [Sale.price].
   static final price = obx.QueryDoubleProperty<Sale>(
-    _entities[3].properties[3],
+    _entities[2].properties[3],
   );
 
   /// See [Sale.quantity].
   static final quantity = obx.QueryIntegerProperty<Sale>(
-    _entities[3].properties[4],
+    _entities[2].properties[4],
   );
 
   /// See [Sale.date].
   static final date = obx.QueryDateNanoProperty<Sale>(
-    _entities[3].properties[5],
+    _entities[2].properties[5],
   );
 
   /// See [Sale.description].
   static final description = obx.QueryStringProperty<Sale>(
-    _entities[3].properties[6],
+    _entities[2].properties[6],
   );
 }
