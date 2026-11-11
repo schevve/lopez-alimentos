@@ -28,51 +28,38 @@ class CsvExportService {
     'cliente_cep',
     'cliente_cpf',
     'cliente_rg',
-    ..._paymentColumns,
-  ];
-
-  static const _paymentColumns = [
-    'pagamento_1_metodo',
-    'pagamento_1_valor',
-    'pagamento_1_data',
-    'pagamento_2_metodo',
-    'pagamento_2_valor',
-    'pagamento_2_data',
-    'pagamento_3_metodo',
-    'pagamento_3_valor',
-    'pagamento_3_data',
-    'pagamento_4_metodo',
-    'pagamento_4_valor',
-    'pagamento_4_data',
-    'pagamento_5_metodo',
-    'pagamento_5_valor',
-    'pagamento_5_data',
-    'pagamento_6_metodo',
-    'pagamento_6_valor',
-    'pagamento_6_data',
   ];
 
   Future<File> exportDatabase() async {
     final db = await _dbHelper.database;
     final sales = await db.query('sales', orderBy: 'id');
     final customers = await db.query('customers', orderBy: 'id');
-    final payments = await db.query('payments', orderBy: 'id');
+    final installments = await db.query(
+      'installments',
+      orderBy: 'sale_id, number, id',
+    );
     final customersById = {
       for (final customer in customers) customer['id']: customer,
     };
-    final paymentsBySaleId = <Object?, List<Map<String, Object?>>>{};
-    for (final payment in payments) {
-      final saleId = payment['sale_id'];
-      if (saleId != null) {
-        paymentsBySaleId.putIfAbsent(saleId, () => []).add(payment);
-      }
+    final installmentsBySaleId = <Object?, List<Map<String, Object?>>>{};
+    for (final installment in installments) {
+      installmentsBySaleId
+          .putIfAbsent(installment['sale_id'], () => [])
+          .add(installment);
     }
 
-    final rows = <List<Object?>>[_columns];
+    final maxInstallments = installmentsBySaleId.values.fold<int>(
+      0,
+      (max, saleInstallments) =>
+          saleInstallments.length > max ? saleInstallments.length : max,
+    );
+    final rows = <List<Object?>>[
+      [..._columns, ..._installmentColumns(maxInstallments)],
+    ];
     for (final sale in sales) {
       final customer = customersById[sale['customer_id']];
-      final salePayments = paymentsBySaleId[sale['id']] ?? [];
-      rows.add(_saleRow(sale, customer, salePayments));
+      final saleInstallments = installmentsBySaleId[sale['id']] ?? [];
+      rows.add(_saleRow(sale, customer, saleInstallments, maxInstallments));
     }
 
     final csv = rows.map((row) => row.map(_escape).join(',')).join('\r\n');
@@ -85,7 +72,8 @@ class CsvExportService {
   List<Object?> _saleRow(
     Map<String, Object?> sale,
     Map<String, Object?>? customer,
-    List<Map<String, Object?>> payments,
+    List<Map<String, Object?>> installments,
+    int installmentCount,
   ) {
     final row = <Object?>[
       sale['id'],
@@ -107,13 +95,29 @@ class CsvExportService {
       customer?['document_rg'],
     ];
 
-    for (var index = 0; index < 6; index++) {
-      final payment = index < payments.length ? payments[index] : null;
-      row.addAll([payment?['method'], payment?['amount'], payment?['date']]);
+    for (var index = 0; index < installmentCount; index++) {
+      final installment = index < installments.length
+          ? installments[index]
+          : null;
+      row.addAll([
+        installment?['amount'],
+        installment?['paid_amount'],
+        installment?['paid_at'],
+        installment?['payment_method'],
+      ]);
     }
 
     return row;
   }
+
+  List<String> _installmentColumns(int count) => [
+    for (var index = 1; index <= count; index++) ...[
+      'parcela_${index}_valor_sugerido',
+      'parcela_${index}_valor_pago',
+      'parcela_${index}_data_pagamento',
+      'parcela_${index}_forma_pagamento',
+    ],
+  ];
 
   String _escape(Object? value) {
     final text = value?.toString() ?? '';

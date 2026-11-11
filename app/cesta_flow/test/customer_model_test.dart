@@ -19,6 +19,9 @@ void main() {
   test('Lê registro antigo e opcionais NULL sem exigir score', () {
     final cliente = Customer.fromMap(registroAntigo);
     expect(cliente.score, isNull);
+    expect(cliente.scoreCategory, CustomerScoreCategory.yellow);
+    expect(cliente.authorized, isFalse);
+    expect(cliente.manualBlockOverride, isNull);
     expect(cliente.email, isNull);
     expect(cliente.cep, isNull);
     expect(Customer.fromMap(cliente.toMap()).score, isNull);
@@ -39,5 +42,31 @@ void main() {
     expect(cliente.score, 940);
     expect(cliente.copyWith(score: 0).score, 0);
     expect(cliente.copyWith(clearScore: true).toMap()['score'], isNull);
+  });
+
+  test('Serializa classificação e preferências de bloqueio', () {
+    final cliente = Customer.fromMap({
+      ...registroAntigo,
+      'score_category': 'green',
+      'authorized': 1,
+      'manual_block_override': 0,
+    });
+
+    expect(cliente.scoreCategory, CustomerScoreCategory.green);
+    expect(cliente.authorized, isTrue);
+    expect(cliente.manualBlockOverride, isFalse);
+
+    final atualizado = cliente.copyWith(
+      scoreCategory: CustomerScoreCategory.red,
+      authorized: false,
+      manualBlockOverride: true,
+    );
+    expect(atualizado.toMap()['score_category'], 'red');
+    expect(atualizado.toMap()['authorized'], 0);
+    expect(atualizado.toMap()['manual_block_override'], 1);
+    expect(
+      atualizado.copyWith(clearManualBlockOverride: true).manualBlockOverride,
+      isNull,
+    );
   });
 }

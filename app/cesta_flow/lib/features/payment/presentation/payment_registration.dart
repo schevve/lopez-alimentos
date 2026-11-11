@@ -1,8 +1,7 @@
 import 'package:cesta_flow/features/payment/presentation/payment_success.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_registration.dart';
-import 'package:cesta_flow/core/data/local/db_helper.dart';
-import 'package:cesta_flow/core/data/local/model/payment_model.dart';
 import 'package:cesta_flow/core/data/local/repository/payment_repository.dart';
+import 'package:cesta_flow/core/domain/payment_allocation.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 
@@ -18,6 +17,7 @@ class PaymentRegistration extends StatefulWidget {
 class _PaymentRegistration extends State<PaymentRegistration> {
   final _formKey = GlobalKey<FormState>();
   final _formData = <String, dynamic>{};
+  bool _isSubmitting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +54,16 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                       decimal: true,
                     ),
                     inputFormatters: [FormatMoney()],
+                    validator: (value) {
+                      final raw = (value ?? '')
+                          .replaceAll('.', '')
+                          .replaceAll(',', '.');
+                      final amount = double.tryParse(raw);
+                      if (amount == null || amount <= 0) {
+                        return 'Informe um valor maior que zero.';
+                      }
+                      return null;
+                    },
                     onSaved: (value) => _formData['paymentValue'] = value,
                   ),
                   TextFormField(
@@ -69,6 +79,12 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                       fillColor: Colors.white,
                     ),
 
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Informe a forma de pagamento.';
+                      }
+                      return null;
+                    },
                     onSaved: (value) => _formData['paymentTerm'] = value,
                   ),
                   TextFormField(
@@ -89,10 +105,10 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                     onSaved: (value) => _formData['nextVisit'] = value,
                   ),
                   FilledButton(
-                    onPressed: () async {
-                      await _submitForm();
-                    },
-                    child: Text("Realizar cobrança"),
+                    onPressed: _isSubmitting ? null : _submitForm,
+                    child: Text(
+                      _isSubmitting ? "Registrando..." : "Realizar cobrança",
+                    ),
                   ),
                 ],
               ),
@@ -104,51 +120,52 @@ class _PaymentRegistration extends State<PaymentRegistration> {
   }
 
   Future<void> _submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
+    if (!_formKey.currentState!.validate()) return;
+    _formKey.currentState!.save();
+    setState(() {
+      _isSubmitting = true;
+    });
 
-      var db = DatabaseHelper();
-      var paymentRepository = PaymentRepository(dbHelper: db);
-      final int saleId = widget.saleId;
+    final rawValue = _formData['paymentValue'] as String;
+    final cleanValue = rawValue.replaceAll('.', '').replaceAll(',', '.');
+    final amountCents = (double.parse(cleanValue) * 100).round();
+    final paymentValue = _formData['paymentValue'] as String;
+    final paymentTerm = (_formData['paymentTerm'] as String).trim();
+    final nextVisit = _formData['nextVisit'] as String? ?? '';
 
-      final String rawValue = _formData['paymentValue'] ?? "0,00";
-      final String cleanValue = rawValue
-          .replaceAll('.', '')
-          .replaceAll(',', '.');
-      final double realValue = double.tryParse(cleanValue) ?? 0.0;
-
-      try {
-        final List<Payment> allPayments = await paymentRepository
-            .getPaymentsBySaleId(saleId);
-
-        double amount = await paymentRepository.getPaymentsBySaleIdAmount(
-          saleId,
-        );
-
-        if (allPayments.isNotEmpty) {
-          amount = amount - realValue;
-        }
-        var paymentData = Payment(
-          saleId: saleId,
-          method: _formData['paymentTerm'],
-          amount: amount,
-          date: DateTime.now(),
-        );
-        await paymentRepository.registerPayment(paymentData);
-        print('Pagamento registrado com sucesso: ${paymentData.amount}');
-      } catch (e) {
-        print("erro no banco de dados: $e");
-      }
-
+    try {
+      final result = await PaymentRepository().registerSalePayment(
+        saleId: widget.saleId,
+        amountCents: amountCents,
+        method: paymentTerm,
+        date: DateTime.now(),
+      );
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => PaymentSuccess(
-            paymentValue: _formData['paymentValue'],
-            paymentTerm: _formData['paymentTerm'],
-            nextVisit: _formData['nextVisit'],
+            paymentValue: paymentValue,
+            paymentTerm: paymentTerm,
+            nextVisit: nextVisit,
+            saleSettled: result.saleIsSettled,
           ),
         ),
       );
+    } on PaymentExceedsBalanceException catch (error) {
+      if (mounted) _showError(error.toString());
+    } catch (error) {
+      if (mounted) _showError('Não foi possível registrar o pagamento: $error');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
     }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 }

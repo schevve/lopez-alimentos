@@ -96,6 +96,12 @@ class _SaleRegistrationState extends State<SaleRegistration> {
               ),
               TextFormField(
                 decoration: InputDecoration(labelText: 'Produto *'),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Informe o produto.';
+                  }
+                  return null;
+                },
                 onSaved: (value) => _formData['produto'] = value,
               ),
               TextFormField(
@@ -109,6 +115,11 @@ class _SaleRegistrationState extends State<SaleRegistration> {
                 decoration: InputDecoration(labelText: 'Data da Venda *'),
                 keyboardType: TextInputType.datetime,
                 inputFormatters: [FormatDate()],
+                validator: (value) {
+                  final date = _parseDate(value);
+                  if (date == null) return 'Informe uma data válida.';
+                  return null;
+                },
                 onSaved: (value) => _formData['data_venda'] = value,
               ),
               TextFormField(
@@ -117,7 +128,31 @@ class _SaleRegistrationState extends State<SaleRegistration> {
                 ),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [FormatMoney()],
+                validator: (value) {
+                  final amount = double.tryParse(
+                    (value ?? '').replaceAll(',', '.'),
+                  );
+                  if (amount == null || amount <= 0) {
+                    return 'Informe um valor maior que zero.';
+                  }
+                  return null;
+                },
                 onSaved: (value) => _formData['valor_total'] = value,
+              ),
+              TextFormField(
+                decoration: InputDecoration(
+                  labelText: 'Quantidade de parcelas *',
+                ),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                validator: (value) {
+                  final count = int.tryParse(value ?? '');
+                  if (count == null || count < 1) {
+                    return 'Informe pelo menos uma parcela.';
+                  }
+                  return null;
+                },
+                onSaved: (value) => _formData['quantidade_parcelas'] = value,
               ),
               FilledButton(
                 onPressed: () {
@@ -143,30 +178,38 @@ class _SaleRegistrationState extends State<SaleRegistration> {
   }
 
   Future<void> _submitForm() async {
-    print(_formKey.currentState!.validate());
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-      var db = DatabaseHelper();
-      var salesRepository = SaleRepository(dbHelper: db);
-      final saleData = Sale(
-        customerId: _formData['clienteId'],
-        productName: _formData['produto'],
-        price: double.parse(
-          (_formData['valor_total'] as String).replaceAll(',', '.'),
-        ),
-        quantity: 1,
-        date: DateTime.parse(
-          _formData['data_venda'].split('/').reversed.join('-'),
-        ),
-        description: _formData['observacoes'] ?? '',
-      );
-      print(saleData);
-      int saleId = await salesRepository.registerSale(saleData);
-      print('Venda registrada com sucesso! ID da venda: $saleId');
-      salesRepository.getAllSales().then((sales) {
-        print('Vendas registradas: ${sales.length}');
-      });
+    if (!_formKey.currentState!.validate()) return;
+    if (_selectedCustomer?.id == null) {
+      _showError('Selecione um cliente.');
+      return;
+    }
 
+    _formKey.currentState!.save();
+    final price = double.parse(
+      (_formData['valor_total'] as String).replaceAll(',', '.'),
+    );
+    final installmentCount = int.parse(
+      _formData['quantidade_parcelas'] as String,
+    );
+    if (installmentCount > (price * 100).round()) {
+      _showError('A quantidade de parcelas excede o valor em centavos.');
+      return;
+    }
+
+    final saleData = Sale(
+      customerId: _selectedCustomer!.id!,
+      productName: (_formData['produto'] as String).trim(),
+      price: price,
+      quantity: 1,
+      date: _parseDate(_formData['data_venda'] as String)!,
+      description: _formData['observacoes'] ?? '',
+    );
+    try {
+      await SaleRepository(dbHelper: DatabaseHelper())
+          .registerSaleWithInstallments(
+            saleData,
+            installmentCount: installmentCount,
+          );
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
@@ -177,7 +220,30 @@ class _SaleRegistrationState extends State<SaleRegistration> {
           ),
         ),
       );
+    } catch (error) {
+      if (mounted) {
+        _showError('Não foi possível registrar a venda: $error');
+      }
     }
+  }
+
+  DateTime? _parseDate(String? value) {
+    final parts = (value ?? '').split('/');
+    if (parts.length != 3) return null;
+    final day = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    final year = int.tryParse(parts[2]);
+    if (day == null || month == null || year == null) return null;
+    final date = DateTime(year, month, day);
+    if (date.year != year || date.month != month || date.day != day) {
+      return null;
+    }
+    return date;
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 }
 

@@ -10,7 +10,12 @@ import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Customer cliente(String nome, String cpf, {int? score}) => Customer(
+Customer cliente(
+  String nome,
+  String cpf, {
+  int? score,
+  CustomerScoreCategory scoreCategory = CustomerScoreCategory.yellow,
+}) => Customer(
   name: nome,
   dateOfBirth: DateTime(1990, 1, 1),
   phone: '(45) 99999-0000',
@@ -20,13 +25,24 @@ Customer cliente(String nome, String cpf, {int? score}) => Customer(
   state: 'SP',
   documentCPF: cpf,
   score: score,
+  scoreCategory: scoreCategory,
 );
 
 class RepositorioDeTeste extends CustomerRepository {
   List<Customer> clientes = [
     cliente('Rosângela Batista', '123.456.789-01'),
-    cliente('Ângelo Pereira', '234.567.890-12', score: 0),
-    cliente('Janaína Gonçalves', '345.678.901-23', score: 940),
+    cliente(
+      'Ângelo Pereira',
+      '234.567.890-12',
+      score: 0,
+      scoreCategory: CustomerScoreCategory.green,
+    ),
+    cliente(
+      'Janaína Gonçalves',
+      '345.678.901-23',
+      score: 940,
+      scoreCategory: CustomerScoreCategory.red,
+    ),
   ];
   int consultas = 0;
   bool falhar = false;
@@ -55,52 +71,49 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets(
-    'Consulta o repositório, usa a barra superior e exibe score nulo',
-    (tester) async {
-      final repository = RepositorioDeTeste();
-      await abrirTela(tester, repository);
-      expect(repository.consultas, 1);
-      expect(find.byType(TopBar), findsOneWidget);
-      expect(find.text('Score não informado'), findsOneWidget);
-      await tester.enterText(find.byType(TextField), 'ROSANGELA');
-      await tester.pumpAndSettle();
-      expect(find.byType(ClienteCard), findsOneWidget);
-      expect(find.text('Rosângela Batista'), findsOneWidget);
-      expect(repository.consultas, 1);
-      await tester.enterText(find.byType(TextField), 'inexistente');
-      await tester.pumpAndSettle();
-      expect(find.text('Nenhum cliente encontrado.'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
+  testWidgets('Consulta o repositório e mostra a categoria de score', (
+    tester,
+  ) async {
+    final repository = RepositorioDeTeste();
+    await abrirTela(tester, repository);
+    expect(repository.consultas, 1);
+    expect(find.byType(TopBar), findsOneWidget);
+    expect(find.text('Score: Amarelo'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'ROSANGELA');
+    await tester.pumpAndSettle();
+    expect(find.byType(ClienteCard), findsOneWidget);
+    expect(find.text('Rosângela Batista'), findsOneWidget);
+    expect(repository.consultas, 1);
+    await tester.enterText(find.byType(TextField), 'inexistente');
+    await tester.pumpAndSettle();
+    expect(find.text('Nenhum cliente encontrado.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
-  testWidgets(
-    'Combina busca por CPF com Com score e Sem score, incluindo zero',
-    (tester) async {
-      await abrirTela(tester, RepositorioDeTeste());
-      await tester.enterText(find.byType(TextField), '23456789012');
-      await tester.tap(find.text('Com score'));
-      await tester.pumpAndSettle();
-      expect(find.text('Ângelo Pereira'), findsOneWidget);
-      expect(find.text('Score: 0'), findsOneWidget);
-      await tester.tap(find.byTooltip('Filtrar clientes'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(ListTile, 'Sem score'));
-      await tester.pumpAndSettle();
-      expect(find.text('Nenhum cliente encontrado.'), findsOneWidget);
-      await tester.enterText(find.byType(TextField), '');
-      await tester.pumpAndSettle();
-      expect(find.text('Rosângela Batista'), findsOneWidget);
-      expect(find.text('Ângelo Pereira'), findsNothing);
-      expect(find.text('Score não informado'), findsOneWidget);
-      await tester.tap(find.text('Todos'));
-      await tester.enterText(find.byType(TextField), 'janaina');
-      await tester.pumpAndSettle();
-      expect(find.text('Score: 940'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
+  testWidgets('Filtra clientes pelas faixas de score', (tester) async {
+    await abrirTela(tester, RepositorioDeTeste());
+    await tester.enterText(find.byType(TextField), '23456789012');
+    await tester.tap(find.text('Verde'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ângelo Pereira'), findsOneWidget);
+    expect(find.text('Score: Verde'), findsOneWidget);
+    await tester.tap(find.byTooltip('Filtrar clientes'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Vermelho'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nenhum cliente encontrado.'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), '');
+    await tester.pumpAndSettle();
+    expect(find.text('Ângelo Pereira'), findsNothing);
+    expect(find.text('Janaína Gonçalves'), findsOneWidget);
+    expect(find.text('Score: Vermelho'), findsOneWidget);
+    await tester.tap(find.text('Todos'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'janaina');
+    await tester.pumpAndSettle();
+    expect(find.text('Score: Vermelho'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('Novo Cliente abre cadastro e atualiza a lista ao voltar', (
     tester,
@@ -117,7 +130,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'cadastrado');
     await tester.pumpAndSettle();
     expect(find.text('Cliente cadastrado'), findsOneWidget);
-    expect(find.text('Score não informado'), findsOneWidget);
+    expect(find.text('Score: Amarelo'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

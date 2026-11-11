@@ -60,8 +60,10 @@ class _SaleRepository extends SaleRepository {
 
 class _PaymentRepository extends PaymentRepository {
   @override
-  Future<Map<int, double>> getPaymentTotalsBySaleIds(List<int> saleIds) async =>
-      {11: 40, 12: 25};
+  Future<Map<int, double>> getPaidTotalsBySaleIds(List<int> saleIds) async => {
+    11: 40,
+    12: 25,
+  };
 }
 
 void main() {

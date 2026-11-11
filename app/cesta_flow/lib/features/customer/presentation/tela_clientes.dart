@@ -5,6 +5,7 @@ import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 
 import '../../shared/top_bar.dart';
 import 'customer_registration.dart';
+
 import 'package:cesta_flow/features/sale/presentation/sale_registration.dart';
 
 import 'widgets/cliente_card.dart';
@@ -19,16 +20,19 @@ class ClientesScreen extends StatefulWidget {
 
 enum _FiltroScore {
   todos('Todos'),
-  comScore('Com score'),
-  semScore('Sem score');
+  verde('Verde'),
+  amarelo('Amarelo'),
+  vermelho('Vermelho');
 
   const _FiltroScore(this.label);
   final String label;
 
   bool inclui(Customer cliente) => switch (this) {
     _FiltroScore.todos => true,
-    _FiltroScore.comScore => cliente.score != null,
-    _FiltroScore.semScore => cliente.score == null,
+    _FiltroScore.verde => cliente.scoreCategory == CustomerScoreCategory.green,
+    _FiltroScore.amarelo =>
+      cliente.scoreCategory == CustomerScoreCategory.yellow,
+    _FiltroScore.vermelho => cliente.scoreCategory == CustomerScoreCategory.red,
   };
 }
 
@@ -112,9 +116,9 @@ class _ClientesScreenState extends State<ClientesScreen> {
     }
 
     if (acao == 'Nova Venda') {
-      await Navigator.of(context).push<void>(
-        MaterialPageRoute(builder: (_) => const SaleRegistration()),
-      );
+      await Navigator.of(
+        context,
+      ).push<void>(MaterialPageRoute(builder: (_) => const SaleRegistration()));
       return;
     }
 
@@ -238,7 +242,11 @@ class _ClientesScreenState extends State<ClientesScreen> {
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.person_add_alt_1_outlined, color: Colors.white, size: 26),
+                  Icon(
+                    Icons.person_add_alt_1_outlined,
+                    color: Colors.white,
+                    size: 26,
+                  ),
                   SizedBox(width: 8),
                   Text(
                     'Novo Cliente',

@@ -113,7 +113,7 @@ class _DashboardState extends State<Dashboard> {
                 MetricCard(
                   title: 'Pendências',
                   value: _metricValue(_pendingCustomersCount.toString()),
-                  subtitle: 'Sem pagamento',
+                  subtitle: 'Com saldo em aberto',
                   icon: Icons.warning,
                   iconColor: const Color(0xFFC62828),
                 ),

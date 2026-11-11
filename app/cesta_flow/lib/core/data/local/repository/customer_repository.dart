@@ -1,4 +1,5 @@
 import 'package:cesta_flow/core/data/local/db_helper.dart';
+import 'package:cesta_flow/core/data/local/customer_score_updater.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -19,22 +20,35 @@ class CustomerRepository {
 
   Future<Customer?> getCustomerById(int id) async {
     final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'customers',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    if (maps.isNotEmpty) {
-      return Customer.fromMap(maps.first);
-    }
-    return null;
+    return db.transaction((txn) async {
+      final existing = await txn.query(
+        'customers',
+        columns: ['id'],
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (existing.isEmpty) return null;
+      await CustomerScoreUpdater.refresh(txn, id);
+      final maps = await txn.query(
+        'customers',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      return maps.isEmpty ? null : Customer.fromMap(maps.first);
+    });
   }
 
   Future<List<Customer>> getAllCustomers() async {
     final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query('customers');
-    return maps.map((map) => Customer.fromMap(map)).toList();
+    return db.transaction((txn) async {
+      final customers = await txn.query('customers', columns: ['id']);
+      for (final customer in customers) {
+        await CustomerScoreUpdater.refresh(txn, customer['id'] as int);
+      }
+      final maps = await txn.query('customers');
+      return maps.map((map) => Customer.fromMap(map)).toList();
+    });
   }
 
   Future<int> updateCustomer(Customer customer) async {
