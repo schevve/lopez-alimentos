@@ -1,7 +1,8 @@
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
+import 'package:cesta_flow/core/data/local/model/installment_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
-import 'package:cesta_flow/core/data/local/repository/payment_repository.dart';
+import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_details.dart';
 import 'package:flutter/material.dart';
@@ -12,31 +13,50 @@ class _SaleRepository extends SaleRepository {
     id: 11,
     uuid: 'sale-11',
     customerId: 5,
-    productName: 'Cesta básica',
-    price: 50,
-    quantity: 2,
-    date: DateTime(2026, 10, 1),
-    description: 'Entrega na portaria',
+    price: 100,
+    installments: 2,
+    createdAt: DateTime(2026, 10, 1),
   );
 
   @override
   Future<Sale?> getSaleById(int id) async => sale?.id == id ? sale : null;
+
+  @override
+  Future<List<SaleBasketLine>> getBasketLines(int saleId) async => [
+    const SaleBasketLine(name: 'Cesta básica', price: 50, quantity: 2),
+  ];
 }
 
-class _PaymentRepository extends PaymentRepository {
+class _InstallmentRepository extends InstallmentRepository {
   @override
-  Future<double> getPaymentsBySaleIdAmount(int saleId) async =>
-      saleId == 11 ? 40 : 0;
+  Future<double> paidAmountBySaleId(int saleId) async => saleId == 11 ? 40 : 0;
+
+  @override
+  Future<List<Installment>> getInstallmentsBySaleId(int saleId) async => [
+    Installment(
+      uuid: 'installment-1',
+      saleId: saleId,
+      amount: 40,
+      paymentDate: DateTime(2026, 10, 2),
+    ),
+    Installment(
+      uuid: 'installment-2',
+      saleId: saleId,
+      amount: 60,
+      dueDate: DateTime(2026, 11, 2),
+    ),
+  ];
 }
 
 class _CustomerRepository extends CustomerRepository {
   @override
   Future<Customer?> getCustomerById(int id) async => Customer(
     id: id,
+    uuid: 'customer-$id',
     name: 'Cliente de teste',
     dateOfBirth: DateTime(1990, 1, 2),
     phone: '(45) 99999-0000',
-    adress_number: '10',
+    addressNumber: '10',
     address: 'Rua das Flores, 10',
     city: 'Toledo',
     state: 'PR',
@@ -51,7 +71,7 @@ void main() {
         home: SaleDetails(
           saleId: 11,
           saleRepository: _SaleRepository(),
-          paymentRepository: _PaymentRepository(),
+          installmentRepository: _InstallmentRepository(),
           customerRepository: _CustomerRepository(),
         ),
       ),
@@ -87,7 +107,7 @@ void main() {
         home: SaleDetails(
           saleId: 999,
           saleRepository: _SaleRepository()..sale = null,
-          paymentRepository: _PaymentRepository(),
+          installmentRepository: _InstallmentRepository(),
           customerRepository: _CustomerRepository(),
         ),
       ),

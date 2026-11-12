@@ -1,7 +1,7 @@
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
-import 'package:cesta_flow/core/data/local/repository/payment_repository.dart';
+import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/customer/presentation/customer_details.dart';
 import 'package:cesta_flow/features/customer/presentation/customer_registration.dart';
@@ -11,10 +11,11 @@ import 'package:flutter_test/flutter_test.dart';
 class _CustomerRepository extends CustomerRepository {
   Customer? customer = Customer(
     id: 5,
+    uuid: 'customer-5',
     name: 'Cliente de teste',
     dateOfBirth: DateTime(1990, 1, 2),
     phone: '(45) 99999-0000',
-    adress_number: '10',
+    addressNumber: '10',
     address: 'Rua das Flores, 10',
     city: 'Toledo',
     state: 'PR',
@@ -41,28 +42,28 @@ class _SaleRepository extends SaleRepository {
       id: 11,
       uuid: 'sale-11',
       customerId: customerId,
-      productName: 'Cesta básica',
-      price: 50,
-      quantity: 2,
-      date: DateTime(2026, 10, 1),
-      description: '',
+      price: 100,
+      createdAt: DateTime(2026, 10, 1),
     ),
     Sale(
       id: 12,
       uuid: 'sale-12',
       customerId: customerId,
-      productName: 'Arroz',
       price: 25,
-      quantity: 1,
-      date: DateTime(2026, 10, 2),
-      description: '',
+      createdAt: DateTime(2026, 10, 2),
     ),
   ];
+
+  @override
+  Future<Map<int, String>> basketLabelsFor(List<int> saleIds) async => {
+    11: 'Cesta básica',
+    12: 'Arroz',
+  };
 }
 
-class _PaymentRepository extends PaymentRepository {
+class _InstallmentRepository extends InstallmentRepository {
   @override
-  Future<Map<int, double>> getPaymentTotalsBySaleIds(List<int> saleIds) async =>
+  Future<Map<int, double>> paidTotalsBySaleIds(List<int> saleIds) async =>
       {11: 40, 12: 25};
 }
 
@@ -76,7 +77,7 @@ void main() {
           customerId: 5,
           customerRepository: _CustomerRepository(),
           saleRepository: _SaleRepository(),
-          paymentRepository: _PaymentRepository(),
+          installmentRepository: _InstallmentRepository(),
         ),
       ),
     );
@@ -105,7 +106,7 @@ void main() {
           customerId: 5,
           customerRepository: customerRepository,
           saleRepository: _SaleRepository(),
-          paymentRepository: _PaymentRepository(),
+          installmentRepository: _InstallmentRepository(),
         ),
       ),
     );
@@ -140,7 +141,7 @@ void main() {
           customerId: 999,
           customerRepository: repository,
           saleRepository: _SaleRepository(),
-          paymentRepository: _PaymentRepository(),
+          installmentRepository: _InstallmentRepository(),
         ),
       ),
     );
