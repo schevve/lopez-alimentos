@@ -112,6 +112,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Editar cliente'));
+    await tester.pump();
     await tester.pumpAndSettle();
 
     expect(find.byType(CustomerRegistration), findsOneWidget);
@@ -125,7 +126,19 @@ void main() {
       find.byType(TextFormField).first,
       'Cliente atualizado',
     );
-    await tester.tap(find.text('Salvar alterações'));
+    final registration = find.byType(CustomerRegistration).last;
+    final scrollable = find
+        .descendant(of: registration, matching: find.byType(Scrollable))
+        .first;
+    final saveButton = find
+        .descendant(of: registration, matching: find.byType(FilledButton))
+        .first;
+    await tester.scrollUntilVisible(
+      saveButton,
+      500,
+      scrollable: scrollable,
+    );
+    await tester.tap(saveButton);
     await tester.pumpAndSettle();
 
     expect(customerRepository.updates, 1);

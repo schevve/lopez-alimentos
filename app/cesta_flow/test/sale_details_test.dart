@@ -86,12 +86,13 @@ void main() {
     expect(find.text('R\$ 100,00'), findsWidgets);
     expect(find.text('Valor pago'), findsOneWidget);
     expect(find.text('R\$ 40,00'), findsOneWidget);
-    expect(find.text('Parcelas'), findsOneWidget);
-    expect(find.text('2'), findsOneWidget);
-    expect(find.text('Produtos'), findsOneWidget);
+    expect(find.text('Parcelas'), findsWidgets);
+    expect(find.text('2'), findsNWidgets(2));
+    expect(find.text('Cesta'), findsWidgets);
     await tester.scrollUntilVisible(find.text('Cesta básica'), 400);
     expect(find.text('Cesta básica'), findsOneWidget);
-    expect(find.text('Valor unitário'), findsOneWidget);
+    expect(find.text('Preço da cesta'), findsOneWidget);
+    expect(find.text('Quantidade'), findsOneWidget);
     expect(find.text('R\$ 50,00'), findsWidgets);
     await tester.scrollUntilVisible(find.text('Parcela 2'), 400);
     expect(find.text('Parcela 1'), findsOneWidget);

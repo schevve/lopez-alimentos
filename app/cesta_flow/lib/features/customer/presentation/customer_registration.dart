@@ -73,19 +73,20 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
       );
     }
 
+    final isEditing = widget.customerId != null;
+
     return Scaffold(
       backgroundColor: Color(0xffF3FCF3),
 
       appBar: TopBar(
-        pagTitle: widget.customerId == null
-            ? "Registrar cliente"
-            : "Editar cliente",
+        pagTitle: isEditing ? 'Editar cliente' : 'Registrar cliente',
       ),
 
       body: CustomerForm(
-        onSubmit: _registerCustomer,
-        buttonText: "Registrar cliente",
-        title: "Registrar cliente",
+        customer: _cliente,
+        onSubmit: isEditing ? _updateCustomer : _registerCustomer,
+        buttonText: isEditing ? 'Salvar alterações' : 'Registrar cliente',
+        title: isEditing ? 'Editar cliente' : 'Registrar cliente',
       ),
     );
   }
@@ -107,6 +108,29 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
       documentRG: data['rg'],
     );
     await _customerRepository.registerCustomer(customer);
+  }
+
+  Future<void> _updateCustomer(Map<String, dynamic> data) async {
+    final current = _cliente;
+    if (current == null) return;
+
+    final updated = current.copyWith(
+      name: data['nome'],
+      dateOfBirth: cleanDate(data['data_nascimento']),
+      email: data['email'],
+      phone: data['telefone'],
+      address: data['rua'],
+      addressNumber: data['numero'],
+      city: data['cidade'],
+      state: data['estado'],
+      cep: data['cep'],
+      documentCPF: data['cpf'],
+      documentRG: data['rg'],
+      updatedAt: DateTime.now(),
+    );
+    await _customerRepository.updateCustomer(updated);
+    if (!mounted) return;
+    Navigator.of(context).pop(true);
   }
 }
 

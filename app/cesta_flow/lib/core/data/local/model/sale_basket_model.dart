@@ -51,12 +51,13 @@ class SaleBasket {
 
   /// Colunas de `public.sale_baskets`. A chave remota é (sale_id, basket_id).
   Map<String, dynamic> toRemote() {
+    final stamp = (updatedAt ?? createdAt).toUtc().toIso8601String();
     return {
       'sale_id': saleUuid,
       'basket_id': basketUuid,
       'quantity': quantity,
       'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt?.toIso8601String(),
+      'updated_at': stamp,
     };
   }
 

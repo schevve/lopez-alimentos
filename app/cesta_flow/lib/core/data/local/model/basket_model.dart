@@ -43,12 +43,13 @@ class Basket {
 
   /// Colunas de `public.baskets`, com `price` a ser criado no Supabase.
   Map<String, dynamic> toRemote() {
+    final stamp = (updatedAt ?? createdAt).toUtc().toIso8601String();
     return {
       'id': uuid,
       'name': name,
       'price': price,
       'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt?.toIso8601String(),
+      'updated_at': stamp,
     };
   }
 
