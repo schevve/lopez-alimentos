@@ -4,6 +4,7 @@ import '../../../../objectbox.g.dart';
 import '../db_helper.dart';
 import '../model/customer_model.dart';
 import '../model/sale_model.dart';
+import '../sync_entity_lookup.dart';
 import 'sale_repository.dart';
 
 class CustomerRepository {
@@ -113,5 +114,65 @@ class CustomerRepository {
       );
       return 1;
     });
+  }
+
+  Future<void> pushUnsynced() async {
+    final db = await _dbHelper.store;
+    final query = db.box<Customer>().query(Customer_.isSynced.equals(false)).build();
+    List<Customer> pending;
+    try {
+      pending = query.find();
+    } finally {
+      query.close();
+    }
+    for (final customer in pending) {
+      var synced = false;
+      if (customer.uuid.isNotEmpty) {
+        try {
+          if (customer.isDeleted) {
+            await Supabase.instance.client
+                .from('customers')
+                .update({
+                  'is_deleted': true,
+                  'updated_at': DateTime.now().toIso8601String(),
+                })
+                .eq('id', customer.uuid);
+          } else {
+            await Supabase.instance.client
+                .from('customers')
+                .upsert(customer.toRemote());
+          }
+          synced = true;
+        } catch (_) {
+          synced = false;
+        }
+      }
+      if (!synced) continue;
+      db.box<Customer>().put(customer.copyWith(isSynced: true), mode: PutMode.update);
+    }
+  }
+
+  Future<void> pullSince(DateTime since) async {
+    final iso = since.toUtc().toIso8601String();
+    final List<dynamic> rows;
+    try {
+      rows = await Supabase.instance.client
+          .from('customers')
+          .select()
+          .gt('updated_at', iso);
+    } catch (_) {
+      return;
+    }
+    final db = await _dbHelper.store;
+    for (final raw in rows) {
+      if (raw is! Map<String, dynamic>) continue;
+      final remote = Customer.fromMap(raw);
+      final existing = findCustomerByUuid(db, remote.uuid);
+      final merged = remote.copyWith(
+        id: existing?.id,
+        isSynced: true,
+      );
+      db.box<Customer>().put(merged, mode: existing == null ? PutMode.put : PutMode.update);
+    }
   }
 }

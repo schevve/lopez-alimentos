@@ -2,8 +2,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../objectbox.g.dart';
 import '../db_helper.dart';
-import '../model/sale_model.dart';
 import '../model/payment_model.dart';
+import '../model/sale_model.dart';
+import '../sync_entity_lookup.dart';
 
 class PaymentRepository {
   final DatabaseHelper _dbHelper;
@@ -144,5 +145,73 @@ class PaymentRepository {
       );
       return 1;
     });
+  }
+
+  Future<void> pushUnsynced() async {
+    final db = await _dbHelper.store;
+    final query = db.box<Payment>().query(Payment_.isSynced.equals(false)).build();
+    List<Payment> pending;
+    try {
+      pending = query.find();
+    } finally {
+      query.close();
+    }
+    for (final payment in pending) {
+      var synced = false;
+      if (payment.uuid.isNotEmpty) {
+        try {
+          if (payment.isDeleted) {
+            await Supabase.instance.client
+                .from('payments')
+                .update({'is_deleted': true})
+                .eq('id', payment.uuid);
+          } else {
+            final sale = db.box<Sale>().get(payment.saleId);
+            final payload = payment.toMap()
+              ..remove('id')
+              ..['id'] = payment.uuid
+              ..['sale_id'] = sale?.uuid ?? '';
+            await Supabase.instance.client.from('payments').upsert(payload);
+          }
+          synced = true;
+        } catch (_) {
+          synced = false;
+        }
+      }
+      if (!synced) continue;
+      db.box<Payment>().put(payment.copyWith(isSynced: true), mode: PutMode.update);
+    }
+  }
+
+  Future<void> pullSince(DateTime since) async {
+    final iso = since.toUtc().toIso8601String();
+    final List<dynamic> rows;
+    try {
+      rows = await Supabase.instance.client
+          .from('payments')
+          .select()
+          .gt('date', iso);
+    } catch (_) {
+      return;
+    }
+    final db = await _dbHelper.store;
+    for (final raw in rows) {
+      if (raw is! Map<String, dynamic>) continue;
+      final saleUuid = raw['sale_id'] as String? ?? '';
+      final sale = findSaleByUuid(db, saleUuid);
+      if (sale?.id == null) continue;
+      final uuid = (raw['id'] as String?) ?? '';
+      if (uuid.isEmpty) continue;
+      final existing = findPaymentByUuid(db, uuid);
+      final map = Map<String, dynamic>.from(raw)..remove('id');
+      map['uuid'] = uuid;
+      map['sale_id'] = sale!.id;
+      final remote = Payment.fromMap(map);
+      final merged = remote.copyWith(id: existing?.id, isSynced: true);
+      db.box<Payment>().put(
+        merged,
+        mode: existing == null ? PutMode.put : PutMode.update,
+      );
+    }
   }
 }

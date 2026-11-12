@@ -8,6 +8,7 @@ import '../model/customer_model.dart';
 import '../model/installment_model.dart';
 import '../model/sale_basket_model.dart';
 import '../model/sale_model.dart';
+import '../sync_entity_lookup.dart';
 
 class SaleBasketLine {
   const SaleBasketLine({
@@ -420,6 +421,199 @@ class SaleRepository {
       return true;
     } catch (_) {
       return false;
+    }
+  }
+
+  Future<void> pushUnsynced() async {
+    final db = await _dbHelper.store;
+    await _pushUnsyncedBaskets(db);
+    await _pushUnsyncedSales(db);
+    await _pushUnsyncedSaleBaskets(db);
+  }
+
+  Future<void> _pushUnsyncedBaskets(Store db) async {
+    final query = db.box<Basket>().query(Basket_.isSynced.equals(false)).build();
+    List<Basket> pending;
+    try {
+      pending = query.find();
+    } finally {
+      query.close();
+    }
+    for (final basket in pending) {
+      var synced = false;
+      if (basket.uuid.isNotEmpty) {
+        try {
+          if (basket.isDeleted) {
+            synced = await _markRemoteDeleted('baskets', basket.uuid);
+          } else {
+            await Supabase.instance.client.from('baskets').upsert(basket.toRemote());
+            synced = true;
+          }
+        } catch (_) {
+          synced = false;
+        }
+      }
+      if (!synced) continue;
+      db.box<Basket>().put(basket.copyWith(isSynced: true), mode: PutMode.update);
+    }
+  }
+
+  Future<void> _pushUnsyncedSales(Store db) async {
+    final query = db.box<Sale>().query(Sale_.isSynced.equals(false)).build();
+    List<Sale> pending;
+    try {
+      pending = query.find();
+    } finally {
+      query.close();
+    }
+    for (final sale in pending) {
+      var synced = false;
+      if (sale.uuid.isNotEmpty) {
+        try {
+          if (sale.isDeleted) {
+            synced = await _markRemoteDeleted('sales', sale.uuid);
+          } else {
+            await Supabase.instance.client.from('sales').upsert(sale.toRemote());
+            synced = true;
+          }
+        } catch (_) {
+          synced = false;
+        }
+      }
+      if (!synced) continue;
+      db.box<Sale>().put(sale.copyWith(isSynced: true), mode: PutMode.update);
+    }
+  }
+
+  Future<void> _pushUnsyncedSaleBaskets(Store db) async {
+    final query =
+        db.box<SaleBasket>().query(SaleBasket_.isSynced.equals(false)).build();
+    List<SaleBasket> pending;
+    try {
+      pending = query.find();
+    } finally {
+      query.close();
+    }
+    for (final link in pending) {
+      var synced = false;
+      if (link.saleUuid.isNotEmpty && link.basketUuid.isNotEmpty) {
+        try {
+          if (link.isDeleted) {
+            synced = await _markRemoteSaleBasketDeleted(
+              link.saleUuid,
+              link.basketUuid,
+            );
+          } else {
+            await Supabase.instance.client
+                .from('sale_baskets')
+                .upsert(link.toRemote());
+            synced = true;
+          }
+        } catch (_) {
+          synced = false;
+        }
+      }
+      if (!synced) continue;
+      db.box<SaleBasket>().put(
+        link.copyWith(isSynced: true),
+        mode: PutMode.update,
+      );
+    }
+  }
+
+  Future<void> pullSince(DateTime since) async {
+    final db = await _dbHelper.store;
+    await _pullBasketsSince(db, since);
+    await _pullSalesSince(db, since);
+    await _pullSaleBasketsSince(db, since);
+  }
+
+  Future<void> _pullBasketsSince(Store db, DateTime since) async {
+    final iso = since.toUtc().toIso8601String();
+    final List<dynamic> rows;
+    try {
+      rows = await Supabase.instance.client
+          .from('baskets')
+          .select()
+          .gt('updated_at', iso);
+    } catch (_) {
+      return;
+    }
+    for (final raw in rows) {
+      if (raw is! Map<String, dynamic>) continue;
+      final remote = Basket.fromMap(raw);
+      final existing = findBasketByUuid(db, remote.uuid);
+      final merged = remote.copyWith(id: existing?.id, isSynced: true);
+      db.box<Basket>().put(
+        merged,
+        mode: existing == null ? PutMode.put : PutMode.update,
+      );
+    }
+  }
+
+  Future<void> _pullSalesSince(Store db, DateTime since) async {
+    final iso = since.toUtc().toIso8601String();
+    final List<dynamic> rows;
+    try {
+      rows = await Supabase.instance.client
+          .from('sales')
+          .select()
+          .gt('updated_at', iso);
+    } catch (_) {
+      return;
+    }
+    for (final raw in rows) {
+      if (raw is! Map<String, dynamic>) continue;
+      final remote = Sale.fromMap(raw);
+      if (remote.customerUuid.isEmpty) continue;
+      final customer = findCustomerByUuid(db, remote.customerUuid);
+      if (customer?.id == null) continue;
+      final existing = findSaleByUuid(db, remote.uuid);
+      final merged = remote.copyWith(
+        id: existing?.id,
+        customerId: customer!.id!,
+        isSynced: true,
+      );
+      db.box<Sale>().put(
+        merged,
+        mode: existing == null ? PutMode.put : PutMode.update,
+      );
+    }
+  }
+
+  Future<void> _pullSaleBasketsSince(Store db, DateTime since) async {
+    final iso = since.toUtc().toIso8601String();
+    final List<dynamic> rows;
+    try {
+      rows = await Supabase.instance.client
+          .from('sale_baskets')
+          .select()
+          .gt('updated_at', iso);
+    } catch (_) {
+      return;
+    }
+    for (final raw in rows) {
+      if (raw is! Map<String, dynamic>) continue;
+      final remote = SaleBasket.fromMap(raw);
+      if (remote.saleUuid.isEmpty || remote.basketUuid.isEmpty) continue;
+      final sale = findSaleByUuid(db, remote.saleUuid);
+      final basket = findBasketByUuid(db, remote.basketUuid);
+      if (sale?.id == null || basket?.id == null) continue;
+      final existing = findSaleBasketByUuids(
+        db,
+        saleUuid: remote.saleUuid,
+        basketUuid: remote.basketUuid,
+      );
+      final merged = remote.copyWith(
+        id: existing?.id,
+        saleId: sale!.id!,
+        basketId: basket!.id!,
+        isSynced: true,
+      );
+      db.box<SaleBasket>().put(
+        merged,
+        mode: existing == null ? PutMode.put : PutMode.update,
+      );
     }
   }
 }

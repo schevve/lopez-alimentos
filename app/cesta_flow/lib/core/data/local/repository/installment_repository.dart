@@ -4,6 +4,7 @@ import '../../../../objectbox.g.dart';
 import '../db_helper.dart';
 import '../model/installment_model.dart';
 import '../model/sale_model.dart';
+import '../sync_entity_lookup.dart';
 
 class InstallmentRepository {
   final DatabaseHelper _dbHelper;
@@ -178,5 +179,77 @@ class InstallmentRepository {
       );
       return 1;
     });
+  }
+
+  Future<void> pushUnsynced() async {
+    final db = await _dbHelper.store;
+    final query =
+        db.box<Installment>().query(Installment_.isSynced.equals(false)).build();
+    List<Installment> pending;
+    try {
+      pending = query.find();
+    } finally {
+      query.close();
+    }
+    for (final installment in pending) {
+      var synced = false;
+      if (installment.uuid.isNotEmpty) {
+        try {
+          if (installment.isDeleted) {
+            await Supabase.instance.client
+                .from('installments')
+                .update({
+                  'is_deleted': true,
+                  'updated_at': DateTime.now().toIso8601String(),
+                })
+                .eq('id', installment.uuid);
+          } else {
+            await Supabase.instance.client
+                .from('installments')
+                .upsert(installment.toRemote());
+          }
+          synced = true;
+        } catch (_) {
+          synced = false;
+        }
+      }
+      if (!synced) continue;
+      db.box<Installment>().put(
+        installment.copyWith(isSynced: true),
+        mode: PutMode.update,
+      );
+    }
+  }
+
+  Future<void> pullSince(DateTime since) async {
+    final iso = since.toUtc().toIso8601String();
+    final List<dynamic> rows;
+    try {
+      rows = await Supabase.instance.client
+          .from('installments')
+          .select()
+          .gt('updated_at', iso);
+    } catch (_) {
+      return;
+    }
+    final db = await _dbHelper.store;
+    for (final raw in rows) {
+      if (raw is! Map<String, dynamic>) continue;
+      final remote = Installment.fromMap(raw);
+      if (remote.saleUuid.isEmpty) continue;
+      final sale = findSaleByUuid(db, remote.saleUuid);
+      if (sale?.id == null) continue;
+      final existing = findInstallmentByUuid(db, remote.uuid);
+      final merged = remote.copyWith(
+        id: existing?.id,
+        saleId: sale!.id!,
+        saleUuid: sale.uuid,
+        isSynced: true,
+      );
+      db.box<Installment>().put(
+        merged,
+        mode: existing == null ? PutMode.put : PutMode.update,
+      );
+    }
   }
 }
