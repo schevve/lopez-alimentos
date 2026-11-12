@@ -7,13 +7,15 @@ class Sale {
   String uuid;
   @Index()
   final int customerId;
-  final String productName;
+  final String customerUuid;
+  final String? userId;
   final double price;
-  final int quantity;
+  final double amountPaid;
+  final int installments;
   @Property(type: PropertyType.dateNano)
-  final DateTime date;
-  final String description;
-  final bool isBlocked;
+  final DateTime createdAt;
+  @Property(type: PropertyType.dateNano)
+  final DateTime? updatedAt;
   final bool isDeleted;
   final bool isSynced;
 
@@ -21,26 +23,28 @@ class Sale {
     this.id,
     required this.uuid,
     required this.customerId,
-    required this.productName,
+    this.customerUuid = '',
+    this.userId,
     required this.price,
-    required this.quantity,
-    required this.date,
-    required this.description,
-    this.isBlocked = false,
+    this.amountPaid = 0,
+    this.installments = 1,
+    DateTime? createdAt,
+    this.updatedAt,
     this.isDeleted = false,
     this.isSynced = false,
-  });
+  }) : createdAt = createdAt ?? DateTime.now();
 
   Map<String, dynamic> toMap() {
     final map = <String, dynamic>{
       'uuid': uuid,
       'customer_id': customerId,
-      'product_name': productName,
+      'customer_uuid': customerUuid,
+      'user_id': userId,
       'price': price,
-      'quantity': quantity,
-      'date': date.toIso8601String(),
-      'description': description,
-      'is_blocked': isBlocked,
+      'amount_paid': amountPaid,
+      'installments': installments,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
       'is_deleted': isDeleted,
       'is_synced': isSynced,
     };
@@ -50,17 +54,38 @@ class Sale {
     return map;
   }
 
+  /// Colunas de `public.sales`. `customer_id` remoto é o uuid do cliente.
+  Map<String, dynamic> toRemote() {
+    return {
+      'id': uuid,
+      'user_id': userId,
+      'customer_id': customerUuid,
+      'price': price,
+      'amount_paid': amountPaid,
+      'installments': installments,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+    };
+  }
+
   factory Sale.fromMap(Map<String, dynamic> map) {
+    final rawId = map['id'];
+    final rawCustomerId = map['customer_id'];
     return Sale(
-      id: map['id'] as int?,
-      uuid: map['uuid'] as String,
-      customerId: map['customer_id'] as int,
-      productName: map['product_name'] as String,
-      price: (map['price'] as num).toDouble(),
-      quantity: (map['quantity'] as num).toInt(),
-      date: DateTime.parse(map['date'] as String),
-      description: map['description'] as String,
-      isBlocked: map['is_blocked'] as bool? ?? false,
+      id: rawId is int ? rawId : null,
+      uuid: (map['uuid'] ?? (rawId is String ? rawId : '')) as String,
+      customerId: rawCustomerId is int ? rawCustomerId : 0,
+      customerUuid:
+          (map['customer_uuid'] ??
+                  (rawCustomerId is String ? rawCustomerId : ''))
+              as String,
+      userId: map['user_id'] as String?,
+      price: (map['price'] as num?)?.toDouble() ?? 0,
+      amountPaid: (map['amount_paid'] as num?)?.toDouble() ?? 0,
+      installments: (map['installments'] as num?)?.toInt() ?? 1,
+      createdAt:
+          _readDate(map['created_at'] ?? map['date']) ?? DateTime.now(),
+      updatedAt: _readDate(map['updated_at']),
       isDeleted: map['is_deleted'] as bool? ?? false,
       isSynced: map['is_synced'] as bool? ?? false,
     );
@@ -70,12 +95,14 @@ class Sale {
     int? id,
     String? uuid,
     int? customerId,
-    String? productName,
+    String? customerUuid,
+    String? userId,
+    bool clearUserId = false,
     double? price,
-    int? quantity,
-    DateTime? date,
-    String? description,
-    bool? isBlocked,
+    double? amountPaid,
+    int? installments,
+    DateTime? createdAt,
+    DateTime? updatedAt,
     bool? isDeleted,
     bool? isSynced,
   }) {
@@ -83,12 +110,13 @@ class Sale {
       id: id ?? this.id,
       uuid: uuid ?? this.uuid,
       customerId: customerId ?? this.customerId,
-      productName: productName ?? this.productName,
+      customerUuid: customerUuid ?? this.customerUuid,
+      userId: clearUserId ? null : userId ?? this.userId,
       price: price ?? this.price,
-      quantity: quantity ?? this.quantity,
-      date: date ?? this.date,
-      description: description ?? this.description,
-      isBlocked: isBlocked ?? this.isBlocked,
+      amountPaid: amountPaid ?? this.amountPaid,
+      installments: installments ?? this.installments,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       isDeleted: isDeleted ?? this.isDeleted,
       isSynced: isSynced ?? this.isSynced,
     );
@@ -96,6 +124,14 @@ class Sale {
 
   @override
   String toString() {
-    return 'Sale{id: $id, uuid: $uuid, customerId: $customerId, productName: $productName, price: $price, quantity: $quantity, date: $date, description: $description, isBlocked: $isBlocked, isDeleted: $isDeleted, isSynced: $isSynced}';
+    return 'Sale{id: $id, uuid: $uuid, customerId: $customerId, price: $price, amountPaid: $amountPaid, installments: $installments, createdAt: $createdAt}';
   }
+}
+
+DateTime? _readDate(Object? value) {
+  if (value == null) return null;
+  if (value is DateTime) return value;
+  final text = value.toString();
+  if (text.isEmpty) return null;
+  return DateTime.parse(text);
 }

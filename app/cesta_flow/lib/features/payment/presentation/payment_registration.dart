@@ -1,8 +1,8 @@
 import 'package:cesta_flow/features/payment/presentation/payment_success.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_registration.dart';
 import 'package:cesta_flow/core/data/local/db_helper.dart';
-import 'package:cesta_flow/core/data/local/model/payment_model.dart';
-import 'package:cesta_flow/core/data/local/repository/payment_repository.dart';
+import 'package:cesta_flow/core/data/local/model/installment_model.dart';
+import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
@@ -59,22 +59,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                   ),
                   TextFormField(
                     decoration: InputDecoration(
-                      labelText: "Metodo de pagamento",
-                      prefixText: '',
-
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-
-                    onSaved: (value) => _formData['paymentTerm'] = value,
-                  ),
-                  TextFormField(
-                    decoration: InputDecoration(
-                      labelText: 'Proxima visita *',
+                      labelText: 'Vencimento',
                       hintText: 'dd/mm/aaaa',
 
                       border: OutlineInputBorder(
@@ -87,7 +72,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
 
                     keyboardType: TextInputType.datetime,
                     inputFormatters: [FormatDate()],
-                    onSaved: (value) => _formData['nextVisit'] = value,
+                    onSaved: (value) => _formData['dueDate'] = value,
                   ),
                   FilledButton(
                     onPressed: () async {
@@ -109,7 +94,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
       _formKey.currentState!.save();
 
       var db = DatabaseHelper();
-      var paymentRepository = PaymentRepository(dbHelper: db);
+      var installmentRepository = InstallmentRepository(dbHelper: db);
       final int saleId = widget.saleId;
 
       final String rawValue = _formData['paymentValue'] ?? "0,00";
@@ -117,40 +102,41 @@ class _PaymentRegistration extends State<PaymentRegistration> {
           .replaceAll('.', '')
           .replaceAll(',', '.');
       final double realValue = double.tryParse(cleanValue) ?? 0.0;
+      final dueDate = _parseDate(_formData['dueDate'] as String?);
 
       try {
-        final List<Payment> allPayments = await paymentRepository
-            .getPaymentsBySaleId(saleId);
-
-        double amount = await paymentRepository.getPaymentsBySaleIdAmount(
-          saleId,
-        );
-
-        if (allPayments.isNotEmpty) {
-          amount = amount - realValue;
-        }
-        var paymentData = Payment(
+        final installment = Installment(
           uuid: const Uuid().v4(),
           saleId: saleId,
-          method: _formData['paymentTerm'],
-          amount: amount,
-          date: DateTime.now(),
+          amount: realValue,
+          dueDate: dueDate,
+          paymentDate: DateTime.now(),
         );
-        await paymentRepository.registerPayment(paymentData);
-        print('Pagamento registrado com sucesso: ${paymentData.amount}');
+        await installmentRepository.registerInstallment(installment);
       } catch (e) {
         print("erro no banco de dados: $e");
       }
 
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => PaymentSuccess(
-            paymentValue: _formData['paymentValue'],
-            paymentTerm: _formData['paymentTerm'],
-            nextVisit: _formData['nextVisit'],
+            paymentValue: _formData['paymentValue'] as String? ?? '',
+            dueDate: _formData['dueDate'] as String? ?? '',
           ),
         ),
       );
     }
   }
+}
+
+DateTime? _parseDate(String? value) {
+  if (value == null || value.trim().isEmpty) return null;
+  final parts = value.split('/');
+  if (parts.length != 3) return null;
+  final day = int.tryParse(parts[0]);
+  final month = int.tryParse(parts[1]);
+  final year = int.tryParse(parts[2]);
+  if (day == null || month == null || year == null) return null;
+  return DateTime(year, month, day);
 }

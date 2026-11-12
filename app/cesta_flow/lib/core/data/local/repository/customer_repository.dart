@@ -3,8 +3,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../objectbox.g.dart';
 import '../db_helper.dart';
 import '../model/customer_model.dart';
+import '../model/installment_model.dart';
+import '../model/sale_basket_model.dart';
 import '../model/sale_model.dart';
-import '../model/payment_model.dart';
 
 class CustomerRepository {
   final DatabaseHelper _dbHelper;
@@ -14,7 +15,7 @@ class CustomerRepository {
   Future<int> registerCustomer(Customer value) async {
     bool isSynced = true;
     try {
-      Supabase.instance.client.from('customers').insert(value.toMap());
+      await Supabase.instance.client.from('customers').insert(value.toRemote());
     } catch (_) {
       isSynced = false;
     }
@@ -35,9 +36,9 @@ class CustomerRepository {
     }
     bool isSynced = true;
     try {
-      Supabase.instance.client
+      await Supabase.instance.client
           .from('customers')
-          .update(value.toMap())
+          .update(value.toRemote())
           .eq('id', value.uuid);
     } catch (_) {
       isSynced = false;
@@ -59,12 +60,18 @@ class CustomerRepository {
       final sales = query.find();
       query.close();
       for (final sale in sales) {
-        final payments = db
-            .box<Payment>()
-            .query(Payment_.saleId.equals(sale.id!))
+        final installments = db
+            .box<Installment>()
+            .query(Installment_.saleId.equals(sale.id!))
             .build();
-        payments.remove();
-        payments.close();
+        installments.remove();
+        installments.close();
+        final links = db
+            .box<SaleBasket>()
+            .query(SaleBasket_.saleId.equals(sale.id!))
+            .build();
+        links.remove();
+        links.close();
         db.box<Sale>().remove(sale.id!);
       }
       return db.box<Customer>().remove(id) ? 1 : 0;

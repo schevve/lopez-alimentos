@@ -96,14 +96,8 @@ class _SaleRegistrationState extends State<SaleRegistration> {
                 // onSaved: (value) => _formData['clienteId'] = value,
               ),
               TextFormField(
-                decoration: InputDecoration(labelText: 'Produto *'),
-                onSaved: (value) => _formData['produto'] = value,
-              ),
-              TextFormField(
-                decoration: InputDecoration(
-                  labelText: 'Observações (opcional)',
-                ),
-                onSaved: (value) => _formData['observacoes'] = value,
+                decoration: InputDecoration(labelText: 'Cesta *'),
+                onSaved: (value) => _formData['cesta'] = value,
               ),
               TextFormField(
                 initialValue: getCurrentFormattedDate(),
@@ -149,21 +143,26 @@ class _SaleRegistrationState extends State<SaleRegistration> {
       _formKey.currentState!.save();
       var db = DatabaseHelper();
       var salesRepository = SaleRepository(dbHelper: db);
+      final price = double.parse(
+        (_formData['valor_total'] as String).replaceAll(',', '.'),
+      );
       final saleData = Sale(
         uuid: const Uuid().v4(),
         customerId: _formData['clienteId'],
-        productName: _formData['produto'],
-        price: double.parse(
-          (_formData['valor_total'] as String).replaceAll(',', '.'),
-        ),
-        quantity: 1,
-        date: DateTime.parse(
+        customerUuid: _selectedCustomer!.uuid,
+        price: price,
+        amountPaid: 0,
+        installments: 1,
+        createdAt: DateTime.parse(
           _formData['data_venda'].split('/').reversed.join('-'),
         ),
-        description: _formData['observacoes'] ?? '',
       );
       print(saleData);
-      int saleId = await salesRepository.registerSale(saleData);
+      int saleId = await salesRepository.registerSale(
+        saleData,
+        basketName: _formData['cesta'] as String? ?? '',
+        basketPrice: price,
+      );
       print('Venda registrada com sucesso! ID da venda: $saleId');
       salesRepository.getAllSales().then((sales) {
         print('Vendas registradas: ${sales.length}');

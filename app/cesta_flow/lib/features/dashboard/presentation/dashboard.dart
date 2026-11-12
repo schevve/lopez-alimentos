@@ -28,6 +28,7 @@ class _DashboardState extends State<Dashboard> {
   String? _errorMessage;
   List<Sale> _latestSales = const [];
   Map<int, Customer> _customersById = const {};
+  Map<int, String> _basketLabels = const {};
   double _salesAmountLast7Days = 0;
   int _customersCount = 0;
   int _pendingCustomersCount = 0;
@@ -55,6 +56,9 @@ class _DashboardState extends State<Dashboard> {
       );
       final pendingCustomers = await _saleRepository.getPendingCustomersCount();
       final customers = await _customerRepository.getAllCustomers();
+      final basketLabels = await _saleRepository.basketLabelsFor(
+        latestSales.map((sale) => sale.id).whereType<int>().toList(),
+      );
 
       if (!mounted) {
         return;
@@ -62,6 +66,7 @@ class _DashboardState extends State<Dashboard> {
 
       setState(() {
         _latestSales = latestSales;
+        _basketLabels = basketLabels;
         _salesAmountLast7Days = salesAmount;
         _pendingCustomersCount = pendingCustomers;
         _customersCount = customers.length;
@@ -248,12 +253,10 @@ class _DashboardState extends State<Dashboard> {
     return SaleCard(
       saleId: sale.id,
       name: customer?.name ?? 'Cliente #${sale.customerId}',
-      status: 'Registrada em ${_formatDate(sale.date)}',
+      status: 'Registrada em ${_formatDate(sale.createdAt)}',
       address: address,
-      product: sale.quantity > 1
-          ? '${sale.quantity}x ${sale.productName}'
-          : sale.productName,
-      amount: formatCurrency(sale.price * sale.quantity),
+      product: _basketLabels[sale.id] ?? 'Cesta',
+      amount: formatCurrency(sale.price),
     );
   }
 

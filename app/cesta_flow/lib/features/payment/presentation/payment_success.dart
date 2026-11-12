@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 
 class PaymentSuccess extends StatefulWidget {
   final String paymentValue;
-  final String paymentTerm;
-  final String nextVisit;
+  final String dueDate;
 
   const PaymentSuccess({
     super.key,
     required this.paymentValue,
-    required this.paymentTerm,
-    required this.nextVisit,
+    required this.dueDate,
   });
 
   @override
@@ -54,7 +52,7 @@ class _PaymentSuccessState extends State<PaymentSuccess> {
               ),
             ),
             Text(
-              "${widget.paymentValue}   -   ${widget.paymentTerm}",
+              widget.paymentValue,
               style: TextStyle(
                 color: Color.fromARGB(255, 53, 134, 83),
                 fontSize: 12,
@@ -62,7 +60,8 @@ class _PaymentSuccessState extends State<PaymentSuccess> {
                 letterSpacing: 1,
               ),
             ),
-            Text("Próxima visita: ${widget.nextVisit}"),
+            if (widget.dueDate.isNotEmpty)
+              Text("Vencimento: ${widget.dueDate}"),
             FilledButton(
               onPressed: () {
                 Navigator.pop(context);
