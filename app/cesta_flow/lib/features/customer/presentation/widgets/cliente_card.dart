@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 
+String _formatScore(double score) => score == score.roundToDouble()
+    ? score.toInt().toString()
+    : score.toString();
+
 class ClienteCard extends StatelessWidget {
   const ClienteCard({super.key, required this.cliente, required this.onAcao});
   final Customer cliente;
@@ -53,7 +57,7 @@ class ClienteCard extends StatelessWidget {
                 child: Text(
                   cliente.score == null
                       ? 'Score não informado'
-                      : 'Score: ${cliente.score}',
+                      : 'Score: ${_formatScore(cliente.score!)}',
                   style: const TextStyle(
                     fontSize: 14,
                     color: Color(0xFF46524B),

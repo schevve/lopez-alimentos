@@ -28,6 +28,7 @@ class _SalesListState extends State<SalesList> {
   String? _errorMessage;
   List<Sale> _sales = const [];
   Map<int, Customer> _customersById = const {};
+  Map<int, String> _basketLabels = const {};
 
   @override
   void initState() {
@@ -52,15 +53,19 @@ class _SalesListState extends State<SalesList> {
     try {
       final sales = await _saleRepository.getAllSales();
       final customers = await _customerRepository.getAllCustomers();
+      final basketLabels = await _saleRepository.basketLabelsFor(
+        sales.map((sale) => sale.id).whereType<int>().toList(),
+      );
 
       if (!mounted) {
         return;
       }
 
-      sales.sort((a, b) => b.date.compareTo(a.date));
+      sales.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       setState(() {
         _sales = sales;
+        _basketLabels = basketLabels;
         _customersById = {
           for (final customer in customers)
             if (customer.id != null) customer.id!: customer,
@@ -295,19 +300,17 @@ class _SalesListState extends State<SalesList> {
         ? 'Endereço não informado'
         : '${customer.address} (${customer.city})';
     final status = customer == null
-        ? 'Registrada em ${_formatDate(sale.date)}'
+        ? 'Registrada em ${_formatDate(sale.createdAt)}'
         : 'CPF ${formatCpf(customer.documentCPF)} • '
-              'Registrada em ${_formatDate(sale.date)}';
+              'Registrada em ${_formatDate(sale.createdAt)}';
 
     return SaleCard(
       saleId: sale.id,
       name: customer?.name ?? 'Cliente #${sale.customerId}',
       status: status,
       address: address,
-      product: sale.quantity > 1
-          ? '${sale.quantity}x ${sale.productName}'
-          : sale.productName,
-      amount: formatCurrency(sale.price * sale.quantity),
+      product: _basketLabels[sale.id] ?? 'Cesta',
+      amount: formatCurrency(sale.price),
     );
   }
 

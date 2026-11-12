@@ -4,6 +4,7 @@ import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:cesta_flow/features/shared/customer_form.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
 
 class CustomerRegistration extends StatefulWidget {
   const CustomerRegistration({super.key, this.customerId, this.repository});
@@ -72,31 +73,34 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
       );
     }
 
+    final isEditing = widget.customerId != null;
+
     return Scaffold(
       backgroundColor: Color(0xffF3FCF3),
 
       appBar: TopBar(
-        pagTitle: widget.customerId == null
-            ? "Registrar cliente"
-            : "Editar cliente",
+        pagTitle: isEditing ? 'Editar cliente' : 'Registrar cliente',
       ),
 
       body: CustomerForm(
-        onSubmit: _registerCustomer,
-        buttonText: "Registrar cliente",
-        title: "Registrar cliente",
+        customer: _cliente,
+        onSubmit: isEditing ? _updateCustomer : _registerCustomer,
+        buttonText: isEditing ? 'Salvar alterações' : 'Registrar cliente',
+        title: isEditing ? 'Editar cliente' : 'Registrar cliente',
       ),
     );
   }
 
   Future<void> _registerCustomer(Map<String, dynamic> data) async {
+    final uuid = Uuid().v4();
     final customer = Customer(
+      uuid: uuid,
       name: data['nome'],
       dateOfBirth: cleanDate(data['data_nascimento']),
       email: data['email'],
       phone: data['telefone'],
       address: data['rua'],
-      adressNumber: data['numero'],
+      addressNumber: data['numero'],
       city: data['cidade'],
       state: data['estado'],
       cep: data['cep'],
@@ -104,7 +108,29 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
       documentRG: data['rg'],
     );
     await _customerRepository.registerCustomer(customer);
-    print('Cliente registrado com sucesso: ${customer.name}');
+  }
+
+  Future<void> _updateCustomer(Map<String, dynamic> data) async {
+    final current = _cliente;
+    if (current == null) return;
+
+    final updated = current.copyWith(
+      name: data['nome'],
+      dateOfBirth: cleanDate(data['data_nascimento']),
+      email: data['email'],
+      phone: data['telefone'],
+      address: data['rua'],
+      addressNumber: data['numero'],
+      city: data['cidade'],
+      state: data['estado'],
+      cep: data['cep'],
+      documentCPF: data['cpf'],
+      documentRG: data['rg'],
+      updatedAt: DateTime.now(),
+    );
+    await _customerRepository.updateCustomer(updated);
+    if (!mounted) return;
+    Navigator.of(context).pop(true);
   }
 }
 

@@ -4,7 +4,7 @@ import 'package:cesta_flow/core/constants/util/format_currency.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
-import 'package:cesta_flow/core/data/local/repository/payment_repository.dart';
+import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/customer/presentation/customer_registration.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
@@ -16,13 +16,13 @@ class CustomerDetails extends StatefulWidget {
     required this.customerId,
     this.customerRepository,
     this.saleRepository,
-    this.paymentRepository,
+    this.installmentRepository,
   });
 
   final int customerId;
   final CustomerRepository? customerRepository;
   final SaleRepository? saleRepository;
-  final PaymentRepository? paymentRepository;
+  final InstallmentRepository? installmentRepository;
 
   @override
   State<CustomerDetails> createState() => _CustomerDetailsState();
@@ -33,8 +33,8 @@ class _CustomerDetailsState extends State<CustomerDetails> {
       widget.customerRepository ?? CustomerRepository();
   late final SaleRepository _saleRepository =
       widget.saleRepository ?? SaleRepository();
-  late final PaymentRepository _paymentRepository =
-      widget.paymentRepository ?? PaymentRepository();
+  late final InstallmentRepository _installmentRepository =
+      widget.installmentRepository ?? InstallmentRepository();
   late Future<_CustomerDetailsData> _details;
 
   @override
@@ -53,14 +53,16 @@ class _CustomerDetailsState extends State<CustomerDetails> {
 
     final sales = await _saleRepository.getSalesByCustomerId(widget.customerId);
     final saleIds = sales.map((sale) => sale.id).whereType<int>().toList();
-    final paymentTotals = await _paymentRepository.getPaymentTotalsBySaleIds(
+    final paymentTotals = await _installmentRepository.paidTotalsBySaleIds(
       saleIds,
     );
+    final basketLabels = await _saleRepository.basketLabelsFor(saleIds);
 
     return _CustomerDetailsData(
       customer: customer,
       sales: sales,
       paymentTotals: paymentTotals,
+      basketLabels: basketLabels,
     );
   }
 
@@ -118,10 +120,11 @@ class _CustomerDetailsState extends State<CustomerDetails> {
             .map(
               (sale) => _SaleSummary(
                 sale: sale,
-                total: sale.price * sale.quantity,
+                label: data.basketLabels[sale.id] ?? 'Cesta',
+                total: sale.price,
                 paid: math.max(
                   0,
-                  data.paymentTotals[sale.id] ?? 0,
+                  data.paymentTotals[sale.id] ?? sale.amountPaid,
                 ).toDouble(),
               ),
             )
@@ -275,10 +278,15 @@ class _CustomerDetailsState extends State<CustomerDetails> {
             ),
             _InfoLine(
               label: 'Data de nascimento',
-              value: _formatDate(customer.dateOfBirth),
+              value: customer.dateOfBirth == null
+                  ? 'Não informada'
+                  : _formatDate(customer.dateOfBirth!),
             ),
             if (customer.score != null)
-              _InfoLine(label: 'Score', value: '${customer.score}'),
+              _InfoLine(
+                label: 'Score',
+                value: _formatScore(customer.score!),
+              ),
             if (customer.id != null)
               _InfoLine(label: 'Código do cliente', value: '#${customer.id}'),
           ],
@@ -292,26 +300,34 @@ class _CustomerDetailsState extends State<CustomerDetails> {
       '${date.month.toString().padLeft(2, '0')}/${date.year}';
 }
 
+String _formatScore(double score) => score == score.roundToDouble()
+    ? score.toInt().toString()
+    : score.toString();
+
 class _CustomerDetailsData {
   const _CustomerDetailsData({
     required this.customer,
     this.sales = const [],
     this.paymentTotals = const {},
+    this.basketLabels = const {},
   });
 
   final Customer? customer;
   final List<Sale> sales;
   final Map<int, double> paymentTotals;
+  final Map<int, String> basketLabels;
 }
 
 class _SaleSummary {
   const _SaleSummary({
     required this.sale,
+    required this.label,
     required this.total,
     required this.paid,
   });
 
   final Sale sale;
+  final String label;
   final double total;
   final double paid;
 
@@ -414,7 +430,7 @@ class _SaleCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '${sale.quantity}x ${sale.productName} • ${_formatDate(sale.date)}',
+              '${summary.label} • ${_formatDate(sale.createdAt)}',
               style: const TextStyle(color: Color(0xFF59665E)),
             ),
             const SizedBox(height: 10),
