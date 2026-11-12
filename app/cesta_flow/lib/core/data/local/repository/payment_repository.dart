@@ -30,10 +30,23 @@ class PaymentRepository {
     });
   }
 
-  Future<Payment?> getPaymentById(int id) async =>
-      (await _dbHelper.store).box<Payment>().get(id);
-  Future<List<Payment>> getAllPayments() async =>
-      (await _dbHelper.store).box<Payment>().getAll();
+  Future<Payment?> getPaymentById(int id) async {
+    final payment = (await _dbHelper.store).box<Payment>().get(id);
+    if (payment == null || payment.isDeleted) return null;
+    return payment;
+  }
+
+  Future<List<Payment>> getAllPayments() async {
+    final query = (await _dbHelper.store)
+        .box<Payment>()
+        .query(Payment_.isDeleted.equals(false))
+        .build();
+    try {
+      return query.find();
+    } finally {
+      query.close();
+    }
+  }
   Future<int> updatePayment(Payment value) async {
     if (value.id == null || value.id == 0) {
       throw ArgumentError('ID obrigatório para atualizar.');
@@ -63,7 +76,9 @@ class PaymentRepository {
     final db = await _dbHelper.store;
     final query = db
         .box<Payment>()
-        .query(Payment_.saleId.equals(saleId))
+        .query(
+          Payment_.saleId.equals(saleId).and(Payment_.isDeleted.equals(false)),
+        )
         .build();
     try {
       return query.find();
@@ -81,7 +96,11 @@ class PaymentRepository {
     final db = await _dbHelper.store;
     final query = db
         .box<Payment>()
-        .query(Payment_.saleId.oneOf(saleIds))
+        .query(
+          Payment_.saleId
+              .oneOf(saleIds)
+              .and(Payment_.isDeleted.equals(false)),
+        )
         .build();
     try {
       final totals = <int, double>{};
@@ -98,6 +117,32 @@ class PaymentRepository {
     }
   }
 
-  Future<int> deletePayment(int id) async =>
-      (await _dbHelper.store).box<Payment>().remove(id) ? 1 : 0;
+  Future<int> deletePayment(int id) async {
+    final db = await _dbHelper.store;
+    final payment = db.box<Payment>().get(id);
+    if (payment == null || payment.isDeleted) return 0;
+
+    var synced = false;
+    if (payment.uuid.isNotEmpty) {
+      try {
+        await Supabase.instance.client
+            .from('payments')
+            .update({'is_deleted': true})
+            .eq('id', payment.uuid);
+        synced = true;
+      } catch (_) {
+        synced = false;
+      }
+    }
+
+    return db.runInTransaction(TxMode.write, () {
+      final current = db.box<Payment>().get(id);
+      if (current == null || current.isDeleted) return 0;
+      db.box<Payment>().put(
+        current.copyWith(isDeleted: true, isSynced: synced),
+        mode: PutMode.update,
+      );
+      return 1;
+    });
+  }
 }

@@ -38,7 +38,7 @@ class SaleRepository {
   }) async {
     final db = await _dbHelper.store;
     final customer = db.box<Customer>().get(value.customerId);
-    if (customer == null) {
+    if (customer == null || customer.isDeleted) {
       throw StateError('Cliente não encontrado.');
     }
     final sale = value.customerUuid.isEmpty
@@ -70,7 +70,8 @@ class SaleRepository {
     final saleAfterSync = sale.copyWith(isSynced: synced);
     final basketAfterSync = basket.copyWith(isSynced: synced);
     return db.runInTransaction(TxMode.write, () {
-      if (db.box<Customer>().get(saleAfterSync.customerId) == null) {
+      final currentCustomer = db.box<Customer>().get(saleAfterSync.customerId);
+      if (currentCustomer == null || currentCustomer.isDeleted) {
         throw StateError('Cliente não encontrado.');
       }
       final basketId = db.box<Basket>().put(basketAfterSync);
@@ -90,10 +91,23 @@ class SaleRepository {
     });
   }
 
-  Future<Sale?> getSaleById(int id) async =>
-      (await _dbHelper.store).box<Sale>().get(id);
-  Future<List<Sale>> getAllSales() async =>
-      (await _dbHelper.store).box<Sale>().getAll();
+  Future<Sale?> getSaleById(int id) async {
+    final sale = (await _dbHelper.store).box<Sale>().get(id);
+    if (sale == null || sale.isDeleted) return null;
+    return sale;
+  }
+
+  Future<List<Sale>> getAllSales() async {
+    final query = (await _dbHelper.store)
+        .box<Sale>()
+        .query(Sale_.isDeleted.equals(false))
+        .build();
+    try {
+      return query.find();
+    } finally {
+      query.close();
+    }
+  }
 
   Future<int> updateSale(Sale value) async {
     if (value.id == null || value.id == 0) {
@@ -124,7 +138,11 @@ class SaleRepository {
     final db = await _dbHelper.store;
     final query = db
         .box<Sale>()
-        .query(Sale_.customerId.equals(customerId))
+        .query(
+          Sale_.customerId
+              .equals(customerId)
+              .and(Sale_.isDeleted.equals(false)),
+        )
         .order(Sale_.createdAt, flags: Order.descending)
         .order(Sale_.id, flags: Order.descending)
         .build();
@@ -143,7 +161,7 @@ class SaleRepository {
     final db = await _dbHelper.store;
     final query = db
         .box<Sale>()
-        .query()
+        .query(Sale_.isDeleted.equals(false))
         .order(Sale_.createdAt, flags: Order.descending)
         .build();
     try {
@@ -166,7 +184,11 @@ class SaleRepository {
     final db = await _dbHelper.store;
     final linkQuery = db
         .box<SaleBasket>()
-        .query(SaleBasket_.saleId.oneOf(saleIds))
+        .query(
+          SaleBasket_.saleId
+              .oneOf(saleIds)
+              .and(SaleBasket_.isDeleted.equals(false)),
+        )
         .build();
     try {
       final links = linkQuery.find();
@@ -175,7 +197,9 @@ class SaleRepository {
       if (basketIds.isNotEmpty) {
         final basketQuery = db
             .box<Basket>()
-            .query(Basket_.id.oneOf(basketIds))
+            .query(
+              Basket_.id.oneOf(basketIds).and(Basket_.isDeleted.equals(false)),
+            )
             .build();
         try {
           for (final basket in basketQuery.find()) {
@@ -222,13 +246,13 @@ class SaleRepository {
     final paidSales = db
         .box<Installment>()
         .getAll()
-        .where((installment) => installment.isPaid)
+        .where((installment) => !installment.isDeleted && installment.isPaid)
         .map((installment) => installment.saleId)
         .toSet();
     return db
         .box<Sale>()
         .getAll()
-        .where((sale) => !paidSales.contains(sale.id))
+        .where((sale) => !sale.isDeleted && !paidSales.contains(sale.id))
         .map((sale) => sale.customerId)
         .toSet()
         .length;
@@ -236,30 +260,166 @@ class SaleRepository {
 
   Future<int> deleteSale(int id) async {
     final db = await _dbHelper.store;
+    final sale = db.box<Sale>().get(id);
+    if (sale == null || sale.isDeleted) return 0;
+
+    final links = _activeLinks(db, [id]);
+    final baskets = _basketsOnlyUsedBy(db, links, {id});
+    final installments = _activeInstallments(db, [id]);
+    final now = DateTime.now();
+    final saleSynced = await _markRemoteDeleted('sales', sale.uuid);
+    final linkSynced = <bool>[
+      for (final link in links)
+        await _markRemoteSaleBasketDeleted(link.saleUuid, link.basketUuid),
+    ];
+    final basketSynced = <bool>[
+      for (final basket in baskets)
+        await _markRemoteDeleted('baskets', basket.uuid),
+    ];
+    final installmentSynced = <bool>[
+      for (final installment in installments)
+        await _markRemoteDeleted('installments', installment.uuid),
+    ];
+
     return db.runInTransaction(TxMode.write, () {
-      _removeSaleChildren(db, id);
-      return db.box<Sale>().remove(id) ? 1 : 0;
+      final current = db.box<Sale>().get(id);
+      if (current == null || current.isDeleted) return 0;
+      db.box<Sale>().put(
+        current.copyWith(
+          isDeleted: true,
+          isSynced: saleSynced,
+          updatedAt: now,
+        ),
+        mode: PutMode.update,
+      );
+      for (var index = 0; index < links.length; index++) {
+        db.box<SaleBasket>().put(
+          links[index].copyWith(
+            isDeleted: true,
+            isSynced: linkSynced[index],
+            updatedAt: now,
+          ),
+          mode: PutMode.update,
+        );
+      }
+      for (var index = 0; index < baskets.length; index++) {
+        db.box<Basket>().put(
+          baskets[index].copyWith(
+            isDeleted: true,
+            isSynced: basketSynced[index],
+            updatedAt: now,
+          ),
+          mode: PutMode.update,
+        );
+      }
+      for (var index = 0; index < installments.length; index++) {
+        db.box<Installment>().put(
+          installments[index].copyWith(
+            isDeleted: true,
+            isSynced: installmentSynced[index],
+            updatedAt: now,
+          ),
+          mode: PutMode.update,
+        );
+      }
+      return 1;
     });
   }
 
-  void _removeSaleChildren(Store db, int saleId) {
-    final installments = db
-        .box<Installment>()
-        .query(Installment_.saleId.equals(saleId))
-        .build();
-    try {
-      installments.remove();
-    } finally {
-      installments.close();
-    }
-    final links = db
+  List<SaleBasket> _activeLinks(Store db, List<int> saleIds) {
+    if (saleIds.isEmpty) return [];
+    final query = db
         .box<SaleBasket>()
-        .query(SaleBasket_.saleId.equals(saleId))
+        .query(
+          SaleBasket_.saleId
+              .oneOf(saleIds)
+              .and(SaleBasket_.isDeleted.equals(false)),
+        )
         .build();
     try {
-      links.remove();
+      return query.find();
     } finally {
-      links.close();
+      query.close();
+    }
+  }
+
+  List<Installment> _activeInstallments(Store db, List<int> saleIds) {
+    if (saleIds.isEmpty) return [];
+    final query = db
+        .box<Installment>()
+        .query(
+          Installment_.saleId
+              .oneOf(saleIds)
+              .and(Installment_.isDeleted.equals(false)),
+        )
+        .build();
+    try {
+      return query.find();
+    } finally {
+      query.close();
+    }
+  }
+
+  List<Basket> _basketsOnlyUsedBy(
+    Store db,
+    List<SaleBasket> links,
+    Set<int> saleIds,
+  ) {
+    final baskets = <Basket>[];
+    final seen = <int>{};
+    for (final link in links) {
+      if (!seen.add(link.basketId)) continue;
+      final basket = db.box<Basket>().get(link.basketId);
+      if (basket == null || basket.isDeleted) continue;
+      final others = db
+          .box<SaleBasket>()
+          .query(SaleBasket_.basketId.equals(link.basketId))
+          .build();
+      try {
+        final usedElsewhere = others.find().any(
+          (other) => !other.isDeleted && !saleIds.contains(other.saleId),
+        );
+        if (!usedElsewhere) baskets.add(basket);
+      } finally {
+        others.close();
+      }
+    }
+    return baskets;
+  }
+
+  Future<bool> _markRemoteDeleted(String table, String id) async {
+    if (id.isEmpty) return false;
+    try {
+      await Supabase.instance.client
+          .from(table)
+          .update({
+            'is_deleted': true,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', id);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> _markRemoteSaleBasketDeleted(
+    String saleUuid,
+    String basketUuid,
+  ) async {
+    if (saleUuid.isEmpty || basketUuid.isEmpty) return false;
+    try {
+      await Supabase.instance.client
+          .from('sale_baskets')
+          .update({
+            'is_deleted': true,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('sale_id', saleUuid)
+          .eq('basket_id', basketUuid);
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 }

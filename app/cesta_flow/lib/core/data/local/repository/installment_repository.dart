@@ -13,7 +13,7 @@ class InstallmentRepository {
   Future<int> registerInstallment(Installment value) async {
     final db = await _dbHelper.store;
     final sale = db.box<Sale>().get(value.saleId);
-    if (sale == null) {
+    if (sale == null || sale.isDeleted) {
       throw StateError('Venda não encontrada.');
     }
     final installment = value.saleUuid.isEmpty
@@ -37,7 +37,7 @@ class InstallmentRepository {
     final valueAfterSync = installment.copyWith(isSynced: isSynced);
     return db.runInTransaction(TxMode.write, () {
       final currentSale = db.box<Sale>().get(valueAfterSync.saleId);
-      if (currentSale == null) {
+      if (currentSale == null || currentSale.isDeleted) {
         throw StateError('Venda não encontrada.');
       }
       db.box<Sale>().put(
@@ -52,10 +52,23 @@ class InstallmentRepository {
     });
   }
 
-  Future<Installment?> getInstallmentById(int id) async =>
-      (await _dbHelper.store).box<Installment>().get(id);
-  Future<List<Installment>> getAllInstallments() async =>
-      (await _dbHelper.store).box<Installment>().getAll();
+  Future<Installment?> getInstallmentById(int id) async {
+    final installment = (await _dbHelper.store).box<Installment>().get(id);
+    if (installment == null || installment.isDeleted) return null;
+    return installment;
+  }
+
+  Future<List<Installment>> getAllInstallments() async {
+    final query = (await _dbHelper.store)
+        .box<Installment>()
+        .query(Installment_.isDeleted.equals(false))
+        .build();
+    try {
+      return query.find();
+    } finally {
+      query.close();
+    }
+  }
 
   Future<int> updateInstallment(Installment value) async {
     if (value.id == null || value.id == 0) {
@@ -86,7 +99,11 @@ class InstallmentRepository {
     final db = await _dbHelper.store;
     final query = db
         .box<Installment>()
-        .query(Installment_.saleId.equals(saleId))
+        .query(
+          Installment_.saleId
+              .equals(saleId)
+              .and(Installment_.isDeleted.equals(false)),
+        )
         .build();
     try {
       return query.find();
@@ -105,7 +122,11 @@ class InstallmentRepository {
     final db = await _dbHelper.store;
     final query = db
         .box<Installment>()
-        .query(Installment_.saleId.oneOf(saleIds))
+        .query(
+          Installment_.saleId
+              .oneOf(saleIds)
+              .and(Installment_.isDeleted.equals(false)),
+        )
         .build();
     try {
       final totals = <int, double>{};
@@ -123,6 +144,39 @@ class InstallmentRepository {
     }
   }
 
-  Future<int> deleteInstallment(int id) async =>
-      (await _dbHelper.store).box<Installment>().remove(id) ? 1 : 0;
+  Future<int> deleteInstallment(int id) async {
+    final db = await _dbHelper.store;
+    final installment = db.box<Installment>().get(id);
+    if (installment == null || installment.isDeleted) return 0;
+
+    var synced = false;
+    if (installment.uuid.isNotEmpty) {
+      try {
+        await Supabase.instance.client
+            .from('installments')
+            .update({
+              'is_deleted': true,
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('id', installment.uuid);
+        synced = true;
+      } catch (_) {
+        synced = false;
+      }
+    }
+
+    return db.runInTransaction(TxMode.write, () {
+      final current = db.box<Installment>().get(id);
+      if (current == null || current.isDeleted) return 0;
+      db.box<Installment>().put(
+        current.copyWith(
+          isDeleted: true,
+          isSynced: synced,
+          updatedAt: DateTime.now(),
+        ),
+        mode: PutMode.update,
+      );
+      return 1;
+    });
+  }
 }
