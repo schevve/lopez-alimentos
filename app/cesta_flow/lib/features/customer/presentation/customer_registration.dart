@@ -1,9 +1,11 @@
+import 'package:cesta_flow/core/constants/util/format_cpf.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:cesta_flow/features/shared/customer_form.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:objectbox/objectbox.dart' show UniqueViolationException;
 
 class CustomerRegistration extends StatefulWidget {
   const CustomerRegistration({super.key, this.customerId, this.repository});
@@ -89,22 +91,67 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
     );
   }
 
+  String _digitos(String valor) => valor.replaceAll(RegExp(r'\D'), '');
+
+  // Campos opcionais vazios viram null (o RG é único: "" repetido daria erro).
+  String? _opcional(dynamic valor) {
+    final texto = (valor ?? '').toString().trim();
+    return texto.isEmpty ? null : texto;
+  }
+
+  void _avisar(String mensagem) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(mensagem)));
+  }
+
   Future<void> _registerCustomer(Map<String, dynamic> data) async {
-    final customer = Customer(
-      name: data['nome'],
-      dateOfBirth: cleanDate(data['data_nascimento']),
-      email: data['email'],
-      phone: data['telefone'],
-      address: data['rua'],
-      adressNumber: data['numero'],
-      city: data['cidade'],
-      state: data['estado'],
-      cep: data['cep'],
-      documentCPF: data['cpf'],
-      documentRG: data['rg'],
-    );
-    await _customerRepository.registerCustomer(customer);
-    print('Cliente registrado com sucesso: ${customer.name}');
+    final cpf = formatCpf(_digitos(data['cpf'].toString()));
+    final rg = _opcional(data['rg']);
+
+    try {
+      // Confere duplicidade antes de gravar, para dar uma mensagem clara.
+      final existentes = await _customerRepository.getAllCustomers();
+      if (existentes.any((c) => _digitos(c.documentCPF) == _digitos(cpf))) {
+        if (mounted) _avisar('Já existe um cliente cadastrado com este CPF.');
+        return;
+      }
+      if (rg != null &&
+          existentes.any(
+            (c) =>
+                c.documentRG != null && _digitos(c.documentRG!) == _digitos(rg),
+          )) {
+        if (mounted) _avisar('Já existe um cliente cadastrado com este RG.');
+        return;
+      }
+
+      final customer = Customer(
+        name: data['nome'].toString().trim(),
+        dateOfBirth: cleanDate(data['data_nascimento'].toString().trim()),
+        email: _opcional(data['email']),
+        phone: data['telefone'].toString().trim(),
+        address: data['rua'].toString().trim(),
+        adressNumber: data['numero'].toString().trim(),
+        city: data['cidade'].toString().trim(),
+        state: data['estado'].toString().trim(),
+        cep: _opcional(data['cep']),
+        documentCPF: cpf,
+        documentRG: rg,
+      );
+
+      customer.id = await _customerRepository.registerCustomer(customer);
+
+      if (!mounted) return;
+      _avisar('Cliente registrado com sucesso!');
+      // Devolve o cliente criado para quem abriu a tela (ex.: seleção de venda).
+      Navigator.of(context).pop(customer);
+    } on UniqueViolationException {
+      if (mounted) _avisar('Já existe um cliente com este CPF ou RG.');
+    } catch (error) {
+      debugPrint('Erro ao registrar cliente: $error');
+      if (mounted) {
+        _avisar('Não foi possível registrar o cliente. Tente novamente.');
+      }
+    }
   }
 }
 

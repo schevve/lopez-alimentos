@@ -34,12 +34,72 @@ class _CustomerFormState extends State<CustomerForm> {
     return '$day/$month/${date.year}';
   }
 
+  bool _salvando = false;
+
+  String _digitos(String? valor) => (valor ?? '').replaceAll(RegExp(r'\D'), '');
+
+  String? _obrigatorio(String? valor, String mensagem) =>
+      (valor ?? '').trim().isEmpty ? mensagem : null;
+
+  String? _validarData(String? valor) {
+    final texto = (valor ?? '').trim();
+    final partes = texto.split('/');
+    if (partes.length != 3) return 'Informe a data (dd/mm/aaaa).';
+    final dia = int.tryParse(partes[0]);
+    final mes = int.tryParse(partes[1]);
+    final ano = int.tryParse(partes[2]);
+    if (dia == null || mes == null || ano == null || partes[2].length != 4) {
+      return 'Informe a data (dd/mm/aaaa).';
+    }
+    final data = DateTime(ano, mes, dia);
+    final existe = data.day == dia && data.month == mes && data.year == ano;
+    if (!existe || ano < 1900 || data.isAfter(DateTime.now())) {
+      return 'Informe uma data válida.';
+    }
+    return null;
+  }
+
+  String? _validarEmail(String? valor) {
+    final email = (valor ?? '').trim();
+    if (email.isEmpty) return null; // opcional
+    return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)
+        ? null
+        : 'Informe um e-mail válido.';
+  }
+
+  String? _validarTelefone(String? valor) {
+    final tamanho = _digitos(valor).length;
+    return tamanho == 10 || tamanho == 11
+        ? null
+        : 'Informe um telefone válido com DDD.';
+  }
+
+  String? _validarCep(String? valor) {
+    if (_digitos(valor).isEmpty) return null; // opcional
+    return _digitos(valor).length == 8 ? null : 'O CEP deve ter 8 dígitos.';
+  }
+
+  String? _validarCpf(String? valor) =>
+      _digitos(valor).length == 11 ? null : 'O CPF deve ter 11 dígitos.';
+
   Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_salvando) return;
+
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Corrija os campos destacados.')),
+      );
+      return;
+    }
 
     _formKey.currentState!.save();
 
-    await widget.onSubmit(_formData);
+    setState(() => _salvando = true);
+    try {
+      await widget.onSubmit(_formData);
+    } finally {
+      if (mounted) setState(() => _salvando = false);
+    }
   }
 
   @override
@@ -78,6 +138,7 @@ class _CustomerFormState extends State<CustomerForm> {
           Padding(padding: EdgeInsetsGeometry.all(10)),
           Form(
             key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             child: Column(
               spacing: 16,
               children: [
@@ -99,6 +160,8 @@ class _CustomerFormState extends State<CustomerForm> {
                     fillColor: Colors.white,
                   ),
                   onSaved: (value) => _formData['nome'] = value,
+                  validator: (value) =>
+                      _obrigatorio(value, 'Informe o nome completo.'),
                 ),
 
                 TextFormField(
@@ -118,6 +181,7 @@ class _CustomerFormState extends State<CustomerForm> {
                   keyboardType: TextInputType.datetime,
                   inputFormatters: [FormatDate()],
                   onSaved: (value) => _formData['data_nascimento'] = value,
+                  validator: _validarData,
                 ),
 
                 TextFormField(
@@ -135,6 +199,7 @@ class _CustomerFormState extends State<CustomerForm> {
                   keyboardType: TextInputType.emailAddress,
 
                   onSaved: (value) => _formData['email'] = value,
+                  validator: _validarEmail,
                 ),
 
                 TextFormField(
@@ -152,6 +217,7 @@ class _CustomerFormState extends State<CustomerForm> {
                   keyboardType: TextInputType.phone,
                   inputFormatters: [FormatPhoneNumber()],
                   onSaved: (value) => _formData['telefone'] = value,
+                  validator: _validarTelefone,
                 ),
 
                 TextFormField(
@@ -168,6 +234,7 @@ class _CustomerFormState extends State<CustomerForm> {
 
                   keyboardType: TextInputType.text,
                   onSaved: (value) => _formData['rua'] = value,
+                  validator: (value) => _obrigatorio(value, 'Informe a rua.'),
                 ),
 
                 TextFormField(
@@ -184,6 +251,8 @@ class _CustomerFormState extends State<CustomerForm> {
 
                   keyboardType: TextInputType.number,
                   onSaved: (value) => _formData['numero'] = value,
+                  validator: (value) =>
+                      _obrigatorio(value, 'Informe o número.'),
                 ),
 
                 TextFormField(
@@ -201,7 +270,7 @@ class _CustomerFormState extends State<CustomerForm> {
                   keyboardType: TextInputType.text,
                   onSaved: (value) => _formData['cidade'] = value,
                   validator: (value) =>
-                      value?.isNotEmpty ?? false ? null : "erro",
+                      _obrigatorio(value, 'Informe a cidade.'),
                 ),
 
                 TextFormField(
@@ -219,7 +288,7 @@ class _CustomerFormState extends State<CustomerForm> {
                   keyboardType: TextInputType.text,
                   onSaved: (value) => _formData['estado'] = value,
                   validator: (value) =>
-                      value?.isNotEmpty ?? false ? null : "erro",
+                      _obrigatorio(value, 'Informe o estado.'),
                 ),
 
                 TextFormField(
@@ -236,6 +305,7 @@ class _CustomerFormState extends State<CustomerForm> {
 
                   keyboardType: TextInputType.number,
                   onSaved: (value) => _formData['cep'] = value,
+                  validator: _validarCep,
                 ),
 
                 TextFormField(
@@ -252,6 +322,7 @@ class _CustomerFormState extends State<CustomerForm> {
 
                   keyboardType: TextInputType.number,
                   onSaved: (value) => _formData['cpf'] = value,
+                  validator: _validarCpf,
                 ),
 
                 TextFormField(
@@ -276,21 +347,34 @@ class _CustomerFormState extends State<CustomerForm> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
 
             child: FilledButton.icon(
-              onPressed: () async {
-                await _submitForm();
-              },
+              onPressed: _salvando ? null : _submitForm,
               style: FilledButton.styleFrom(
                 backgroundColor: const Color.fromARGB(255, 158, 204, 174),
+                disabledBackgroundColor: const Color.fromARGB(
+                  255,
+                  158,
+                  204,
+                  174,
+                ),
                 padding: EdgeInsets.symmetric(vertical: 16, horizontal: 32),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              icon: Icon(
-                Icons.person_add_alt_1_outlined,
-                color: Color(0xff1C5631),
-                size: 26,
-              ),
+              icon: _salvando
+                  ? const SizedBox(
+                      width: 26,
+                      height: 26,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        color: Color(0xff1C5631),
+                      ),
+                    )
+                  : const Icon(
+                      Icons.person_add_alt_1_outlined,
+                      color: Color(0xff1C5631),
+                      size: 26,
+                    ),
               label: Text(
                 widget.buttonText,
                 style: TextStyle(
