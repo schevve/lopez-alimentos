@@ -12,6 +12,33 @@ class BasketRepository {
   BasketRepository({DatabaseHelper? dbHelper})
     : _dbHelper = dbHelper ?? DatabaseHelper();
 
+  Future<int> registerBasket(Basket value) async {
+    var isSynced = true;
+    try {
+      await Supabase.instance.client.from('baskets').insert(value.toRemote());
+    } catch (_) {
+      isSynced = false;
+    }
+    final db = await _dbHelper.store;
+    final valueAfterSync = value.copyWith(isSynced: isSynced);
+    return db.runInTransaction(TxMode.write, () {
+      return db.box<Basket>().put(valueAfterSync);
+    });
+  }
+
+  Future<List<Basket>> getAllBaskets() async {
+    final query = (await _dbHelper.store)
+        .box<Basket>()
+        .query(Basket_.isDeleted.equals(false))
+        .order(Basket_.name)
+        .build();
+    try {
+      return query.find();
+    } finally {
+      query.close();
+    }
+  }
+
   Future<void> pushUnsyncedBaskets() async {
     await _pushBaskets(await _dbHelper.store);
   }
