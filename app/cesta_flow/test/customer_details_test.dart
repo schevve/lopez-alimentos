@@ -139,6 +139,8 @@ void main() {
       scrollable: scrollable,
     );
     await tester.tap(saveButton);
+    await tester.ensureVisible(find.text('Salvar alterações'));
+    await tester.tap(find.text('Salvar alterações'));
     await tester.pumpAndSettle();
 
     expect(customerRepository.updates, 1);

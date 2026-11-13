@@ -25,6 +25,7 @@ class CustomerForm extends StatefulWidget {
 class _CustomerFormState extends State<CustomerForm> {
   final _formKey = GlobalKey<FormState>();
   final _formData = <String, dynamic>{};
+  bool _isSubmitting = false;
 
   String _formatDate(DateTime? date) {
     if (date == null) return '';
@@ -35,11 +36,19 @@ class _CustomerFormState extends State<CustomerForm> {
   }
 
   Future<void> _submitForm() async {
+    if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
 
     _formKey.currentState!.save();
 
-    await widget.onSubmit(_formData);
+    setState(() => _isSubmitting = true);
+    try {
+      await widget.onSubmit(_formData);
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
   }
 
   @override
@@ -276,9 +285,7 @@ class _CustomerFormState extends State<CustomerForm> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
 
             child: FilledButton.icon(
-              onPressed: () async {
-                await _submitForm();
-              },
+              onPressed: _isSubmitting ? null : _submitForm,
               style: FilledButton.styleFrom(
                 backgroundColor: const Color.fromARGB(255, 158, 204, 174),
                 padding: EdgeInsets.symmetric(vertical: 16, horizontal: 32),
@@ -286,13 +293,19 @@ class _CustomerFormState extends State<CustomerForm> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              icon: Icon(
-                Icons.person_add_alt_1_outlined,
-                color: Color(0xff1C5631),
-                size: 26,
-              ),
+              icon: _isSubmitting
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(
+                      Icons.person_add_alt_1_outlined,
+                      color: Color(0xff1C5631),
+                      size: 26,
+                    ),
               label: Text(
-                widget.buttonText,
+                _isSubmitting ? 'Salvando...' : widget.buttonText,
                 style: TextStyle(
                   color: Color(0xff1C5631),
                   fontSize: 24,
