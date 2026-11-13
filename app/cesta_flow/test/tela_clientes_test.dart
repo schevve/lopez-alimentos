@@ -11,11 +11,12 @@ import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Customer cliente(String nome, String cpf, {int? score}) => Customer(
+Customer cliente(String nome, String cpf, {double? score}) => Customer(
+  uuid: cpf,
   name: nome,
   dateOfBirth: DateTime(1990, 1, 1),
   phone: '(45) 99999-0000',
-  adressNumber: '10',
+  addressNumber: '10',
   address: 'Rua das Flores, 10',
   city: 'São Paulo',
   state: 'SP',
@@ -27,7 +28,7 @@ class RepositorioDeTeste extends CustomerRepository {
   List<Customer> clientes = [
     cliente('Rosângela Batista', '123.456.789-01'),
     cliente('Ângelo Pereira', '234.567.890-12', score: 0),
-    cliente('Janaína Gonçalves', '345.678.901-23', score: 940),
+    cliente('Janaína Gonçalves', '345.678.901-23', score: 940.0),
   ];
   int consultas = 0;
   bool falhar = false;

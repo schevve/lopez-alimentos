@@ -29,19 +29,19 @@ class CustomerEdit extends StatelessWidget {
 
   Future<void> _updateCustomer(Map<String, dynamic> data) async {
     final repository = CustomerRepository(dbHelper: DatabaseHelper());
-    final updatedcustomer = Customer(
-      id: customer.id,
+    final updatedcustomer = customer.copyWith(
       name: data['nome'],
       dateOfBirth: cleanDate(data['data_nascimento']),
       email: data['email'],
       phone: data['telefone'],
       address: data['rua'],
-      adressNumber: data['numero'],
+      addressNumber: data['numero'],
       city: data['cidade'],
       state: data['estado'],
       cep: data['cep'],
       documentCPF: data['cpf'],
       documentRG: data['rg'],
+      updatedAt: DateTime.now(),
     );
     await repository.updateCustomer(updatedcustomer);
   }

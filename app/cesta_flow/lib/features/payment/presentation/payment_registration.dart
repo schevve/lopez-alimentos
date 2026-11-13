@@ -1,12 +1,14 @@
+import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
+import 'package:cesta_flow/core/data/local/model/installment_model.dart';
+import 'package:cesta_flow/core/data/local/model/payment_model.dart';
+import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/features/payment/presentation/payment_success.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_registration.dart';
-import 'package:cesta_flow/core/data/local/db_helper.dart';
-import 'package:cesta_flow/core/data/local/model/payment_model.dart';
-import 'package:cesta_flow/core/data/local/repository/payment_repository.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
 
 class PaymentRegistration extends StatefulWidget {
   final int saleId;
@@ -21,13 +23,14 @@ class _PaymentRegistration extends State<PaymentRegistration> {
   String? _selectedPaymentMethod;
 
   late final Customer _defaultCustomer = Customer(
+    uuid: 'mock-customer',
     id: 1,
     name: 'João da Silva (Teste)',
     dateOfBirth: DateTime(1990, 5, 15),
     email: 'joao.silva@email.com',
     phone: '(11) 98765-4321',
     address: 'Rua das Flores, 123',
-    adressNumber: '111',
+    addressNumber: '111',
     city: 'São Paulo',
     state: 'SP',
     cep: '01001-000',
@@ -35,8 +38,8 @@ class _PaymentRegistration extends State<PaymentRegistration> {
     documentRG: '12.345.678-9',
   );
 
-  // Dados de teste (mock) caso nenhum pagamento seja passado externamente
   late final Payment _defaultPayment = Payment(
+    uuid: 'mock-payment',
     id: 1,
     saleId: 1,
     method: 'Cartão de Crédito',
@@ -119,7 +122,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                     ],
                   ),
                   Text(
-                    "R\$${_defaultPayment?.amount.toString() ?? ''}",
+                    "R\$${_defaultPayment.amount.toString()}",
                     style: TextStyle(
                       fontSize: 35,
                       color: Colors.white,
@@ -128,7 +131,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                     ),
                   ),
                   Text(
-                    "compra realizada em ${_defaultPayment?.date != null ? DateFormat('dd/MM/yyyy').format(_defaultPayment!.date) : ''}",
+                    "compra realizada em ${DateFormat('dd/MM/yyyy').format(_defaultPayment.date)}",
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.white,
@@ -158,7 +161,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                 spacing: 10,
                 children: [
                   TextFormField(
-                    initialValue: _defaultPayment?.amount.toString() ?? '',
+                    initialValue: _defaultPayment.amount.toString(),
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
@@ -258,13 +261,13 @@ class _PaymentRegistration extends State<PaymentRegistration> {
 
                     keyboardType: TextInputType.datetime,
                     inputFormatters: [FormatDate()],
-                    onSaved: (value) => _formData['nextVisit'] = value,
+                    onSaved: (value) => _formData['dueDate'] = value,
                   ),
                   FilledButton(
                     style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xff1C5631),
-                    foregroundColor: Colors.white,
-                  ),
+                      backgroundColor: const Color(0xff1C5631),
+                      foregroundColor: Colors.white,
+                    ),
 
                     onPressed: () async {
                       if (_selectedPaymentMethod == null) {
@@ -300,48 +303,50 @@ class _PaymentRegistration extends State<PaymentRegistration> {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
 
-      // var db = DatabaseHelper();
-      // var paymentRepository = PaymentRepository(dbHelper: db);
-      // final int saleId = widget.saleId;
+      final db = DatabaseHelper();
+      final installmentRepository = InstallmentRepository(dbHelper: db);
+      final int saleId = widget.saleId;
 
-      // final String rawValue = _formData['paymentValue'] ?? "0,00";
-      // final String cleanValue = rawValue
-      //     .replaceAll('.', '')
-      //     .replaceAll(',', '.');
-      // final double realValue = double.tryParse(cleanValue) ?? 0.0;
+      final String rawValue = _formData['paymentValue'] ?? "0,00";
+      final String cleanValue = rawValue
+          .replaceAll('.', '')
+          .replaceAll(',', '.');
+      final double realValue = double.tryParse(cleanValue) ?? 0.0;
+      final dueDate = _parseDate(_formData['dueDate'] as String?);
 
-      // try {
-      //   final List<Payment> allPayments = await paymentRepository
-      //       .getPaymentsBySaleId(saleId);
+      try {
+        final installment = Installment(
+          uuid: const Uuid().v4(),
+          saleId: saleId,
+          amount: realValue,
+          dueDate: dueDate,
+          paymentDate: DateTime.now(),
+        );
+        await installmentRepository.registerInstallment(installment);
+      } catch (e) {
+        debugPrint("erro no banco de dados: $e");
+      }
 
-      //   double amount = await paymentRepository.getPaymentsBySaleIdAmount(
-      //     saleId,
-      //   );
-
-      //   if (allPayments.isNotEmpty) {
-      //     amount = amount - realValue;
-      //   }
-      //   var paymentData = Payment(
-      //     saleId: saleId,
-      //     method: _formData['paymentTerm'],
-      //     amount: amount,
-      //     date: DateTime.now(),
-      //   );
-      //   await paymentRepository.registerPayment(paymentData);
-      //   print('Pagamento registrado com sucesso: ${paymentData.amount}');
-      // } catch (e) {
-      //   print("erro no banco de dados: $e");
-      // }
-
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => PaymentSuccess(
-            paymentValue: _formData['paymentValue'],
-            paymentTerm: _formData['paymentTerm'],
-            nextVisit: _formData['nextVisit'],
+            paymentValue: _formData['paymentValue'] as String? ?? '',
+            dueDate: _formData['dueDate'] as String? ?? '',
           ),
         ),
       );
     }
   }
+}
+
+DateTime? _parseDate(String? value) {
+  if (value == null || value.trim().isEmpty) return null;
+  final parts = value.split('/');
+  if (parts.length != 3) return null;
+  final day = int.tryParse(parts[0]);
+  final month = int.tryParse(parts[1]);
+  final year = int.tryParse(parts[2]);
+  if (day == null || month == null || year == null) return null;
+  return DateTime(year, month, day);
 }

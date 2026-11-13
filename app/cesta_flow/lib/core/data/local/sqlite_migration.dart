@@ -2,8 +2,8 @@ import 'package:objectbox/objectbox.dart';
 import 'package:sqflite/sqflite.dart' as sqlite;
 
 import 'model/customer_model.dart';
+import 'model/installment_model.dart';
 import 'model/sale_model.dart';
-import 'model/payment_model.dart';
 import 'model/migration_state.dart';
 
 /// SQLite permanece instalado apenas para ler a base anterior, sem upgrades.
@@ -52,10 +52,10 @@ class SqliteMigration {
       if (store.box<MigrationState>().get(1) != null) return;
       final customerBox = store.box<Customer>();
       final saleBox = store.box<Sale>();
-      final paymentBox = store.box<Payment>();
+      final installmentBox = store.box<Installment>();
       if (!customerBox.isEmpty() ||
           !saleBox.isEmpty() ||
-          !paymentBox.isEmpty()) {
+          !installmentBox.isEmpty()) {
         throw StateError(
           'O ObjectBox já contém dados sem registro de migração. '
           'A importação foi interrompida para preservar as duas bases.',
@@ -91,11 +91,16 @@ class SqliteMigration {
             'É necessário definir o vínculo antes de migrar. O SQLite foi preservado.',
           );
         }
-        final payment = Payment.fromMap(row);
-        if (saleBox.get(payment.saleId) == null) {
-          throw StateError('Pagamento ${payment.id} sem venda correspondente.');
+        final installment = Installment.fromMap(row);
+        final sale = saleBox.get(installment.saleId);
+        if (sale == null) {
+          throw StateError('Pagamento ${installment.id} sem venda correspondente.');
         }
-        paymentBox.put(payment);
+        installmentBox.put(
+          installment.saleUuid.isEmpty
+              ? installment.copyWith(saleUuid: sale.uuid)
+              : installment,
+        );
       }
       store.box<MigrationState>().put(MigrationState());
     });
