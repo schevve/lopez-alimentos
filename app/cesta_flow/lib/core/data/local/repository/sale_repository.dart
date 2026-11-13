@@ -6,6 +6,7 @@ import '../db_helper.dart';
 import '../model/basket_model.dart';
 import '../model/customer_model.dart';
 import '../model/installment_model.dart';
+import '../model/sale_basket_input.dart';
 import '../model/sale_basket_model.dart';
 import '../model/sale_model.dart';
 import '../sync_entity_lookup.dart';
@@ -31,12 +32,8 @@ class SaleRepository {
   SaleRepository({DatabaseHelper? dbHelper})
     : _dbHelper = dbHelper ?? DatabaseHelper();
 
-  Future<int> registerSale(
-    Sale value, {
-    String basketName = '',
-    double? basketPrice,
-    int quantity = 1,
-  }) async {
+  Future<int> registerSale(Sale value, List<SaleBasketInput> lines) async {
+    SaleBasketInput.ensureValid(lines);
     final db = await _dbHelper.store;
     final customer = db.box<Customer>().get(value.customerId);
     if (customer == null || customer.isDeleted) {
@@ -45,49 +42,80 @@ class SaleRepository {
     final sale = value.customerUuid.isEmpty
         ? value.copyWith(customerUuid: customer.uuid)
         : value;
-    final basket = Basket(
-      uuid: const Uuid().v4(),
-      name: basketName,
-      price: basketPrice ?? sale.price,
-      createdAt: sale.createdAt,
-    );
+    final resolvedLines = <({Basket basket, SaleBasketInput line, bool isNew})>[];
+    for (final line in lines) {
+      if (line.isCatalog) {
+        final catalog = findBasketByUuid(db, line.basketUuid);
+        if (catalog == null || catalog.isDeleted) {
+          throw StateError('Cesta do catálogo não encontrada.');
+        }
+        resolvedLines.add((basket: catalog, line: line, isNew: false));
+      } else {
+        resolvedLines.add((
+          basket: Basket(
+            uuid: const Uuid().v4(),
+            name: line.name!.trim(),
+            price: line.unitPrice!,
+            createdAt: sale.createdAt,
+          ),
+          line: line,
+          isNew: true,
+        ));
+      }
+    }
+
     var synced = true;
     try {
       await Supabase.instance.client.from('sales').insert(sale.toRemote());
-      await Supabase.instance.client.from('baskets').insert(basket.toRemote());
-      await Supabase.instance.client.from('sale_baskets').insert(
-        SaleBasket(
-          saleId: 0,
-          basketId: 0,
-          saleUuid: sale.uuid,
-          basketUuid: basket.uuid,
-          quantity: quantity,
-          createdAt: sale.createdAt,
-        ).toRemote(),
-      );
+      for (final resolved in resolvedLines) {
+        if (resolved.isNew) {
+          await Supabase.instance.client
+              .from('baskets')
+              .insert(resolved.basket.toRemote());
+        }
+        await Supabase.instance.client.from('sale_baskets').insert(
+          SaleBasket(
+            saleId: 0,
+            basketId: 0,
+            saleUuid: sale.uuid,
+            basketUuid: resolved.basket.uuid,
+            quantity: resolved.line.quantity,
+            createdAt: sale.createdAt,
+          ).toRemote(),
+        );
+      }
     } catch (_) {
       synced = false;
     }
     final saleAfterSync = sale.copyWith(isSynced: synced);
-    final basketAfterSync = basket.copyWith(isSynced: synced);
     return db.runInTransaction(TxMode.write, () {
       final currentCustomer = db.box<Customer>().get(saleAfterSync.customerId);
       if (currentCustomer == null || currentCustomer.isDeleted) {
         throw StateError('Cliente não encontrado.');
       }
-      final basketId = db.box<Basket>().put(basketAfterSync);
       final saleId = db.box<Sale>().put(saleAfterSync);
-      db.box<SaleBasket>().put(
-        SaleBasket(
-          saleId: saleId,
-          basketId: basketId,
-          saleUuid: saleAfterSync.uuid,
-          basketUuid: basketAfterSync.uuid,
-          quantity: quantity,
-          createdAt: saleAfterSync.createdAt,
-          isSynced: synced,
-        ),
-      );
+      for (final resolved in resolvedLines) {
+        final basketAfterSync = resolved.isNew
+            ? resolved.basket.copyWith(isSynced: synced)
+            : resolved.basket;
+        final basketId = resolved.isNew
+            ? db.box<Basket>().put(basketAfterSync)
+            : basketAfterSync.id!;
+        if (!resolved.isNew && basketAfterSync.id == null) {
+          throw StateError('Cesta do catálogo sem ID local.');
+        }
+        db.box<SaleBasket>().put(
+          SaleBasket(
+            saleId: saleId,
+            basketId: basketId,
+            saleUuid: saleAfterSync.uuid,
+            basketUuid: basketAfterSync.uuid,
+            quantity: resolved.line.quantity,
+            createdAt: saleAfterSync.createdAt,
+            isSynced: synced,
+          ),
+        );
+      }
       return saleId;
     });
   }

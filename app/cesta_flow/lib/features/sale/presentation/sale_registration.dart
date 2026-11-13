@@ -2,6 +2,7 @@ import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/constants/util/format_cpf.dart';
 import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
+import 'package:cesta_flow/core/data/local/model/sale_basket_input.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_customer_selection.dart';
@@ -158,11 +159,13 @@ class _SaleRegistrationState extends State<SaleRegistration> {
         ),
       );
       print(saleData);
-      int saleId = await salesRepository.registerSale(
-        saleData,
-        basketName: _formData['cesta'] as String? ?? '',
-        basketPrice: price,
-      );
+      int saleId = await salesRepository.registerSale(saleData, [
+        SaleBasketInput.unregistered(
+          name: _formData['cesta'] as String? ?? '',
+          unitPrice: price,
+          quantity: 1,
+        ),
+      ]);
       print('Venda registrada com sucesso! ID da venda: $saleId');
       salesRepository.getAllSales().then((sales) {
         print('Vendas registradas: ${sales.length}');

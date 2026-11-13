@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:cesta_flow/core/data/local/db_helper.dart';
+import 'package:cesta_flow/core/data/local/model/basket_model.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
+import 'package:cesta_flow/core/data/local/model/sale_basket_input.dart';
 import 'package:cesta_flow/core/data/local/model/migration_state.dart';
 import 'package:cesta_flow/core/data/local/model/installment_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
@@ -34,6 +36,12 @@ Sale sale(int customerId, {int? id, DateTime? date}) => Sale(
   price: 100,
   createdAt: date ?? DateTime(2026, 10, 1),
 );
+SaleBasketInput saleLine(Store store, {String uuid = 'basket-test'}) {
+  store.box<Basket>().put(
+    Basket(uuid: uuid, name: 'Cesta teste', price: 100),
+  );
+  return SaleBasketInput.catalog(basketUuid: uuid, quantity: 1);
+}
 Installment payment(int saleId, {int? id, double amount = 25}) => Installment(
   id: id,
   uuid: 'payment-${id ?? saleId}-$amount',
@@ -89,11 +97,16 @@ void main() {
 
   test('Vínculos, agregações, ordenação e exclusão em cascata', () async {
     final cid = await customers.registerCustomer(customer());
-    final sid = await sales.registerSale(sale(cid));
+    final sid = await sales.registerSale(sale(cid), [saleLine(store)]);
     final laterId = await sales.registerSale(
       sale(cid, date: DateTime(2026, 10, 3)),
+      [saleLine(store, uuid: 'basket-later')],
     );
-    await expectLater(sales.registerSale(sale(999)), throwsStateError);
+    await expectLater(sales.registerSale(sale(999), []), throwsArgumentError);
+    await expectLater(
+      sales.registerSale(sale(999), [saleLine(store, uuid: 'basket-orphan')]),
+      throwsStateError,
+    );
     await expectLater(
       payments.registerInstallment(payment(999)),
       throwsStateError,
