@@ -143,7 +143,7 @@ class _SaleDetailsState extends State<SaleDetails> {
                 },
               ),
               const SizedBox(height: 24),
-              const _SectionTitle(title: 'Cesta'),
+              const _SectionTitle(title: 'Produtos'),
               const SizedBox(height: 12),
               if (data.baskets.isEmpty)
                 _ProductCard(
@@ -379,10 +379,7 @@ class _InfoLine extends StatelessWidget {
       children: [
         SizedBox(
           width: 130,
-          child: Text(
-            label,
-            style: const TextStyle(color: Color(0xFF59665E)),
-          ),
+          child: Text(label, style: const TextStyle(color: Color(0xFF59665E))),
         ),
         Expanded(
           child: Text(
@@ -412,11 +409,7 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _MessageState extends StatelessWidget {
-  const _MessageState({
-    required this.message,
-    this.actionLabel,
-    this.onAction,
-  });
+  const _MessageState({required this.message, this.actionLabel, this.onAction});
 
   final String message;
   final String? actionLabel;
