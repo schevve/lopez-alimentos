@@ -38,6 +38,7 @@ class _SaleRegistrationState extends State<SaleRegistration> {
   Customer? _selectedCustomer;
   final List<SelectedBasketLine> _basketLines = [];
   bool _totalEditedManually = false;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -112,7 +113,9 @@ class _SaleRegistrationState extends State<SaleRegistration> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Stack(
+      children: [
+        Scaffold(
       backgroundColor: const Color(0xffF3FCF3),
       appBar: const TopBar(pagTitle: 'Registrar venda'),
       body: SingleChildScrollView(
@@ -233,7 +236,7 @@ class _SaleRegistrationState extends State<SaleRegistration> {
                 },
               ),
               FilledButton(
-                onPressed: _submitForm,
+                onPressed: _isSubmitting ? null : _submitForm,
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.greenButton,
                   padding: const EdgeInsets.symmetric(
@@ -253,6 +256,15 @@ class _SaleRegistrationState extends State<SaleRegistration> {
           ),
         ),
       ),
+        ),
+        if (_isSubmitting) ...[
+          ModalBarrier(
+            dismissible: false,
+            color: Colors.black.withValues(alpha: 0.45),
+          ),
+          const Center(child: _SaleRegistrationLoading()),
+        ],
+      ],
     );
   }
 
@@ -264,6 +276,8 @@ class _SaleRegistrationState extends State<SaleRegistration> {
       return;
     }
     if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSubmitting = true);
 
     final price = parseMoneyField(_totalController.text);
     final saleData = Sale(
@@ -286,15 +300,63 @@ class _SaleRegistrationState extends State<SaleRegistration> {
     ];
 
     final salesRepository = SaleRepository(dbHelper: DatabaseHelper());
-    await salesRepository.registerSale(saleData, lines);
+    try {
+      await salesRepository.registerSale(saleData, lines);
 
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SaleSuccess(
-          valor: saleData.price,
-          clienteNome: _selectedCustomer!.name,
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SaleSuccess(
+            valor: saleData.price,
+            clienteNome: _selectedCustomer!.name,
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Não foi possível registrar a venda: $error'),
+        ),
+      );
+    }
+  }
+}
+
+class _SaleRegistrationLoading extends StatelessWidget {
+  const _SaleRegistrationLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      elevation: 4,
+      child: const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 20,
+          children: [
+            SizedBox(
+              height: 40,
+              width: 40,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                color: AppColors.primary,
+              ),
+            ),
+            Text(
+              'Registrando venda...',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
         ),
       ),
     );
