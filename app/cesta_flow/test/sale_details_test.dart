@@ -58,6 +58,7 @@ class _CustomerRepository extends CustomerRepository {
     phone: '(45) 99999-0000',
     addressNumber: '10',
     address: 'Rua das Flores, 10',
+    adress_number: '10',
     city: 'Toledo',
     state: 'PR',
     documentCPF: '123.456.789-01',

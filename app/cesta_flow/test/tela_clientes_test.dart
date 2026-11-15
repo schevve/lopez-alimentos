@@ -5,7 +5,6 @@ import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/features/customer/presentation/customer_registration.dart';
 import 'package:cesta_flow/features/customer/presentation/tela_clientes.dart';
 import 'package:cesta_flow/features/customer/presentation/widgets/cliente_card.dart';
-import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
 import 'package:cesta_flow/features/shared/bottom_bar.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +17,7 @@ Customer cliente(String nome, String cpf, {double? score}) => Customer(
   phone: '(45) 99999-0000',
   addressNumber: '10',
   address: 'Rua das Flores, 10',
+  adress_number: '10',
   city: 'São Paulo',
   state: 'SP',
   documentCPF: cpf,
@@ -58,13 +58,12 @@ void main() {
   }
 
   testWidgets(
-    'Consulta o repositório, usa barras compartilhadas e exibe score nulo',
+    'Consulta o repositório, usa a barra superior e exibe score nulo',
     (tester) async {
       final repository = RepositorioDeTeste();
       await abrirTela(tester, repository);
       expect(repository.consultas, 1);
       expect(find.byType(TopBar), findsOneWidget);
-      expect(find.byType(BottomBar), findsOneWidget);
       expect(find.text('Score não informado'), findsOneWidget);
       await tester.enterText(find.byType(TextField), 'ROSANGELA');
       await tester.pumpAndSettle();
@@ -124,19 +123,30 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Navegação compartilhada abre o Dashboard', (tester) async {
-    await abrirTela(tester, RepositorioDeTeste());
+  testWidgets('BottomBar repassa a seleção da aba ao callback', (tester) async {
+    String? selectedKey;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          bottomNavigationBar: BottomBar(
+            selectedKey: 'customers',
+            buttonsIcons: const {
+              'home': ('Início', Icons.home_rounded),
+              'customers': ('Clientes', Icons.people_rounded),
+            },
+            onTap: (key) => selectedKey = key,
+          ),
+        ),
+      ),
+    );
     await tester.tap(
       find.descendant(
         of: find.byType(BottomBar),
-        matching: find.byIcon(Icons.home),
+        matching: find.byIcon(Icons.home_rounded),
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.byType(Dashboard), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.arrow_back));
-    await tester.pumpAndSettle();
-    expect(find.byType(ClientesScreen), findsOneWidget);
+    expect(selectedKey, 'home');
     expect(tester.takeException(), isNull);
   });
 
