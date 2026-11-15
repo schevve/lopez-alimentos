@@ -4,16 +4,13 @@ import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/basket_model.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_basket_input.dart';
-import 'package:cesta_flow/core/data/local/model/migration_state.dart';
 import 'package:cesta_flow/core/data/local/model/installment_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
-import 'package:cesta_flow/core/data/local/sqlite_migration.dart';
 import 'package:cesta_flow/objectbox.g.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart' as sqlite;
 
 Customer customer({int? id, String cpf = '12345678901', String? rg}) =>
     Customer(
@@ -37,11 +34,10 @@ Sale sale(int customerId, {int? id, DateTime? date}) => Sale(
   createdAt: date ?? DateTime(2026, 10, 1),
 );
 SaleBasketInput saleLine(Store store, {String uuid = 'basket-test'}) {
-  store.box<Basket>().put(
-    Basket(uuid: uuid, name: 'Cesta teste', price: 100),
-  );
+  store.box<Basket>().put(Basket(uuid: uuid, name: 'Cesta teste', price: 100));
   return SaleBasketInput.catalog(basketUuid: uuid, quantity: 1);
 }
+
 Installment payment(int saleId, {int? id, double amount = 25}) => Installment(
   id: id,
   uuid: 'payment-${id ?? saleId}-$amount',
@@ -83,9 +79,8 @@ void main() {
       customers.registerCustomer(customer()),
       throwsA(isA<UniqueViolationException>()),
     );
-    final updated = (await customers.getCustomerById(id))!.copyWith(
-      score: 940.0,
-    );
+    final updated = (await customers.getCustomerById(id))!
+        .copyWith(score: 940.0);
     expect(await customers.updateCustomer(updated), 1);
     expect((await customers.getCustomerById(id))!.score, 940);
     await customers.updateCustomer(updated.copyWith(clearScore: true));

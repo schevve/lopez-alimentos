@@ -5,7 +5,7 @@
   "entities": [
     {
       "id": "1:4701824812835680819",
-      "lastPropertyId": "21:3701888500420505926",
+      "lastPropertyId": "22:818118996813678361",
       "name": "Customer",
       "properties": [
         {
@@ -37,6 +37,11 @@
         {
           "id": "6:7481537747433887838",
           "name": "address",
+          "type": 9
+        },
+        {
+          "id": "7:818118996813678362",
+          "name": "addressNumber",
           "type": 9
         },
         {
@@ -79,11 +84,6 @@
           "type": 9
         },
         {
-          "id": "15:4409382761374600660",
-          "name": "addressNumber",
-          "type": 9
-        },
-        {
           "id": "16:1331790417569478420",
           "name": "isBlocked",
           "type": 1
@@ -99,11 +99,6 @@
           "type": 1
         },
         {
-          "id": "19:1758834413320528997",
-          "name": "userId",
-          "type": 9
-        },
-        {
           "id": "20:8006118147029201410",
           "name": "createdAt",
           "type": 12
@@ -112,20 +107,11 @@
           "id": "21:3701888500420505926",
           "name": "updatedAt",
           "type": 12
-        }
-      ],
-      "relations": []
-    },
-    {
-      "id": "2:8234913649267644606",
-      "lastPropertyId": "1:2379442855627600136",
-      "name": "MigrationState",
-      "properties": [
+        },
         {
-          "id": "1:2379442855627600136",
-          "name": "id",
-          "type": 6,
-          "flags": 129
+          "id": "22:818118996813678361",
+          "name": "userId",
+          "type": 9
         }
       ],
       "relations": []
@@ -442,15 +428,20 @@
   "lastSequenceId": "0:0",
   "modelVersion": 5,
   "modelVersionParserMinimum": 5,
-  "retiredEntityUids": [],
+  "retiredEntityUids": [
+    8234913649267644606
+  ],
   "retiredIndexUids": [],
   "retiredPropertyUids": [
+    2379442855627600136,
     818118996813678362,
     821365319983928006,
     9054271273497702786,
     1834108804518327479,
     7821167298407210678,
-    6308068897524923776
+    6308068897524923776,
+    4409382761374600660,
+    1758834413320528997
   ],
   "retiredRelationUids": [],
   "version": 1

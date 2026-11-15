@@ -17,7 +17,6 @@ import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 import 'core/data/local/model/basket_model.dart';
 import 'core/data/local/model/customer_model.dart';
 import 'core/data/local/model/installment_model.dart';
-import 'core/data/local/model/migration_state.dart';
 import 'core/data/local/model/payment_model.dart';
 import 'core/data/local/model/sale_basket_model.dart';
 import 'core/data/local/model/sale_model.dart';
@@ -28,7 +27,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(1, 4701824812835680819),
     name: 'Customer',
-    lastPropertyId: const obx_int.IdUid(21, 3701888500420505926),
+    lastPropertyId: const obx_int.IdUid(22, 818118996813678361),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -64,6 +63,12 @@ final _entities = <obx_int.ModelEntity>[
       obx_int.ModelProperty(
         id: const obx_int.IdUid(6, 7481537747433887838),
         name: 'address',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(7, 818118996813678362),
+        name: 'addressNumber',
         type: 9,
         flags: 0,
       ),
@@ -112,12 +117,6 @@ final _entities = <obx_int.ModelEntity>[
         flags: 0,
       ),
       obx_int.ModelProperty(
-        id: const obx_int.IdUid(15, 4409382761374600660),
-        name: 'addressNumber',
-        type: 9,
-        flags: 0,
-      ),
-      obx_int.ModelProperty(
         id: const obx_int.IdUid(16, 1331790417569478420),
         name: 'isBlocked',
         type: 1,
@@ -136,12 +135,6 @@ final _entities = <obx_int.ModelEntity>[
         flags: 0,
       ),
       obx_int.ModelProperty(
-        id: const obx_int.IdUid(19, 1758834413320528997),
-        name: 'userId',
-        type: 9,
-        flags: 0,
-      ),
-      obx_int.ModelProperty(
         id: const obx_int.IdUid(20, 8006118147029201410),
         name: 'createdAt',
         type: 12,
@@ -153,21 +146,11 @@ final _entities = <obx_int.ModelEntity>[
         type: 12,
         flags: 0,
       ),
-    ],
-    relations: <obx_int.ModelRelation>[],
-    backlinks: <obx_int.ModelBacklink>[],
-  ),
-  obx_int.ModelEntity(
-    id: const obx_int.IdUid(2, 8234913649267644606),
-    name: 'MigrationState',
-    lastPropertyId: const obx_int.IdUid(1, 2379442855627600136),
-    flags: 0,
-    properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
-        id: const obx_int.IdUid(1, 2379442855627600136),
-        name: 'id',
-        type: 6,
-        flags: 129,
+        id: const obx_int.IdUid(22, 818118996813678361),
+        name: 'userId',
+        type: 9,
+        flags: 0,
       ),
     ],
     relations: <obx_int.ModelRelation>[],
@@ -577,15 +560,18 @@ obx_int.ModelDefinition getObjectBoxModel() {
     lastIndexId: const obx_int.IdUid(7, 8506137160682807911),
     lastRelationId: const obx_int.IdUid(0, 0),
     lastSequenceId: const obx_int.IdUid(0, 0),
-    retiredEntityUids: const [],
+    retiredEntityUids: const [8234913649267644606],
     retiredIndexUids: const [],
     retiredPropertyUids: const [
+      2379442855627600136,
       818118996813678362,
       821365319983928006,
       9054271273497702786,
       1834108804518327479,
       7821167298407210678,
       6308068897524923776,
+      4409382761374600660,
+      1758834413320528997,
     ],
     retiredRelationUids: const [],
     modelVersion: 5,
@@ -609,6 +595,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
             : fbb.writeString(object.email!);
         final phoneOffset = fbb.writeString(object.phone);
         final addressOffset = fbb.writeString(object.address);
+        final addressNumberOffset = fbb.writeString(object.addressNumber);
         final cityOffset = fbb.writeString(object.city);
         final stateOffset = fbb.writeString(object.state);
         final cepOffset = object.cep == null
@@ -619,11 +606,10 @@ obx_int.ModelDefinition getObjectBoxModel() {
             ? null
             : fbb.writeString(object.documentRG!);
         final uuidOffset = fbb.writeString(object.uuid);
-        final addressNumberOffset = fbb.writeString(object.addressNumber);
         final userIdOffset = object.userId == null
             ? null
             : fbb.writeString(object.userId!);
-        fbb.startTable(22);
+        fbb.startTable(23);
         fbb.addInt64(0, object.id ?? 0);
         fbb.addOffset(1, nameOffset);
         fbb.addInt64(
@@ -635,6 +621,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.addOffset(3, emailOffset);
         fbb.addOffset(4, phoneOffset);
         fbb.addOffset(5, addressOffset);
+        fbb.addOffset(6, addressNumberOffset);
         fbb.addOffset(7, cityOffset);
         fbb.addOffset(8, stateOffset);
         fbb.addOffset(9, cepOffset);
@@ -642,11 +629,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.addOffset(11, documentRGOffset);
         fbb.addFloat64(12, object.score);
         fbb.addOffset(13, uuidOffset);
-        fbb.addOffset(14, addressNumberOffset);
         fbb.addBool(15, object.isBlocked);
         fbb.addBool(16, object.isDeleted);
         fbb.addBool(17, object.isSynced);
-        fbb.addOffset(18, userIdOffset);
         fbb.addInt64(19, object.createdAt.microsecondsSinceEpoch * 1000);
         fbb.addInt64(
           20,
@@ -654,6 +639,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
               ? null
               : object.updatedAt!.microsecondsSinceEpoch * 1000,
         );
+        fbb.addOffset(21, userIdOffset);
         fbb.finish(fbb.endTable());
         return object.id ?? 0;
       },
@@ -680,7 +666,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         ).vTableGet(buffer, rootOffset, 30, '');
         final userIdParam = const fb.StringReader(
           asciiOptimization: true,
-        ).vTableGetNullable(buffer, rootOffset, 40);
+        ).vTableGetNullable(buffer, rootOffset, 46);
         final nameParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 6, '');
@@ -700,7 +686,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         ).vTableGet(buffer, rootOffset, 14, '');
         final addressNumberParam = const fb.StringReader(
           asciiOptimization: true,
-        ).vTableGet(buffer, rootOffset, 32, '');
+        ).vTableGet(buffer, rootOffset, 16, '');
         final cityParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 18, '');
@@ -774,36 +760,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
         return object;
       },
     ),
-    MigrationState: obx_int.EntityDefinition<MigrationState>(
-      model: _entities[1],
-      toOneRelations: (MigrationState object) => [],
-      toManyRelations: (MigrationState object) => {},
-      getId: (MigrationState object) => object.id,
-      setId: (MigrationState object, int id) {
-        object.id = id;
-      },
-      objectToFB: (MigrationState object, fb.Builder fbb) {
-        fbb.startTable(2);
-        fbb.addInt64(0, object.id);
-        fbb.finish(fbb.endTable());
-        return object.id;
-      },
-      objectFromFB: (obx.Store store, ByteData fbData) {
-        final buffer = fb.BufferContext(fbData);
-        final rootOffset = buffer.derefObject(0);
-        final idParam = const fb.Int64Reader().vTableGet(
-          buffer,
-          rootOffset,
-          4,
-          0,
-        );
-        final object = MigrationState(id: idParam);
-
-        return object;
-      },
-    ),
     Payment: obx_int.EntityDefinition<Payment>(
-      model: _entities[2],
+      model: _entities[1],
       toOneRelations: (Payment object) => [],
       toManyRelations: (Payment object) => {},
       getId: (Payment object) => object.id,
@@ -890,7 +848,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
       },
     ),
     Sale: obx_int.EntityDefinition<Sale>(
-      model: _entities[3],
+      model: _entities[2],
       toOneRelations: (Sale object) => [],
       toManyRelations: (Sale object) => {},
       getId: (Sale object) => object.id,
@@ -1010,7 +968,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
       },
     ),
     Basket: obx_int.EntityDefinition<Basket>(
-      model: _entities[4],
+      model: _entities[3],
       toOneRelations: (Basket object) => [],
       toManyRelations: (Basket object) => {},
       getId: (Basket object) => object.id,
@@ -1098,7 +1056,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
       },
     ),
     Installment: obx_int.EntityDefinition<Installment>(
-      model: _entities[5],
+      model: _entities[4],
       toOneRelations: (Installment object) => [],
       toManyRelations: (Installment object) => {},
       getId: (Installment object) => object.id,
@@ -1228,7 +1186,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
       },
     ),
     SaleBasket: obx_int.EntityDefinition<SaleBasket>(
-      model: _entities[6],
+      model: _entities[5],
       toOneRelations: (SaleBasket object) => [],
       toManyRelations: (SaleBasket object) => {},
       getId: (SaleBasket object) => object.id,
@@ -1368,43 +1326,43 @@ class Customer_ {
     _entities[0].properties[5],
   );
 
+  /// See [Customer.addressNumber].
+  static final addressNumber = obx.QueryStringProperty<Customer>(
+    _entities[0].properties[6],
+  );
+
   /// See [Customer.city].
   static final city = obx.QueryStringProperty<Customer>(
-    _entities[0].properties[6],
+    _entities[0].properties[7],
   );
 
   /// See [Customer.state].
   static final state = obx.QueryStringProperty<Customer>(
-    _entities[0].properties[7],
+    _entities[0].properties[8],
   );
 
   /// See [Customer.cep].
   static final cep = obx.QueryStringProperty<Customer>(
-    _entities[0].properties[8],
+    _entities[0].properties[9],
   );
 
   /// See [Customer.documentCPF].
   static final documentCPF = obx.QueryStringProperty<Customer>(
-    _entities[0].properties[9],
+    _entities[0].properties[10],
   );
 
   /// See [Customer.documentRG].
   static final documentRG = obx.QueryStringProperty<Customer>(
-    _entities[0].properties[10],
+    _entities[0].properties[11],
   );
 
   /// See [Customer.score].
   static final score = obx.QueryDoubleProperty<Customer>(
-    _entities[0].properties[11],
+    _entities[0].properties[12],
   );
 
   /// See [Customer.uuid].
   static final uuid = obx.QueryStringProperty<Customer>(
-    _entities[0].properties[12],
-  );
-
-  /// See [Customer.addressNumber].
-  static final addressNumber = obx.QueryStringProperty<Customer>(
     _entities[0].properties[13],
   );
 
@@ -1423,27 +1381,19 @@ class Customer_ {
     _entities[0].properties[16],
   );
 
-  /// See [Customer.userId].
-  static final userId = obx.QueryStringProperty<Customer>(
-    _entities[0].properties[17],
-  );
-
   /// See [Customer.createdAt].
   static final createdAt = obx.QueryDateNanoProperty<Customer>(
-    _entities[0].properties[18],
+    _entities[0].properties[17],
   );
 
   /// See [Customer.updatedAt].
   static final updatedAt = obx.QueryDateNanoProperty<Customer>(
-    _entities[0].properties[19],
+    _entities[0].properties[18],
   );
-}
 
-/// [MigrationState] entity fields to define ObjectBox queries.
-class MigrationState_ {
-  /// See [MigrationState.id].
-  static final id = obx.QueryIntegerProperty<MigrationState>(
-    _entities[1].properties[0],
+  /// See [Customer.userId].
+  static final userId = obx.QueryStringProperty<Customer>(
+    _entities[0].properties[19],
   );
 }
 
@@ -1451,106 +1401,106 @@ class MigrationState_ {
 class Payment_ {
   /// See [Payment.id].
   static final id = obx.QueryIntegerProperty<Payment>(
-    _entities[2].properties[0],
+    _entities[1].properties[0],
   );
 
   /// See [Payment.saleId].
   static final saleId = obx.QueryIntegerProperty<Payment>(
-    _entities[2].properties[1],
+    _entities[1].properties[1],
   );
 
   /// See [Payment.method].
   static final method = obx.QueryStringProperty<Payment>(
-    _entities[2].properties[2],
+    _entities[1].properties[2],
   );
 
   /// See [Payment.amount].
   static final amount = obx.QueryDoubleProperty<Payment>(
-    _entities[2].properties[3],
+    _entities[1].properties[3],
   );
 
   /// See [Payment.date].
   static final date = obx.QueryDateNanoProperty<Payment>(
-    _entities[2].properties[4],
+    _entities[1].properties[4],
   );
 
   /// See [Payment.uuid].
   static final uuid = obx.QueryStringProperty<Payment>(
-    _entities[2].properties[5],
+    _entities[1].properties[5],
   );
 
   /// See [Payment.isBlocked].
   static final isBlocked = obx.QueryBooleanProperty<Payment>(
-    _entities[2].properties[6],
+    _entities[1].properties[6],
   );
 
   /// See [Payment.isDeleted].
   static final isDeleted = obx.QueryBooleanProperty<Payment>(
-    _entities[2].properties[7],
+    _entities[1].properties[7],
   );
 
   /// See [Payment.isSynced].
   static final isSynced = obx.QueryBooleanProperty<Payment>(
-    _entities[2].properties[8],
+    _entities[1].properties[8],
   );
 }
 
 /// [Sale] entity fields to define ObjectBox queries.
 class Sale_ {
   /// See [Sale.id].
-  static final id = obx.QueryIntegerProperty<Sale>(_entities[3].properties[0]);
+  static final id = obx.QueryIntegerProperty<Sale>(_entities[2].properties[0]);
 
   /// See [Sale.customerId].
   static final customerId = obx.QueryIntegerProperty<Sale>(
-    _entities[3].properties[1],
+    _entities[2].properties[1],
   );
 
   /// See [Sale.price].
   static final price = obx.QueryDoubleProperty<Sale>(
-    _entities[3].properties[2],
+    _entities[2].properties[2],
   );
 
   /// See [Sale.uuid].
-  static final uuid = obx.QueryStringProperty<Sale>(_entities[3].properties[3]);
+  static final uuid = obx.QueryStringProperty<Sale>(_entities[2].properties[3]);
 
   /// See [Sale.isDeleted].
   static final isDeleted = obx.QueryBooleanProperty<Sale>(
-    _entities[3].properties[4],
+    _entities[2].properties[4],
   );
 
   /// See [Sale.isSynced].
   static final isSynced = obx.QueryBooleanProperty<Sale>(
-    _entities[3].properties[5],
+    _entities[2].properties[5],
   );
 
   /// See [Sale.customerUuid].
   static final customerUuid = obx.QueryStringProperty<Sale>(
-    _entities[3].properties[6],
+    _entities[2].properties[6],
   );
 
   /// See [Sale.userId].
   static final userId = obx.QueryStringProperty<Sale>(
-    _entities[3].properties[7],
+    _entities[2].properties[7],
   );
 
   /// See [Sale.amountPaid].
   static final amountPaid = obx.QueryDoubleProperty<Sale>(
-    _entities[3].properties[8],
+    _entities[2].properties[8],
   );
 
   /// See [Sale.installments].
   static final installments = obx.QueryIntegerProperty<Sale>(
-    _entities[3].properties[9],
+    _entities[2].properties[9],
   );
 
   /// See [Sale.createdAt].
   static final createdAt = obx.QueryDateNanoProperty<Sale>(
-    _entities[3].properties[10],
+    _entities[2].properties[10],
   );
 
   /// See [Sale.updatedAt].
   static final updatedAt = obx.QueryDateNanoProperty<Sale>(
-    _entities[3].properties[11],
+    _entities[2].properties[11],
   );
 }
 
@@ -1558,42 +1508,42 @@ class Sale_ {
 class Basket_ {
   /// See [Basket.id].
   static final id = obx.QueryIntegerProperty<Basket>(
-    _entities[4].properties[0],
+    _entities[3].properties[0],
   );
 
   /// See [Basket.uuid].
   static final uuid = obx.QueryStringProperty<Basket>(
-    _entities[4].properties[1],
+    _entities[3].properties[1],
   );
 
   /// See [Basket.name].
   static final name = obx.QueryStringProperty<Basket>(
-    _entities[4].properties[2],
+    _entities[3].properties[2],
   );
 
   /// See [Basket.price].
   static final price = obx.QueryDoubleProperty<Basket>(
-    _entities[4].properties[3],
+    _entities[3].properties[3],
   );
 
   /// See [Basket.createdAt].
   static final createdAt = obx.QueryDateNanoProperty<Basket>(
-    _entities[4].properties[4],
+    _entities[3].properties[4],
   );
 
   /// See [Basket.updatedAt].
   static final updatedAt = obx.QueryDateNanoProperty<Basket>(
-    _entities[4].properties[5],
+    _entities[3].properties[5],
   );
 
   /// See [Basket.isDeleted].
   static final isDeleted = obx.QueryBooleanProperty<Basket>(
-    _entities[4].properties[6],
+    _entities[3].properties[6],
   );
 
   /// See [Basket.isSynced].
   static final isSynced = obx.QueryBooleanProperty<Basket>(
-    _entities[4].properties[7],
+    _entities[3].properties[7],
   );
 }
 
@@ -1601,57 +1551,57 @@ class Basket_ {
 class Installment_ {
   /// See [Installment.id].
   static final id = obx.QueryIntegerProperty<Installment>(
-    _entities[5].properties[0],
+    _entities[4].properties[0],
   );
 
   /// See [Installment.uuid].
   static final uuid = obx.QueryStringProperty<Installment>(
-    _entities[5].properties[1],
+    _entities[4].properties[1],
   );
 
   /// See [Installment.saleId].
   static final saleId = obx.QueryIntegerProperty<Installment>(
-    _entities[5].properties[2],
+    _entities[4].properties[2],
   );
 
   /// See [Installment.saleUuid].
   static final saleUuid = obx.QueryStringProperty<Installment>(
-    _entities[5].properties[3],
+    _entities[4].properties[3],
   );
 
   /// See [Installment.amount].
   static final amount = obx.QueryDoubleProperty<Installment>(
-    _entities[5].properties[4],
+    _entities[4].properties[4],
   );
 
   /// See [Installment.dueDate].
   static final dueDate = obx.QueryDateNanoProperty<Installment>(
-    _entities[5].properties[5],
+    _entities[4].properties[5],
   );
 
   /// See [Installment.paymentDate].
   static final paymentDate = obx.QueryDateNanoProperty<Installment>(
-    _entities[5].properties[6],
+    _entities[4].properties[6],
   );
 
   /// See [Installment.createdAt].
   static final createdAt = obx.QueryDateNanoProperty<Installment>(
-    _entities[5].properties[7],
+    _entities[4].properties[7],
   );
 
   /// See [Installment.updatedAt].
   static final updatedAt = obx.QueryDateNanoProperty<Installment>(
-    _entities[5].properties[8],
+    _entities[4].properties[8],
   );
 
   /// See [Installment.isDeleted].
   static final isDeleted = obx.QueryBooleanProperty<Installment>(
-    _entities[5].properties[9],
+    _entities[4].properties[9],
   );
 
   /// See [Installment.isSynced].
   static final isSynced = obx.QueryBooleanProperty<Installment>(
-    _entities[5].properties[10],
+    _entities[4].properties[10],
   );
 }
 
@@ -1659,51 +1609,51 @@ class Installment_ {
 class SaleBasket_ {
   /// See [SaleBasket.id].
   static final id = obx.QueryIntegerProperty<SaleBasket>(
-    _entities[6].properties[0],
+    _entities[5].properties[0],
   );
 
   /// See [SaleBasket.saleId].
   static final saleId = obx.QueryIntegerProperty<SaleBasket>(
-    _entities[6].properties[1],
+    _entities[5].properties[1],
   );
 
   /// See [SaleBasket.basketId].
   static final basketId = obx.QueryIntegerProperty<SaleBasket>(
-    _entities[6].properties[2],
+    _entities[5].properties[2],
   );
 
   /// See [SaleBasket.saleUuid].
   static final saleUuid = obx.QueryStringProperty<SaleBasket>(
-    _entities[6].properties[3],
+    _entities[5].properties[3],
   );
 
   /// See [SaleBasket.basketUuid].
   static final basketUuid = obx.QueryStringProperty<SaleBasket>(
-    _entities[6].properties[4],
+    _entities[5].properties[4],
   );
 
   /// See [SaleBasket.quantity].
   static final quantity = obx.QueryIntegerProperty<SaleBasket>(
-    _entities[6].properties[5],
+    _entities[5].properties[5],
   );
 
   /// See [SaleBasket.createdAt].
   static final createdAt = obx.QueryDateNanoProperty<SaleBasket>(
-    _entities[6].properties[6],
+    _entities[5].properties[6],
   );
 
   /// See [SaleBasket.updatedAt].
   static final updatedAt = obx.QueryDateNanoProperty<SaleBasket>(
-    _entities[6].properties[7],
+    _entities[5].properties[7],
   );
 
   /// See [SaleBasket.isDeleted].
   static final isDeleted = obx.QueryBooleanProperty<SaleBasket>(
-    _entities[6].properties[8],
+    _entities[5].properties[8],
   );
 
   /// See [SaleBasket.isSynced].
   static final isSynced = obx.QueryBooleanProperty<SaleBasket>(
-    _entities[6].properties[9],
+    _entities[5].properties[9],
   );
 }

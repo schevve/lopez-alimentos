@@ -12,6 +12,7 @@ class Customer {
   final String? email;
   final String phone;
   final String address;
+  @Property(uid: 818118996813678362)
   final String addressNumber;
   final String city;
   final String state;
