@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cesta_flow/core/data/local/db_helper.dart';
+import 'package:cesta_flow/core/data/remote/remote_sync_service.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -59,6 +60,15 @@ class _MainAppState extends State<MainApp> {
   void initState() {
     super.initState();
     _enableWakeLock();
+    _synchronizeOnStartup();
+  }
+
+  Future<void> _synchronizeOnStartup() async {
+    try {
+      await RemoteSyncService().synchronize();
+    } catch (e) {
+      debugPrint('Falha na sincronização inicial: $e');
+    }
   }
 
   Future<void> _enableWakeLock() async {
