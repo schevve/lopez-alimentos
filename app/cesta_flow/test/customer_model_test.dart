@@ -26,7 +26,7 @@ void main() {
   });
 
   test('Preserva score NULL, zero e numérico ao serializar', () {
-    for (final score in [null, 0, 940]) {
+    for (final score in [null, 0.0, 940.0]) {
       final cliente = Customer.fromMap({...registroAntigo, 'score': score});
       expect(cliente.toMap()['score'], score);
       expect(cliente.copyWith(name: 'Outro nome').score, score);
@@ -35,7 +35,7 @@ void main() {
   });
 
   test('Permite atualizar o score e limpar para NULL', () {
-    final cliente = Customer.fromMap(registroAntigo).copyWith(score: 940);
+    final cliente = Customer.fromMap(registroAntigo).copyWith(score: 940.0);
     expect(cliente.score, 940);
     expect(cliente.copyWith(score: 0).score, 0);
     expect(cliente.copyWith(clearScore: true).toMap()['score'], isNull);

@@ -38,12 +38,13 @@ class CustomerEdit extends StatelessWidget {
       email: data['email'],
       phone: data['telefone'],
       address: data['rua'],
-      adress_number: data['numero'],
+      addressNumber: data['numero'],
       city: data['cidade'],
       state: data['estado'],
       cep: data['cep'],
       documentCPF: data['cpf'],
       documentRG: data['rg'],
+      updatedAt: DateTime.now(),
     );
     await customerRepository.updateCustomer(updatedCustomer);
     if (context.mounted) {
