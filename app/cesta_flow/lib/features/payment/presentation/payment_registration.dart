@@ -1,14 +1,13 @@
 import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/installment_model.dart';
-import 'package:cesta_flow/core/data/local/model/payment_model.dart';
 import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/features/payment/presentation/payment_success.dart';
-import 'package:cesta_flow/features/sale/presentation/sale_registration.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
+import 'package:cesta_flow/core/constants/util/input_formatters.dart';
 
 class PaymentRegistration extends StatefulWidget {
   final int saleId;
@@ -38,14 +37,8 @@ class _PaymentRegistration extends State<PaymentRegistration> {
     documentRG: '12.345.678-9',
   );
 
-  late final Payment _defaultPayment = Payment(
-    uuid: 'mock-payment',
-    id: 1,
-    saleId: 1,
-    method: 'Cartão de Crédito',
-    amount: 150.00,
-    date: DateTime.now(),
-  );
+  static const double _pendingAmount = 150.00;
+  final DateTime _saleDate = DateTime.now();
 
   final _formKey = GlobalKey<FormState>();
   final _formData = <String, dynamic>{};
@@ -122,7 +115,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                     ],
                   ),
                   Text(
-                    "R\$${_defaultPayment.amount.toString()}",
+                    'R\$${_pendingAmount.toStringAsFixed(2)}',
                     style: TextStyle(
                       fontSize: 35,
                       color: Colors.white,
@@ -131,7 +124,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                     ),
                   ),
                   Text(
-                    "compra realizada em ${DateFormat('dd/MM/yyyy').format(_defaultPayment.date)}",
+                    'compra realizada em ${DateFormat('dd/MM/yyyy').format(_saleDate)}',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.white,
@@ -161,7 +154,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                 spacing: 10,
                 children: [
                   TextFormField(
-                    initialValue: _defaultPayment.amount.toString(),
+                    initialValue: _pendingAmount.toStringAsFixed(2),
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
@@ -214,37 +207,36 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     childAspectRatio: 3.5,
-                    children: [
-                      'Pix',
-                      'Cartão',
-                      'Dinheiro',
-                      'Vale de alimentação',
-                    ].map((method) {
-                      final isSelected = _selectedPaymentMethod == method;
+                    children:
+                        [
+                          'Pix',
+                          'Cartão',
+                          'Dinheiro',
+                          'Vale de alimentação',
+                        ].map((method) {
+                          final isSelected = _selectedPaymentMethod == method;
 
-                      return OutlinedButton(
-                        onPressed: () {
-                          setState(() {
-                            _selectedPaymentMethod = method;
-                          });
-                        },
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: isSelected
-                              ? const Color(0xff1C5631)
-                              : Colors.white,
-                          foregroundColor: isSelected
-                              ? Colors.white
-                              : const Color(0xff1C5631),
-                          side: const BorderSide(
-                            color: Color(0xff1C5631),
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: Text(method),
-                      );
-                    }).toList(),
+                          return OutlinedButton(
+                            onPressed: () {
+                              setState(() {
+                                _selectedPaymentMethod = method;
+                              });
+                            },
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: isSelected
+                                  ? const Color(0xff1C5631)
+                                  : Colors.white,
+                              foregroundColor: isSelected
+                                  ? Colors.white
+                                  : const Color(0xff1C5631),
+                              side: const BorderSide(color: Color(0xff1C5631)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: Text(method),
+                          );
+                        }).toList(),
                   ),
                   TextFormField(
                     decoration: InputDecoration(
@@ -321,6 +313,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
           amount: realValue,
           dueDate: dueDate,
           paymentDate: DateTime.now(),
+          paymentMethod: _selectedPaymentMethod,
         );
         await installmentRepository.registerInstallment(installment);
       } catch (e) {
