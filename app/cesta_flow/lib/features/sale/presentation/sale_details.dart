@@ -358,6 +358,11 @@ class _InstallmentCard extends StatelessWidget {
               label: 'Valor',
               value: formatCurrency(installment.amount),
             ),
+            if (isPaid && installment.paymentMethod != null)
+              _InfoLine(
+                label: 'Forma de pagamento',
+                value: installment.paymentMethod!,
+              ),
           ],
         ),
       ),

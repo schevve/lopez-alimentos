@@ -13,6 +13,7 @@ class Installment {
   final DateTime? dueDate;
   @Property(type: PropertyType.dateNano)
   final DateTime? paymentDate;
+  final String? paymentMethod;
   @Property(type: PropertyType.dateNano)
   final DateTime createdAt;
   @Property(type: PropertyType.dateNano)
@@ -28,6 +29,7 @@ class Installment {
     required this.amount,
     this.dueDate,
     this.paymentDate,
+    this.paymentMethod,
     DateTime? createdAt,
     this.updatedAt,
     this.isDeleted = false,
@@ -44,6 +46,7 @@ class Installment {
       'amount': amount,
       'due_date': dueDate?.toIso8601String(),
       'payment_date': paymentDate?.toIso8601String(),
+      'payment_method': paymentMethod,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
       'is_deleted': isDeleted,
@@ -63,6 +66,7 @@ class Installment {
       'amount': amount,
       'due_date': dueDate?.toIso8601String(),
       'payment_date': paymentDate?.toIso8601String(),
+      'payment_method': paymentMethod,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -81,6 +85,7 @@ class Installment {
       amount: (map['amount'] as num?)?.toDouble() ?? 0,
       dueDate: _readDate(map['due_date']),
       paymentDate: _readDate(map['payment_date'] ?? map['date']),
+      paymentMethod: (map['payment_method'] ?? map['method']) as String?,
       createdAt: _readDate(map['created_at']) ?? DateTime.now(),
       updatedAt: _readDate(map['updated_at']),
       isDeleted: map['is_deleted'] as bool? ?? false,
@@ -98,6 +103,8 @@ class Installment {
     bool clearDueDate = false,
     DateTime? paymentDate,
     bool clearPaymentDate = false,
+    String? paymentMethod,
+    bool clearPaymentMethod = false,
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isDeleted,
@@ -111,6 +118,9 @@ class Installment {
       amount: amount ?? this.amount,
       dueDate: clearDueDate ? null : dueDate ?? this.dueDate,
       paymentDate: clearPaymentDate ? null : paymentDate ?? this.paymentDate,
+      paymentMethod: clearPaymentMethod
+          ? null
+          : paymentMethod ?? this.paymentMethod,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isDeleted: isDeleted ?? this.isDeleted,
