@@ -233,17 +233,10 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                 style: const TextStyle(fontSize: 16),
               ),
             ),
-            InputDecorator(
-              decoration: const InputDecoration(labelText: 'Parcela pendente'),
-              child: Text(
-                formatCurrency(_nextInstallmentAmount),
-                style: const TextStyle(fontSize: 16),
-              ),
-            ),
             TextFormField(
               controller: _amountController,
               decoration: const InputDecoration(
-                labelText: 'Valor recebido *',
+                labelText: 'Valor do pagamento *',
               ),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
