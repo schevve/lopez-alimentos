@@ -6,6 +6,7 @@ import '../db_helper.dart';
 import '../model/installment_model.dart';
 import '../model/sale_model.dart';
 import '../sync_entity_lookup.dart';
+import 'sale_repository.dart';
 
 class InstallmentRepository {
   final DatabaseHelper _dbHelper;
@@ -50,8 +51,8 @@ class InstallmentRepository {
     required double totalPrice,
     required DateTime firstDueDate,
   }) async {
-    if (count < 1 || count > 6) {
-      throw ArgumentError('Quantidade de parcelas deve ser entre 1 e 6.');
+    if (count < 1 || count > 3) {
+      throw ArgumentError('Quantidade de parcelas deve ser entre 1 e 3.');
     }
     if (totalPrice <= 0) {
       throw ArgumentError('Valor total inválido para parcelas.');
@@ -88,18 +89,16 @@ class InstallmentRepository {
     String? paymentMethod,
     DateTime? paymentDate,
   }) async {
-    if (amount <= 0) {
-      throw ArgumentError('Informe um valor de pagamento maior que zero.');
-    }
     final db = await _dbHelper.store;
     final sale = db.box<Sale>().get(saleId);
     if (sale == null || sale.isDeleted) {
       throw StateError('Venda não encontrada.');
     }
+    SaleRepository.validatePaymentAmount(sale, amount);
 
     var installment = await _nextUnpaidInstallment(saleId);
     if (installment == null) {
-      final remaining = _remainingBalance(sale);
+      final remaining = SaleRepository.remainingBalance(sale);
       if (remaining <= 0) {
         throw StateError('Venda já está quitada.');
       }
@@ -143,7 +142,7 @@ class InstallmentRepository {
     }
 
     final settledAfterSync = settled.copyWith(isSynced: isSynced);
-    return db.runInTransaction(TxMode.write, () {
+    final installmentId = db.runInTransaction(TxMode.write, () {
       final currentSale = db.box<Sale>().get(saleId);
       if (currentSale == null || currentSale.isDeleted) {
         throw StateError('Venda não encontrada.');
@@ -162,6 +161,13 @@ class InstallmentRepository {
       db.box<Installment>().put(settledAfterSync, mode: PutMode.update);
       return settledAfterSync.id!;
     });
+
+    final saleAfterPayment = db.box<Sale>().get(saleId);
+    if (saleAfterPayment != null &&
+        SaleRepository.isSaleFullyPaid(saleAfterPayment)) {
+      await _cancelRemainingUnpaidInstallments(saleId);
+    }
+    return installmentId;
   }
 
   bool _isPaid(Installment installment) => installment.paymentDate != null;
@@ -186,7 +192,15 @@ class InstallmentRepository {
     return pending.first;
   }
 
-  double _remainingBalance(Sale sale) => sale.price - sale.amountPaid;
+  Future<void> _cancelRemainingUnpaidInstallments(int saleId) async {
+    final unpaid = (await getInstallmentsBySaleId(saleId))
+        .where((item) => !_isPaid(item));
+    for (final installment in unpaid) {
+      final id = installment.id;
+      if (id == null) continue;
+      await deleteInstallment(id);
+    }
+  }
 
   Future<Installment?> getInstallmentById(int id) async {
     final installment = (await _dbHelper.store).box<Installment>().get(id);

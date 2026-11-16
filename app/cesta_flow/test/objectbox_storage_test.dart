@@ -100,7 +100,27 @@ void main() {
     );
     await payments.registerPayment(saleId: sid, amount: 25);
     await payments.registerPayment(saleId: sid, amount: 35);
+    await expectLater(
+      payments.registerPayment(saleId: sid, amount: 50),
+      throwsArgumentError,
+    );
     expect(await payments.paidAmountBySaleId(sid), 60);
+
+    final plannedSaleId = await sales.registerSale(
+      sale(cid, date: DateTime(2026, 10, 4)),
+      [saleLine(store, uuid: 'basket-planned')],
+    );
+    await payments.createPlannedInstallmentsForSale(
+      saleId: plannedSaleId,
+      count: 3,
+      totalPrice: 100,
+      firstDueDate: DateTime(2026, 10, 4),
+    );
+    await payments.registerPayment(saleId: plannedSaleId, amount: 100);
+    final plannedInstallments =
+        await payments.getInstallmentsBySaleId(plannedSaleId);
+    expect(plannedInstallments.length, 1);
+    expect(plannedInstallments.single.isPaid, isTrue);
     expect(await payments.paidTotalsBySaleIds([sid, laterId]), {sid: 60.0});
     expect(await payments.paidTotalsBySaleIds([]), isEmpty);
     expect((await sales.getSalesByCustomerId(cid)).first.id, laterId);

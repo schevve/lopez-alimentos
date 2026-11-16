@@ -200,7 +200,7 @@ class _SaleRegistrationState extends State<SaleRegistration> {
                 initialValue: _installmentCount,
                 decoration: const InputDecoration(labelText: 'Quantidade de parcelas *'),
                 items: [
-                  for (var n = 1; n <= 6; n++)
+                  for (var n = 1; n <= 3; n++)
                     DropdownMenuItem(value: n, child: Text('$n')),
                 ],
                 onChanged: (value) {
