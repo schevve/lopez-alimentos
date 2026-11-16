@@ -355,9 +355,16 @@ class _InstallmentCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             _InfoLine(
-              label: 'Valor',
-              value: formatCurrency(installment.amount),
+              label: isPaid ? 'Valor pago' : 'Valor previsto',
+              value: formatCurrency(
+                isPaid ? installment.paidAmount : installment.expectedAmount,
+              ),
             ),
+            if (isPaid && installment.paymentMethod != null)
+              _InfoLine(
+                label: 'Forma de pagamento',
+                value: installment.paymentMethod!,
+              ),
           ],
         ),
       ),

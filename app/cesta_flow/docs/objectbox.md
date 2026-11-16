@@ -19,10 +19,10 @@ remoto PostgreSQL; sua integração com o armazenamento local será feita depois
 
 ## Repositórios e regras
 
-As telas usam `CustomerRepository`, `SaleRepository` e `PaymentRepository`.
+As telas usam `CustomerRepository`, `SaleRepository` e `InstallmentRepository`.
 As APIs, totais, ordenação, CPF/RG únicos, score opcional e exclusões em cascata
 continuam com a mesma lógica. Os repositórios verificam a existência do cliente
-antes de gravar uma venda e da venda antes de gravar um pagamento.
+antes de gravar uma venda e da venda antes de gravar uma parcela (installment).
 
 O critério de clientes pendentes continua sendo a existência de alguma venda
 sem pagamento. A exportação CSV existente lê os registros atuais do ObjectBox.

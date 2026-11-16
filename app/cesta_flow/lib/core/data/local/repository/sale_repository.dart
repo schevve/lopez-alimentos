@@ -32,6 +32,26 @@ class SaleRepository {
   SaleRepository({DatabaseHelper? dbHelper})
     : _dbHelper = dbHelper ?? DatabaseHelper();
 
+  static double remainingBalance(Sale sale) => sale.price - sale.amountPaid;
+
+  static bool isSaleFullyPaid(Sale sale) => remainingBalance(sale) <= 0;
+
+  /// Valida pagamento contra o saldo restante da venda.
+  static void validatePaymentAmount(Sale sale, double paymentAmount) {
+    if (paymentAmount <= 0) {
+      throw ArgumentError('Informe um valor de pagamento maior que zero.');
+    }
+    if (isSaleFullyPaid(sale)) {
+      throw StateError('Venda já está quitada.');
+    }
+    final remaining = remainingBalance(sale);
+    if (paymentAmount > remaining) {
+      throw ArgumentError(
+        'O pagamento não pode exceder o saldo restante da venda.',
+      );
+    }
+  }
+
   Future<int> registerSale(Sale value, List<SaleBasketInput> lines) async {
     SaleBasketInput.ensureValid(lines);
     final db = await _dbHelper.store;
@@ -141,6 +161,11 @@ class SaleRepository {
   Future<int> updateSale(Sale value) async {
     if (value.id == null || value.id == 0) {
       throw ArgumentError('ID obrigatório para atualizar.');
+    }
+    if (value.amountPaid > value.price) {
+      throw ArgumentError(
+        'O valor pago não pode exceder o preço total da venda.',
+      );
     }
     bool isSynced = true;
     try {

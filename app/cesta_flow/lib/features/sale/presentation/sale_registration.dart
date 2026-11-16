@@ -7,6 +7,7 @@ import 'package:cesta_flow/core/data/local/model/basket_model.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_basket_input.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
+import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/sale/presentation/basket_selection.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_customer_selection.dart';
@@ -39,6 +40,7 @@ class _SaleRegistrationState extends State<SaleRegistration> {
   final List<SelectedBasketLine> _basketLines = [];
   bool _totalEditedManually = false;
   bool _isSubmitting = false;
+  int _installmentCount = 1;
 
   @override
   void initState() {
@@ -194,6 +196,18 @@ class _SaleRegistrationState extends State<SaleRegistration> {
                   );
                 },
               ),
+              DropdownButtonFormField<int>(
+                initialValue: _installmentCount,
+                decoration: const InputDecoration(labelText: 'Quantidade de parcelas *'),
+                items: [
+                  for (var n = 1; n <= 3; n++)
+                    DropdownMenuItem(value: n, child: Text('$n')),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _installmentCount = value);
+                },
+              ),
               TextFormField(
                 controller: _dateController,
                 decoration: const InputDecoration(labelText: 'Data da Venda *'),
@@ -286,7 +300,7 @@ class _SaleRegistrationState extends State<SaleRegistration> {
       customerUuid: _selectedCustomer!.uuid,
       price: price,
       amountPaid: 0,
-      installments: 1,
+      installments: _installmentCount,
       createdAt: DateTime.parse(
         _dateController.text.split('/').reversed.join('-'),
       ),
@@ -299,9 +313,17 @@ class _SaleRegistrationState extends State<SaleRegistration> {
         ),
     ];
 
-    final salesRepository = SaleRepository(dbHelper: DatabaseHelper());
+    final dbHelper = DatabaseHelper();
+    final salesRepository = SaleRepository(dbHelper: dbHelper);
+    final installmentRepository = InstallmentRepository(dbHelper: dbHelper);
     try {
-      await salesRepository.registerSale(saleData, lines);
+      final saleId = await salesRepository.registerSale(saleData, lines);
+      await installmentRepository.createPlannedInstallmentsForSale(
+        saleId: saleId,
+        count: _installmentCount,
+        totalPrice: price,
+        firstDueDate: saleData.createdAt,
+      );
 
       if (!mounted) return;
       Navigator.pushReplacement(

@@ -49,7 +49,12 @@ String formatMoneyField(double value) {
 }
 
 double parseMoneyField(String value) {
-  return double.parse(value.replaceAll(',', '.'));
+  final trimmed = value.trim();
+  if (trimmed.isEmpty) return 0;
+  final normalized = trimmed.contains(',')
+      ? trimmed.replaceAll('.', '').replaceAll(',', '.')
+      : trimmed;
+  return double.parse(normalized);
 }
 
 String getCurrentFormattedDate() {

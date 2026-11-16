@@ -2,7 +2,6 @@ import '../../../objectbox.g.dart';
 import 'model/basket_model.dart';
 import 'model/customer_model.dart';
 import 'model/installment_model.dart';
-import 'model/payment_model.dart';
 import 'model/sale_basket_model.dart';
 import 'model/sale_model.dart';
 
@@ -39,16 +38,6 @@ Basket? findBasketByUuid(Store db, String uuid) {
 Installment? findInstallmentByUuid(Store db, String uuid) {
   if (uuid.isEmpty) return null;
   final query = db.box<Installment>().query(Installment_.uuid.equals(uuid)).build();
-  try {
-    return query.findFirst();
-  } finally {
-    query.close();
-  }
-}
-
-Payment? findPaymentByUuid(Store db, String uuid) {
-  if (uuid.isEmpty) return null;
-  final query = db.box<Payment>().query(Payment_.uuid.equals(uuid)).build();
   try {
     return query.findFirst();
   } finally {

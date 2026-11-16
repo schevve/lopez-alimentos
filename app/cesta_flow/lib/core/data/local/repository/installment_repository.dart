@@ -1,17 +1,25 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../../objectbox.g.dart';
 import '../db_helper.dart';
 import '../model/installment_model.dart';
 import '../model/sale_model.dart';
 import '../sync_entity_lookup.dart';
+import 'sale_repository.dart';
 
 class InstallmentRepository {
   final DatabaseHelper _dbHelper;
   InstallmentRepository({DatabaseHelper? dbHelper})
     : _dbHelper = dbHelper ?? DatabaseHelper();
 
-  Future<int> registerInstallment(Installment value) async {
+  Future<int> createInstallment(Installment value) async {
+    if (_isPaid(value)) {
+      throw ArgumentError('Parcela planejada não pode estar quitada.');
+    }
+    if (value.paidAmount != 0) {
+      throw ArgumentError('Parcela planejada não pode ter valor pago.');
+    }
     final db = await _dbHelper.store;
     final sale = db.box<Sale>().get(value.saleId);
     if (sale == null || sale.isDeleted) {
@@ -20,37 +28,178 @@ class InstallmentRepository {
     final installment = value.saleUuid.isEmpty
         ? value.copyWith(saleUuid: sale.uuid)
         : value;
-    bool isSynced = true;
+    var isSynced = true;
     try {
       await Supabase.instance.client
           .from('installments')
           .insert(installment.toRemote());
-      await Supabase.instance.client
-          .from('sales')
-          .update({
-            'amount_paid': sale.amountPaid + installment.amount,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', sale.uuid);
     } catch (_) {
       isSynced = false;
     }
     final valueAfterSync = installment.copyWith(isSynced: isSynced);
     return db.runInTransaction(TxMode.write, () {
-      final currentSale = db.box<Sale>().get(valueAfterSync.saleId);
+      if (db.box<Sale>().get(valueAfterSync.saleId) == null) {
+        throw StateError('Venda não encontrada.');
+      }
+      return db.box<Installment>().put(valueAfterSync);
+    });
+  }
+
+  Future<void> createPlannedInstallmentsForSale({
+    required int saleId,
+    required int count,
+    required double totalPrice,
+    required DateTime firstDueDate,
+  }) async {
+    if (count < 1 || count > 3) {
+      throw ArgumentError('Quantidade de parcelas deve ser entre 1 e 3.');
+    }
+    if (totalPrice <= 0) {
+      throw ArgumentError('Valor total inválido para parcelas.');
+    }
+    final expectedAmounts = _splitExpectedAmounts(totalPrice, count);
+    for (var index = 0; index < count; index++) {
+      final dueDate = DateTime(
+        firstDueDate.year,
+        firstDueDate.month + index,
+        firstDueDate.day,
+      );
+      await createInstallment(
+        Installment(
+          uuid: const Uuid().v4(),
+          saleId: saleId,
+          expectedAmount: expectedAmounts[index],
+          dueDate: dueDate,
+        ),
+      );
+    }
+  }
+
+  List<double> _splitExpectedAmounts(double total, int count) {
+    final unitCents = (total * 100).round() ~/ count;
+    final amounts = List<double>.filled(count, unitCents / 100);
+    final assigned = unitCents * count / 100;
+    amounts[count - 1] += total - assigned;
+    return amounts;
+  }
+
+  Future<int> registerPayment({
+    required int saleId,
+    required double amount,
+    String? paymentMethod,
+    DateTime? paymentDate,
+  }) async {
+    final db = await _dbHelper.store;
+    final sale = db.box<Sale>().get(saleId);
+    if (sale == null || sale.isDeleted) {
+      throw StateError('Venda não encontrada.');
+    }
+    SaleRepository.validatePaymentAmount(sale, amount);
+
+    var installment = await _nextUnpaidInstallment(saleId);
+    if (installment == null) {
+      final remaining = SaleRepository.remainingBalance(sale);
+      if (remaining <= 0) {
+        throw StateError('Venda já está quitada.');
+      }
+      final planUuid = const Uuid().v4();
+      await createInstallment(
+        Installment(
+          uuid: planUuid,
+          saleId: saleId,
+          expectedAmount: remaining,
+        ),
+      );
+      installment = await _nextUnpaidInstallment(saleId);
+      if (installment == null) {
+        throw StateError('Não foi possível criar parcela para o pagamento.');
+      }
+    }
+
+    final paidAt = paymentDate ?? DateTime.now();
+    final settled = installment.copyWith(
+      paidAmount: amount,
+      paymentDate: paidAt,
+      paymentMethod: paymentMethod,
+      updatedAt: paidAt,
+    );
+
+    var isSynced = true;
+    try {
+      await Supabase.instance.client
+          .from('installments')
+          .update(settled.toRemote())
+          .eq('id', settled.uuid);
+      await Supabase.instance.client
+          .from('sales')
+          .update({
+            'amount_paid': sale.amountPaid + amount,
+            'updated_at': paidAt.toIso8601String(),
+          })
+          .eq('id', sale.uuid);
+    } catch (_) {
+      isSynced = false;
+    }
+
+    final settledAfterSync = settled.copyWith(isSynced: isSynced);
+    final installmentId = db.runInTransaction(TxMode.write, () {
+      final currentSale = db.box<Sale>().get(saleId);
       if (currentSale == null || currentSale.isDeleted) {
         throw StateError('Venda não encontrada.');
       }
+      if (db.box<Installment>().get(settledAfterSync.id!) == null) {
+        throw StateError('Parcela não encontrada.');
+      }
       db.box<Sale>().put(
         currentSale.copyWith(
-          amountPaid: currentSale.amountPaid + valueAfterSync.amount,
-          updatedAt: DateTime.now(),
+          amountPaid: currentSale.amountPaid + amount,
+          updatedAt: paidAt,
           isSynced: isSynced && currentSale.isSynced,
         ),
         mode: PutMode.update,
       );
-      return db.box<Installment>().put(valueAfterSync);
+      db.box<Installment>().put(settledAfterSync, mode: PutMode.update);
+      return settledAfterSync.id!;
     });
+
+    final saleAfterPayment = db.box<Sale>().get(saleId);
+    if (saleAfterPayment != null &&
+        SaleRepository.isSaleFullyPaid(saleAfterPayment)) {
+      await _cancelRemainingUnpaidInstallments(saleId);
+    }
+    return installmentId;
+  }
+
+  bool _isPaid(Installment installment) => installment.paymentDate != null;
+
+  Future<Installment?> _nextUnpaidInstallment(int saleId) async {
+    final installments = await getInstallmentsBySaleId(saleId);
+    final pending =
+        installments.where((item) => !_isPaid(item)).toList()
+          ..sort((a, b) {
+            final dueA = a.dueDate;
+            final dueB = b.dueDate;
+            if (dueA == null && dueB == null) {
+              return a.createdAt.compareTo(b.createdAt);
+            }
+            if (dueA == null) return 1;
+            if (dueB == null) return -1;
+            final dueCompare = dueA.compareTo(dueB);
+            if (dueCompare != 0) return dueCompare;
+            return a.createdAt.compareTo(b.createdAt);
+          });
+    if (pending.isEmpty) return null;
+    return pending.first;
+  }
+
+  Future<void> _cancelRemainingUnpaidInstallments(int saleId) async {
+    final unpaid = (await getInstallmentsBySaleId(saleId))
+        .where((item) => !_isPaid(item));
+    for (final installment in unpaid) {
+      final id = installment.id;
+      if (id == null) continue;
+      await deleteInstallment(id);
+    }
   }
 
   Future<Installment?> getInstallmentById(int id) async {
@@ -115,8 +264,8 @@ class InstallmentRepository {
 
   Future<double> paidAmountBySaleId(int saleId) async =>
       (await getInstallmentsBySaleId(saleId))
-          .where((installment) => installment.isPaid)
-          .fold<double>(0, (sum, installment) => sum + installment.amount);
+          .where((installment) => _isPaid(installment))
+          .fold<double>(0, (sum, installment) => sum + installment.paidAmount);
 
   Future<Map<int, double>> paidTotalsBySaleIds(List<int> saleIds) async {
     if (saleIds.isEmpty) return {};
@@ -132,11 +281,11 @@ class InstallmentRepository {
     try {
       final totals = <int, double>{};
       for (final installment in query.find()) {
-        if (!installment.isPaid) continue;
+        if (!_isPaid(installment)) continue;
         totals.update(
           installment.saleId,
-          (sum) => sum + installment.amount,
-          ifAbsent: () => installment.amount,
+          (sum) => sum + installment.paidAmount,
+          ifAbsent: () => installment.paidAmount,
         );
       }
       return totals;

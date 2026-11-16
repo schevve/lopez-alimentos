@@ -94,8 +94,6 @@ class _CustomerRegistrationState
       );
     }
 
-    final isEditing = widget.customerId != null;
-
     return Scaffold(
       backgroundColor: const Color(0xffF3FCF3),
       appBar: TopBar(
@@ -152,10 +150,6 @@ class _CustomerRegistrationState
     Navigator.of(context).pop(true);
   }
 }
-
-String _formatDate(DateTime date) =>
-    '${date.day.toString().padLeft(2, '0')}/'
-    '${date.month.toString().padLeft(2, '0')}/${date.year}';
 
 DateTime cleanDate(String dateString) {
   final parts = dateString.split('/');
