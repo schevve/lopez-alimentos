@@ -299,7 +299,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(6, 8727988763342085890),
     name: 'Installment',
-    lastPropertyId: const obx_int.IdUid(12, 460167962782540694),
+    lastPropertyId: const obx_int.IdUid(14, 5650795077311920629),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -325,12 +325,6 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(4, 1516841879635067654),
         name: 'saleUuid',
         type: 9,
-        flags: 0,
-      ),
-      obx_int.ModelProperty(
-        id: const obx_int.IdUid(5, 3751700556971616796),
-        name: 'amount',
-        type: 8,
         flags: 0,
       ),
       obx_int.ModelProperty(
@@ -373,6 +367,18 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(12, 460167962782540694),
         name: 'paymentMethod',
         type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(13, 1683677510064764407),
+        name: 'paidAmount',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(14, 5650795077311920629),
+        name: 'expectedAmount',
+        type: 8,
         flags: 0,
       ),
     ],
@@ -521,6 +527,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
       5386505259579833343,
       1064612922156208424,
       3876233115759566934,
+      3751700556971616796,
     ],
     retiredRelationUids: const [],
     modelVersion: 5,
@@ -931,12 +938,11 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final paymentMethodOffset = object.paymentMethod == null
             ? null
             : fbb.writeString(object.paymentMethod!);
-        fbb.startTable(13);
+        fbb.startTable(15);
         fbb.addInt64(0, object.id ?? 0);
         fbb.addOffset(1, uuidOffset);
         fbb.addInt64(2, object.saleId);
         fbb.addOffset(3, saleUuidOffset);
-        fbb.addFloat64(4, object.amount);
         fbb.addInt64(
           5,
           object.dueDate == null
@@ -959,6 +965,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.addBool(9, object.isDeleted);
         fbb.addBool(10, object.isSynced);
         fbb.addOffset(11, paymentMethodOffset);
+        fbb.addFloat64(12, object.paidAmount);
+        fbb.addFloat64(13, object.expectedAmount);
         fbb.finish(fbb.endTable());
         return object.id ?? 0;
       },
@@ -997,10 +1005,16 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final saleUuidParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 10, '');
-        final amountParam = const fb.Float64Reader().vTableGet(
+        final expectedAmountParam = const fb.Float64Reader().vTableGet(
           buffer,
           rootOffset,
-          12,
+          30,
+          0,
+        );
+        final paidAmountParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          28,
           0,
         );
         final dueDateParam = dueDateValue == null
@@ -1042,7 +1056,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
           uuid: uuidParam,
           saleId: saleIdParam,
           saleUuid: saleUuidParam,
-          amount: amountParam,
+          expectedAmount: expectedAmountParam,
+          paidAmount: paidAmountParam,
           dueDate: dueDateParam,
           paymentDate: paymentDateParam,
           paymentMethod: paymentMethodParam,
@@ -1391,44 +1406,49 @@ class Installment_ {
     _entities[3].properties[3],
   );
 
-  /// See [Installment.amount].
-  static final amount = obx.QueryDoubleProperty<Installment>(
-    _entities[3].properties[4],
-  );
-
   /// See [Installment.dueDate].
   static final dueDate = obx.QueryDateNanoProperty<Installment>(
-    _entities[3].properties[5],
+    _entities[3].properties[4],
   );
 
   /// See [Installment.paymentDate].
   static final paymentDate = obx.QueryDateNanoProperty<Installment>(
-    _entities[3].properties[6],
+    _entities[3].properties[5],
   );
 
   /// See [Installment.createdAt].
   static final createdAt = obx.QueryDateNanoProperty<Installment>(
-    _entities[3].properties[7],
+    _entities[3].properties[6],
   );
 
   /// See [Installment.updatedAt].
   static final updatedAt = obx.QueryDateNanoProperty<Installment>(
-    _entities[3].properties[8],
+    _entities[3].properties[7],
   );
 
   /// See [Installment.isDeleted].
   static final isDeleted = obx.QueryBooleanProperty<Installment>(
-    _entities[3].properties[9],
+    _entities[3].properties[8],
   );
 
   /// See [Installment.isSynced].
   static final isSynced = obx.QueryBooleanProperty<Installment>(
-    _entities[3].properties[10],
+    _entities[3].properties[9],
   );
 
   /// See [Installment.paymentMethod].
   static final paymentMethod = obx.QueryStringProperty<Installment>(
+    _entities[3].properties[10],
+  );
+
+  /// See [Installment.paidAmount].
+  static final paidAmount = obx.QueryDoubleProperty<Installment>(
     _entities[3].properties[11],
+  );
+
+  /// See [Installment.expectedAmount].
+  static final expectedAmount = obx.QueryDoubleProperty<Installment>(
+    _entities[3].properties[12],
   );
 }
 

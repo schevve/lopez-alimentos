@@ -8,7 +8,8 @@ class Installment {
   @Index()
   final int saleId;
   final String saleUuid;
-  final double amount;
+  final double expectedAmount;
+  final double paidAmount;
   @Property(type: PropertyType.dateNano)
   final DateTime? dueDate;
   @Property(type: PropertyType.dateNano)
@@ -26,7 +27,8 @@ class Installment {
     required this.uuid,
     required this.saleId,
     this.saleUuid = '',
-    required this.amount,
+    required this.expectedAmount,
+    this.paidAmount = 0,
     this.dueDate,
     this.paymentDate,
     this.paymentMethod,
@@ -43,7 +45,8 @@ class Installment {
       'uuid': uuid,
       'sale_id': saleId,
       'sale_uuid': saleUuid,
-      'amount': amount,
+      'expected_amount': expectedAmount,
+      'paid_amount': paidAmount,
       'due_date': dueDate?.toIso8601String(),
       'payment_date': paymentDate?.toIso8601String(),
       'payment_method': paymentMethod,
@@ -63,7 +66,8 @@ class Installment {
     return {
       'id': uuid,
       'sale_id': saleUuid,
-      'amount': amount,
+      'expected_amount': expectedAmount,
+      'paid_amount': paidAmount,
       'due_date': dueDate?.toIso8601String(),
       'payment_date': paymentDate?.toIso8601String(),
       'payment_method': paymentMethod,
@@ -82,7 +86,8 @@ class Installment {
       saleUuid:
           (map['sale_uuid'] ?? (rawSaleId is String ? rawSaleId : ''))
               as String,
-      amount: (map['amount'] as num?)?.toDouble() ?? 0,
+      expectedAmount: _readExpectedAmount(map),
+      paidAmount: _readPaidAmount(map),
       dueDate: _readDate(map['due_date']),
       paymentDate: _readDate(map['payment_date'] ?? map['date']),
       paymentMethod: (map['payment_method'] ?? map['method']) as String?,
@@ -98,7 +103,8 @@ class Installment {
     String? uuid,
     int? saleId,
     String? saleUuid,
-    double? amount,
+    double? expectedAmount,
+    double? paidAmount,
     DateTime? dueDate,
     bool clearDueDate = false,
     DateTime? paymentDate,
@@ -115,7 +121,8 @@ class Installment {
       uuid: uuid ?? this.uuid,
       saleId: saleId ?? this.saleId,
       saleUuid: saleUuid ?? this.saleUuid,
-      amount: amount ?? this.amount,
+      expectedAmount: expectedAmount ?? this.expectedAmount,
+      paidAmount: paidAmount ?? this.paidAmount,
       dueDate: clearDueDate ? null : dueDate ?? this.dueDate,
       paymentDate: clearPaymentDate ? null : paymentDate ?? this.paymentDate,
       paymentMethod: clearPaymentMethod
@@ -130,8 +137,26 @@ class Installment {
 
   @override
   String toString() {
-    return 'Installment{id: $id, uuid: $uuid, saleId: $saleId, amount: $amount, dueDate: $dueDate, paymentDate: $paymentDate}';
+    return 'Installment{id: $id, uuid: $uuid, saleId: $saleId, expectedAmount: $expectedAmount, dueDate: $dueDate, paymentDate: $paymentDate}';
   }
+}
+
+double _readExpectedAmount(Map<String, dynamic> map) {
+  final expected = map['expected_amount'];
+  if (expected is num) return expected.toDouble();
+  final legacy = map['amount'];
+  if (legacy is num) return legacy.toDouble();
+  return 0;
+}
+
+double _readPaidAmount(Map<String, dynamic> map) {
+  final explicit = (map['paid_amount'] as num?)?.toDouble();
+  if (explicit != null && explicit > 0) return explicit;
+  final paymentDate = _readDate(map['payment_date'] ?? map['date']);
+  if (paymentDate != null) {
+    return _readExpectedAmount(map);
+  }
+  return explicit ?? 0;
 }
 
 DateTime? _readDate(Object? value) {

@@ -36,13 +36,14 @@ class _InstallmentRepository extends InstallmentRepository {
     Installment(
       uuid: 'installment-1',
       saleId: saleId,
-      amount: 40,
+      expectedAmount: 40,
+      paidAmount: 40,
       paymentDate: DateTime(2026, 10, 2),
     ),
     Installment(
       uuid: 'installment-2',
       saleId: saleId,
-      amount: 60,
+      expectedAmount: 60,
       dueDate: DateTime(2026, 11, 2),
     ),
   ];

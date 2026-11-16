@@ -38,14 +38,6 @@ SaleBasketInput saleLine(Store store, {String uuid = 'basket-test'}) {
   return SaleBasketInput.catalog(basketUuid: uuid, quantity: 1);
 }
 
-Installment payment(int saleId, {int? id, double amount = 25}) => Installment(
-  id: id,
-  uuid: 'payment-${id ?? saleId}-$amount',
-  saleId: saleId,
-  amount: amount,
-  paymentDate: DateTime(2026, 10, 2),
-);
-
 void main() {
   late Directory directory;
   late Store store;
@@ -103,11 +95,11 @@ void main() {
       throwsStateError,
     );
     await expectLater(
-      payments.registerInstallment(payment(999)),
+      payments.registerPayment(saleId: 999, amount: 25),
       throwsStateError,
     );
-    await payments.registerInstallment(payment(sid));
-    await payments.registerInstallment(payment(sid, amount: 35));
+    await payments.registerPayment(saleId: sid, amount: 25);
+    await payments.registerPayment(saleId: sid, amount: 35);
     expect(await payments.paidAmountBySaleId(sid), 60);
     expect(await payments.paidTotalsBySaleIds([sid, laterId]), {sid: 60.0});
     expect(await payments.paidTotalsBySaleIds([]), isEmpty);
@@ -117,7 +109,7 @@ void main() {
     expect(await sales.getPendingCustomersCount(), 1);
     await sales.deleteSale(sid);
     expect(await payments.getAllInstallments(), isEmpty);
-    await payments.registerInstallment(payment(laterId));
+    await payments.registerPayment(saleId: laterId, amount: 25);
     await customers.deleteCustomer(cid);
     expect(await sales.getAllSales(), isEmpty);
     expect(await payments.getAllInstallments(), isEmpty);

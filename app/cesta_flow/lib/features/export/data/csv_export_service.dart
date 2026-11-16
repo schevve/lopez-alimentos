@@ -147,7 +147,7 @@ class CsvExportService {
           ? installments[index]
           : null;
       row.addAll([
-        installment?['amount'],
+        installment?['expected_amount'] ?? installment?['amount'],
         installment?['due_date'],
         installment?['payment_date'],
       ]);

@@ -1,12 +1,10 @@
 import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
-import 'package:cesta_flow/core/data/local/model/installment_model.dart';
 import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/features/payment/presentation/payment_success.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:uuid/uuid.dart';
 import 'package:cesta_flow/core/constants/util/input_formatters.dart';
 
 class PaymentRegistration extends StatefulWidget {
@@ -304,18 +302,13 @@ class _PaymentRegistration extends State<PaymentRegistration> {
           .replaceAll('.', '')
           .replaceAll(',', '.');
       final double realValue = double.tryParse(cleanValue) ?? 0.0;
-      final dueDate = _parseDate(_formData['dueDate'] as String?);
 
       try {
-        final installment = Installment(
-          uuid: const Uuid().v4(),
+        await installmentRepository.registerPayment(
           saleId: saleId,
           amount: realValue,
-          dueDate: dueDate,
-          paymentDate: DateTime.now(),
           paymentMethod: _selectedPaymentMethod,
         );
-        await installmentRepository.registerInstallment(installment);
       } catch (e) {
         debugPrint("erro no banco de dados: $e");
       }
@@ -331,15 +324,4 @@ class _PaymentRegistration extends State<PaymentRegistration> {
       );
     }
   }
-}
-
-DateTime? _parseDate(String? value) {
-  if (value == null || value.trim().isEmpty) return null;
-  final parts = value.split('/');
-  if (parts.length != 3) return null;
-  final day = int.tryParse(parts[0]);
-  final month = int.tryParse(parts[1]);
-  final year = int.tryParse(parts[2]);
-  if (day == null || month == null || year == null) return null;
-  return DateTime(year, month, day);
 }
