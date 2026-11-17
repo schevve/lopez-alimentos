@@ -6,6 +6,7 @@ import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/installment_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_basket_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
+import 'package:cesta_flow/features/export/data/export_period_filter.dart';
 import 'package:excel_plus/excel_plus.dart';
 import 'package:objectbox/objectbox.dart';
 import 'package:path_provider/path_provider.dart';
@@ -24,38 +25,72 @@ class ExcelExportService {
     'venda_cestas',
   };
 
-  Future<File> exportDatabase() async {
+  /// [filter] limita vendas, parcelas (pagamentos) e `venda_cestas`. Clientes e
+  /// cestas são sempre exportados por completo. Sem filtro, todas as abas vêm
+  /// completas.
+  Future<File> exportDatabase({ExportPeriodFilter? filter}) async {
     final db = await _dbHelper.store;
-    final (customers, sales, installments, baskets, saleBaskets) = db
-        .runInTransaction(
-          TxMode.read,
-          () => (
-            db
-                .box<Customer>()
-                .getAll()
-                .map((customer) => customer.toMap())
-                .toList(),
-            db.box<Sale>().getAll().map((sale) => sale.toMap()).toList(),
-            db
-                .box<Installment>()
-                .getAll()
-                .map((item) => item.toMap())
-                .toList(),
-            db.box<Basket>().getAll().map((basket) => basket.toMap()).toList(),
-            db
-                .box<SaleBasket>()
-                .getAll()
-                .map((link) => link.toMap())
-                .toList(),
-          ),
+    final (
+      List<Map<String, dynamic>> customers,
+      List<Map<String, dynamic>> sales,
+      List<Map<String, dynamic>> installments,
+      List<Map<String, dynamic>> baskets,
+      List<Map<String, dynamic>> saleBaskets,
+    ) data = db.runInTransaction(TxMode.read, () {
+      final allCustomers = db.box<Customer>().getAll();
+      final allSales = db.box<Sale>().getAll();
+      final allInstallments = db.box<Installment>().getAll();
+      final allBaskets = db.box<Basket>().getAll();
+      final allSaleBaskets = db.box<SaleBasket>().getAll();
+
+      if (filter == null) {
+        return (
+          allCustomers.map((customer) => customer.toMap()).toList(),
+          allSales.map((sale) => sale.toMap()).toList(),
+          allInstallments.map((item) => item.toMap()).toList(),
+          allBaskets.map((basket) => basket.toMap()).toList(),
+          allSaleBaskets.map((link) => link.toMap()).toList(),
         );
+      }
+
+      final salesInPeriod = allSales
+          .where((sale) => filter.contains(sale.createdAt))
+          .toList();
+      final saleIdsInPeriod = salesInPeriod
+          .map((sale) => sale.id)
+          .whereType<int>()
+          .toSet();
+
+      final installmentsInPeriod = allInstallments.where((installment) {
+        if (saleIdsInPeriod.contains(installment.saleId)) return true;
+        final paymentDate = installment.paymentDate;
+        return paymentDate != null && filter.contains(paymentDate);
+      }).toList();
+
+      final relacionamentoSaleIds = {
+        ...saleIdsInPeriod,
+        ...installmentsInPeriod.map((installment) => installment.saleId),
+      };
+
+      final saleBasketsInPeriod = allSaleBaskets
+          .where((link) => relacionamentoSaleIds.contains(link.saleId))
+          .toList();
+
+      return (
+        allCustomers.map((customer) => customer.toMap()).toList(),
+        salesInPeriod.map((sale) => sale.toMap()).toList(),
+        installmentsInPeriod.map((item) => item.toMap()).toList(),
+        allBaskets.map((basket) => basket.toMap()).toList(),
+        saleBasketsInPeriod.map((link) => link.toMap()).toList(),
+      );
+    });
 
     final excel = Excel.createExcel();
-    _writeSheet(excel, 'clientes', customers);
-    _writeSheet(excel, 'vendas', sales);
-    _writeSheet(excel, 'parcelas', installments);
-    _writeSheet(excel, 'cestas', baskets);
-    _writeSheet(excel, 'venda_cestas', saleBaskets);
+    _writeSheet(excel, 'clientes', data.$1);
+    _writeSheet(excel, 'vendas', data.$2);
+    _writeSheet(excel, 'parcelas', data.$3);
+    _writeSheet(excel, 'cestas', data.$4);
+    _writeSheet(excel, 'venda_cestas', data.$5);
 
     for (final name in List<String>.from(excel.tables.keys)) {
       if (!_sheetNames.contains(name)) {
