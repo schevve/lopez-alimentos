@@ -9,6 +9,7 @@ import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/payment/presentation/payment_success.dart';
+import 'package:cesta_flow/features/shared/app_text_form_field.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 
@@ -152,8 +153,9 @@ class _PaymentRegistration extends State<PaymentRegistration> {
     minimumSize: Size.zero,
     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
     padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
-    side: const BorderSide(color: Color(0xff1C5631), width: 2),
-    foregroundColor: const Color(0xff1C5631),
+    side: const BorderSide(color: AppColors.secondary, width: 2),
+    backgroundColor: AppColors.secondary,
+    foregroundColor: AppColors.white,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
   );
 
@@ -213,35 +215,55 @@ class _PaymentRegistration extends State<PaymentRegistration> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: 16,
           children: [
-            InputDecorator(
-              decoration: const InputDecoration(labelText: 'Cliente'),
-              child: Text(customerLabel, style: const TextStyle(fontSize: 16)),
-            ),
-            InputDecorator(
-              decoration: const InputDecoration(labelText: 'Data da compra'),
-              child: Text(
-                _formatDate(sale.createdAt),
-                style: const TextStyle(fontSize: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(255, 255, 255, 255),
+                borderRadius: BorderRadius.circular(12),
               ),
-            ),
-            TextFormField(
-              controller: _amountController,
-              decoration: const InputDecoration(
-                labelText: 'Valor do pagamento *',
+    
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start, 
+                spacing: 8,
+                children: [
+                  Text("Dados da venda",
+                  style: TextStyle(color: AppColors.greenText, fontWeight: FontWeight(900), fontSize: 20,)),
+
+                  Text("Cliente",
+                  style: TextStyle(color: AppColors.greenText, fontWeight: FontWeight(900))),
+                  AppTextFormField(
+                    labelText: 'Cliente',
+                    initialValue: customerLabel,
+                    readOnly: true,
+                  ),
+                  Text("Data da compra",
+                  style: TextStyle(color: AppColors.greenText, fontWeight: FontWeight(900))),
+                  AppTextFormField(
+                    labelText: 'Data da compra',
+                    initialValue: _formatDate(sale.createdAt),
+                    readOnly: true,
+                  ),
+                  Text("Valor do pagamento (R\$)",
+                  style: TextStyle(color: AppColors.greenText, fontWeight: FontWeight(900))),
+                  AppTextFormField(
+                    controller: _amountController,
+                    labelText: 'Valor do pagamento *',
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    inputFormatters: [FormatMoney()],
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Informe o valor recebido';
+                      }
+                      if (parseMoneyField(value) <= 0) {
+                        return 'O valor deve ser maior que zero';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
               ),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              inputFormatters: [FormatMoney()],
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Informe o valor recebido';
-                }
-                if (parseMoneyField(value) <= 0) {
-                  return 'O valor deve ser maior que zero';
-                }
-                return null;
-              },
             ),
             Align(
               alignment: Alignment.centerLeft,
@@ -288,7 +310,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                   children: [
                     const Text(
                       'Forma de pagamento *',
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(color: AppColors.greenText, fontWeight: FontWeight(900), fontSize: 20,)
                     ),
                     GridView.count(
                       crossAxisCount: 2,
@@ -335,51 +357,67 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                 );
               },
             ),
-            TextFormField(
-              controller: _nextVisitController,
-              decoration: const InputDecoration(labelText: 'Próxima visita'),
-              keyboardType: TextInputType.datetime,
-              inputFormatters: [FormatDate()],
-              validator: (value) {
-                final text = value?.trim() ?? '';
-                if (text.isEmpty) return null;
-                if (text.length < 10) return 'Informe a data completa';
-                return null;
-              },
-            ),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 8,
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(255, 255, 255, 255),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: 4,
                 children: [
-                  for (final option in _suggestedVisitOptions)
-                    OutlinedButton(
-                      onPressed: () => _applySuggestedVisitDate(option.date),
-                      style: _suggestedAmountButtonStyle,
-                      child: Text(
-                        option.label,
-                        style: const TextStyle(fontSize: 16),
-                      ),
+                  Text("Próxima visita",
+                        style: TextStyle(color: AppColors.greenText, fontWeight: FontWeight(900))),
+                  AppTextFormField(
+                    controller: _nextVisitController,
+                    labelText: 'Próxima visita',
+                    keyboardType: TextInputType.datetime,
+                    inputFormatters: [FormatDate()],
+                    validator: (value) {
+                      final text = value?.trim() ?? '';
+                      if (text.isEmpty) return null;
+                      if (text.length < 10) return 'Informe a data completa';
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 2,),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: 8,
+                      children: [
+                        for (final option in _suggestedVisitOptions)
+                          OutlinedButton(
+                            onPressed: () => _applySuggestedVisitDate(option.date),
+                            style: _suggestedAmountButtonStyle,
+                            child: Text(
+                              option.label,
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ),
+                      ],
                     ),
+                  ),
                 ],
               ),
             ),
             FilledButton(
               onPressed: _isSubmitting ? null : _submitForm,
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.greenButton,
+                backgroundColor: AppColors.secondary,
                 padding: const EdgeInsets.symmetric(
                   vertical: 16,
                   horizontal: 32,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(30),
                 ),
               ),
               child: const Text(
                 'Registrar pagamento',
-                style: TextStyle(color: Color(0xff1C5631), fontSize: 24),
+                style: TextStyle(color: AppColors.white, fontSize: 24),
               ),
             ),
           ],
