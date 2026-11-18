@@ -1,4 +1,6 @@
+import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
+import 'package:cesta_flow/features/shared/app_text_form_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -90,191 +92,90 @@ class _CustomerFormState extends State<CustomerForm> {
             child: Column(
               spacing: 16,
               children: [
-                TextFormField(
+                AppTextFormField(
+                  labelText: 'Nome completo*',
+                  hintText: " ",
                   initialValue: customer?.name ?? '',
-                  decoration: InputDecoration(
-                    labelText: 'Nome completo*',
-                    hintText: " ",
-                    prefixIcon: const Icon(
-                      Icons.person,
-                      color: Color(0xff1C5631),
-                    ),
-
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-
-                    filled: true,
-                    fillColor: Colors.white,
+                  prefixIcon: const Icon(
+                    Icons.person,
+                    color: Color(0xff1C5631),
                   ),
                   onSaved: (value) => _formData['nome'] = value,
                 ),
 
-                TextFormField(
+                AppTextFormField(
+                  labelText: 'Data de Nascimento *',
+                  hintText: 'dd/mm/aaaa',
                   initialValue: _formatDate(customer?.dateOfBirth),
-                  decoration: InputDecoration(
-                    labelText: 'Data de Nascimento *',
-                    hintText: 'dd/mm/aaaa',
-
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-
                   keyboardType: TextInputType.datetime,
                   inputFormatters: [FormatDate()],
                   onSaved: (value) => _formData['data_nascimento'] = value,
                 ),
 
-                TextFormField(
+                AppTextFormField(
+                  labelText: 'Email (opcional)',
                   initialValue: customer?.email ?? '',
-                  decoration: InputDecoration(
-                    labelText: 'Email (opcional)',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-
                   keyboardType: TextInputType.emailAddress,
-
                   onSaved: (value) => _formData['email'] = value,
                 ),
 
-                TextFormField(
+                AppTextFormField(
+                  labelText: 'Telefone *',
                   initialValue: customer?.phone ?? '',
-                  decoration: InputDecoration(
-                    labelText: 'Telefone *',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-
                   keyboardType: TextInputType.phone,
                   inputFormatters: [FormatPhoneNumber()],
                   onSaved: (value) => _formData['telefone'] = value,
                 ),
-
-                TextFormField(
-                  initialValue: customer?.address ?? '',
-                  decoration: InputDecoration(
-                    labelText: 'Rua *',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-
-                  keyboardType: TextInputType.text,
-                  onSaved: (value) => _formData['rua'] = value,
-                ),
-
-                TextFormField(
-                  initialValue: customer?.addressNumber ?? '',
-                  decoration: InputDecoration(
-                    labelText: 'Número *',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-
+          
+                AppTextFormField(
+                  labelText: 'CEP (opcional)',
+                  initialValue: customer?.cep ?? '',
                   keyboardType: TextInputType.number,
-                  onSaved: (value) => _formData['numero'] = value,
+                  onSaved: (value) => _formData['cep'] = value,
                 ),
-
-                TextFormField(
-                  initialValue: customer?.city ?? '',
-                  decoration: InputDecoration(
-                    labelText: 'Cidade *',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-
-                  keyboardType: TextInputType.text,
-                  onSaved: (value) => _formData['cidade'] = value,
-                  validator: (value) =>
-                      value?.isNotEmpty ?? false ? null : "erro",
-                ),
-
-                TextFormField(
+                
+                AppTextFormField(
+                  labelText: 'Estado *',
                   initialValue: customer?.state ?? '',
-                  decoration: InputDecoration(
-                    labelText: 'Estado (opcional)',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-
                   keyboardType: TextInputType.text,
                   onSaved: (value) => _formData['estado'] = value,
                   validator: (value) =>
                       value?.isNotEmpty ?? false ? null : "erro",
                 ),
 
-                TextFormField(
-                  initialValue: customer?.cep ?? '',
-                  decoration: InputDecoration(
-                    labelText: 'CEP (opcional)',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-
-                  keyboardType: TextInputType.number,
-                  onSaved: (value) => _formData['cep'] = value,
+                AppTextFormField(
+                  labelText: 'Cidade *',
+                  initialValue: customer?.city ?? '',
+                  keyboardType: TextInputType.text,
+                  onSaved: (value) => _formData['cidade'] = value,
+                  validator: (value) =>
+                      value?.isNotEmpty ?? false ? null : "erro",
                 ),
 
-                TextFormField(
+                AppTextFormField(
+                  labelText: 'Rua *',
+                  initialValue: customer?.address ?? '',
+                  keyboardType: TextInputType.text,
+                  onSaved: (value) => _formData['rua'] = value,
+                ),
+
+                AppTextFormField(
+                  labelText: 'Número *',
+                  initialValue: customer?.addressNumber ?? '',
+                  keyboardType: TextInputType.number,
+                  onSaved: (value) => _formData['numero'] = value,
+                ),
+
+                AppTextFormField(
+                  labelText: 'CPF *',
                   initialValue: customer?.documentCPF ?? '',
-                  decoration: InputDecoration(
-                    labelText: 'CPF *',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-
                   keyboardType: TextInputType.number,
                   onSaved: (value) => _formData['cpf'] = value,
                 ),
 
-                TextFormField(
+                AppTextFormField(
+                  labelText: 'RG (opcional)',
                   initialValue: customer?.documentRG ?? '',
-                  decoration: InputDecoration(
-                    labelText: 'RG (opcional)',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-
                   keyboardType: TextInputType.number,
                   onSaved: (value) => _formData['rg'] = value,
                 ),
@@ -287,10 +188,13 @@ class _CustomerFormState extends State<CustomerForm> {
             child: FilledButton.icon(
               onPressed: _isSubmitting ? null : _submitForm,
               style: FilledButton.styleFrom(
-                backgroundColor: const Color.fromARGB(255, 158, 204, 174),
-                padding: EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+                backgroundColor: AppColors.secondary,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 32,
+                ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(30),
                 ),
               ),
               icon: _isSubmitting
@@ -301,13 +205,13 @@ class _CustomerFormState extends State<CustomerForm> {
                     )
                   : const Icon(
                       Icons.person_add_alt_1_outlined,
-                      color: Color(0xff1C5631),
+                      color: AppColors.white,
                       size: 26,
                     ),
               label: Text(
                 _isSubmitting ? 'Salvando...' : widget.buttonText,
                 style: TextStyle(
-                  color: Color(0xff1C5631),
+                  color: AppColors.white,
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 2,
