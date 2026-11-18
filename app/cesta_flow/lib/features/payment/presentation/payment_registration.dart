@@ -100,10 +100,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
     }
   }
 
-  double _nextInstallmentAmountFor(
-    Sale sale,
-    List<Installment> installments,
-  ) {
+  double _nextInstallmentAmountFor(Sale sale, List<Installment> installments) {
     final remaining = SaleRepository.remainingBalance(sale);
     if (remaining <= 0) return 0;
     final pending = installments.where((item) => !item.isPaid).toList()
@@ -123,8 +120,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
     return expected;
   }
 
-  bool _sameMoney(double a, double b) =>
-      (a * 100).round() == (b * 100).round();
+  bool _sameMoney(double a, double b) => (a * 100).round() == (b * 100).round();
 
   void _applySuggestedAmount(double amount) {
     setState(() {
@@ -153,15 +149,13 @@ class _PaymentRegistration extends State<PaymentRegistration> {
   }
 
   ButtonStyle get _suggestedAmountButtonStyle => OutlinedButton.styleFrom(
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
-        side: const BorderSide(color: Color(0xff1C5631), width: 2),
-        foregroundColor: const Color(0xff1C5631),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-      );
+    minimumSize: Size.zero,
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+    side: const BorderSide(color: Color(0xff1C5631), width: 2),
+    foregroundColor: const Color(0xff1C5631),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+  );
 
   String _formatDate(DateTime date) =>
       '${date.day.toString().padLeft(2, '0')}/'
@@ -221,10 +215,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
           children: [
             InputDecorator(
               decoration: const InputDecoration(labelText: 'Cliente'),
-              child: Text(
-                customerLabel,
-                style: const TextStyle(fontSize: 16),
-              ),
+              child: Text(customerLabel, style: const TextStyle(fontSize: 16)),
             ),
             InputDecorator(
               decoration: const InputDecoration(labelText: 'Data da compra'),
@@ -269,8 +260,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                   ),
                   if (!_sameMoney(_nextInstallmentAmount, _remainingBalance))
                     OutlinedButton(
-                      onPressed: () =>
-                          _applySuggestedAmount(_remainingBalance),
+                      onPressed: () => _applySuggestedAmount(_remainingBalance),
                       style: _suggestedAmountButtonStyle,
                       child: Text(
                         formatCurrency(_remainingBalance),
@@ -280,21 +270,69 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                 ],
               ),
             ),
-            DropdownButtonFormField<String>(
+            FormField<String>(
               initialValue: _paymentMethod,
-              decoration: const InputDecoration(
-                labelText: 'Forma de pagamento *',
-              ),
-              items: [
-                for (final method in _paymentMethods)
-                  DropdownMenuItem(value: method, child: Text(method)),
-              ],
-              onChanged: (value) => setState(() => _paymentMethod = value),
+              autovalidateMode: AutovalidateMode.onUserInteraction,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Selecione a forma de pagamento';
                 }
                 return null;
+              },
+              builder: (field) {
+                final selected = field.value;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: 8,
+                  children: [
+                    const Text(
+                      'Forma de pagamento *',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    GridView.count(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      childAspectRatio: 3.5,
+                      children: _paymentMethods.map((method) {
+                        final isSelected = selected == method;
+
+                        return OutlinedButton(
+                          onPressed: () {
+                            field.didChange(method);
+                            setState(() {
+                              _paymentMethod = method;
+                            });
+                          },
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: isSelected
+                                ? const Color(0xff1C5631)
+                                : Colors.white,
+                            foregroundColor: isSelected
+                                ? Colors.white
+                                : const Color(0xff1C5631),
+                            side: const BorderSide(color: Color(0xff1C5631)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(method),
+                        );
+                      }).toList(),
+                    ),
+                    if (field.hasError)
+                      Text(
+                        field.errorText!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
+                );
               },
             ),
             TextFormField(
@@ -421,11 +459,7 @@ class _PaymentRegistrationLoading extends StatelessWidget {
 }
 
 class _MessageState extends StatelessWidget {
-  const _MessageState({
-    required this.message,
-    this.actionLabel,
-    this.onAction,
-  });
+  const _MessageState({required this.message, this.actionLabel, this.onAction});
 
   final String message;
   final String? actionLabel;
