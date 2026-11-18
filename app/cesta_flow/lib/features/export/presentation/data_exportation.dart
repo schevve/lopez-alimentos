@@ -100,12 +100,6 @@ class _DataExportationState extends State<DataExportation> {
                     color: AppColors.greenText,
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'O período abaixo filtra vendas, parcelas e vínculos '
-                  'venda–cesta. Clientes e cestas saem completos.',
-                  style: TextStyle(fontSize: 13),
-                ),
                 const SizedBox(height: 12),
                 Text(
                   'Período',
