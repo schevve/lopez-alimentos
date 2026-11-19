@@ -1,5 +1,7 @@
 import 'package:objectbox/objectbox.dart';
 
+import '../remote_deletion.dart';
+
 @Entity()
 class Sale {
   @Id(assignable: true)
@@ -86,7 +88,7 @@ class Sale {
       createdAt:
           _readDate(map['created_at'] ?? map['date']) ?? DateTime.now(),
       updatedAt: _readDate(map['updated_at']),
-      isDeleted: map['is_deleted'] as bool? ?? false,
+      isDeleted: readRemoteDeleted(map),
       isSynced: map['is_synced'] as bool? ?? false,
     );
   }

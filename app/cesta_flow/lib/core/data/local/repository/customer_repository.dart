@@ -1,9 +1,11 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../objectbox.g.dart';
+import '../../remote/active_supabase_client.dart';
 import '../db_helper.dart';
 import '../model/customer_model.dart';
 import '../model/sale_model.dart';
+import '../remote_deletion.dart';
 import '../sync_entity_lookup.dart';
 import 'sale_repository.dart';
 
@@ -13,17 +15,17 @@ class CustomerRepository {
     : _dbHelper = dbHelper ?? DatabaseHelper();
 
   Future<int> registerCustomer(Customer value) async {
-    bool isSynced = true;
-    try {
-      await Supabase.instance.client.from('customers').insert(value.toRemote());
-    } catch (_) {
-      isSynced = false;
-    }
     final db = await _dbHelper.store;
-    final valueAfterSync = value.copyWith(isSynced: isSynced);
-    return db.runInTransaction(TxMode.write, () {
-      return db.box<Customer>().put(valueAfterSync);
+    final pending = value.copyWith(isSynced: false);
+    final id = db.runInTransaction(TxMode.write, () {
+      return db.box<Customer>().put(pending);
     });
+    final saved = pending.copyWith(id: id);
+    final client = activeSupabaseClient();
+    if (client == null) return id;
+    await client.from('customers').insert(saved.toRemote());
+    db.box<Customer>().put(saved.copyWith(isSynced: true), mode: PutMode.update);
+    return id;
   }
 
   Future<Customer?> getCustomerById(int id) async {
@@ -47,23 +49,19 @@ class CustomerRepository {
     if (value.id == null || value.id == 0) {
       throw ArgumentError('ID obrigatório para atualizar.');
     }
-    bool isSynced = true;
-    try {
-      await Supabase.instance.client
-          .from('customers')
-          .update(value.toRemote())
-          .eq('id', value.uuid);
-    } catch (_) {
-      isSynced = false;
-    }
-    final valueAfterSync = value.copyWith(isSynced: isSynced);
     final db = await _dbHelper.store;
-    return db.runInTransaction(TxMode.write, () {
-      if (db.box<Customer>().get(valueAfterSync.id!) == null) return 0;
-
-      db.box<Customer>().put(valueAfterSync, mode: PutMode.update);
+    final pending = value.copyWith(isSynced: false);
+    final updated = db.runInTransaction(TxMode.write, () {
+      if (db.box<Customer>().get(pending.id!) == null) return 0;
+      db.box<Customer>().put(pending, mode: PutMode.update);
       return 1;
     });
+    if (updated == 0) return 0;
+    final client = activeSupabaseClient();
+    if (client == null) return 1;
+    await client.from('customers').update(pending.toRemote()).eq('id', pending.uuid);
+    db.box<Customer>().put(pending.copyWith(isSynced: true), mode: PutMode.update);
+    return 1;
   }
 
   Future<int> deleteCustomer(int id) async {
@@ -85,35 +83,26 @@ class CustomerRepository {
       await salesRepository.deleteSale(saleId);
     }
 
-    var synced = false;
-    if (customer.uuid.isNotEmpty) {
-      try {
-        await Supabase.instance.client
-            .from('customers')
-            .update({
-              'is_deleted': true,
-              'updated_at': DateTime.now().toIso8601String(),
-            })
-            .eq('id', customer.uuid);
-        synced = true;
-      } catch (_) {
-        synced = false;
-      }
-    }
-
-    return db.runInTransaction(TxMode.write, () {
+    final now = DateTime.now();
+    final marked = db.runInTransaction(TxMode.write, () {
       final current = db.box<Customer>().get(id);
       if (current == null || current.isDeleted) return 0;
       db.box<Customer>().put(
-        current.copyWith(
-          isDeleted: true,
-          isSynced: synced,
-          updatedAt: DateTime.now(),
-        ),
+        current.copyWith(isDeleted: true, isSynced: false, updatedAt: now),
         mode: PutMode.update,
       );
       return 1;
     });
+    if (marked == 0) return 0;
+    final client = activeSupabaseClient();
+    final deleted = db.box<Customer>().get(id);
+    if (client == null || deleted == null || deleted.uuid.isEmpty) return 1;
+    await client
+        .from('customers')
+        .update(remoteDeletionStamp(now))
+        .eq('id', deleted.uuid);
+    db.box<Customer>().put(deleted.copyWith(isSynced: true), mode: PutMode.update);
+    return 1;
   }
 
   Future<void> pushUnsynced() async {
@@ -132,10 +121,7 @@ class CustomerRepository {
           if (customer.isDeleted) {
             await Supabase.instance.client
                 .from('customers')
-                .update({
-                  'is_deleted': true,
-                  'updated_at': DateTime.now().toIso8601String(),
-                })
+                .update(remoteDeletionStamp(DateTime.now()))
                 .eq('id', customer.uuid);
           } else {
             await Supabase.instance.client

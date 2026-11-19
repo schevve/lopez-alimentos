@@ -1,10 +1,12 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../objectbox.g.dart';
+import '../../remote/active_supabase_client.dart';
 import '../../remote/supabase_sync_query.dart';
 import '../db_helper.dart';
 import '../model/basket_model.dart';
 import '../model/sale_basket_model.dart';
+import '../remote_deletion.dart';
 import '../sync_entity_lookup.dart';
 
 class BasketRepository {
@@ -13,17 +15,17 @@ class BasketRepository {
     : _dbHelper = dbHelper ?? DatabaseHelper();
 
   Future<int> registerBasket(Basket value) async {
-    var isSynced = true;
-    try {
-      await Supabase.instance.client.from('baskets').insert(value.toRemote());
-    } catch (_) {
-      isSynced = false;
-    }
     final db = await _dbHelper.store;
-    final valueAfterSync = value.copyWith(isSynced: isSynced);
-    return db.runInTransaction(TxMode.write, () {
-      return db.box<Basket>().put(valueAfterSync);
+    final pending = value.copyWith(isSynced: false);
+    final id = db.runInTransaction(TxMode.write, () {
+      return db.box<Basket>().put(pending);
     });
+    final saved = pending.copyWith(id: id);
+    final client = activeSupabaseClient();
+    if (client == null) return id;
+    await client.from('baskets').insert(saved.toRemote());
+    db.box<Basket>().put(saved.copyWith(isSynced: true), mode: PutMode.update);
+    return id;
   }
 
   Future<List<Basket>> getAllBaskets() async {
@@ -166,10 +168,7 @@ class BasketRepository {
     try {
       await Supabase.instance.client
           .from('baskets')
-          .update({
-            'is_deleted': true,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
+          .update(remoteDeletionStamp(DateTime.now()))
           .eq('id', id);
       return true;
     } catch (_) {
@@ -185,10 +184,7 @@ class BasketRepository {
     try {
       await Supabase.instance.client
           .from('sale_baskets')
-          .update({
-            'is_deleted': true,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
+          .update(remoteDeletionStamp(DateTime.now()))
           .eq('sale_id', saleUuid)
           .eq('basket_id', basketUuid);
       return true;

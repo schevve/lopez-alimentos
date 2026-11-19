@@ -2,9 +2,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../objectbox.g.dart';
+import '../../remote/active_supabase_client.dart';
 import '../db_helper.dart';
 import '../model/installment_model.dart';
 import '../model/sale_model.dart';
+import '../remote_deletion.dart';
 import '../sync_entity_lookup.dart';
 import 'sale_repository.dart';
 
@@ -25,24 +27,25 @@ class InstallmentRepository {
     if (sale == null || sale.isDeleted) {
       throw StateError('Venda não encontrada.');
     }
-    final installment = value.saleUuid.isEmpty
-        ? value.copyWith(saleUuid: sale.uuid)
-        : value;
-    var isSynced = true;
-    try {
-      await Supabase.instance.client
-          .from('installments')
-          .insert(installment.toRemote());
-    } catch (_) {
-      isSynced = false;
-    }
-    final valueAfterSync = installment.copyWith(isSynced: isSynced);
-    return db.runInTransaction(TxMode.write, () {
-      if (db.box<Sale>().get(valueAfterSync.saleId) == null) {
+    final installment = (value.saleUuid.isEmpty
+            ? value.copyWith(saleUuid: sale.uuid)
+            : value)
+        .copyWith(isSynced: false);
+    final id = db.runInTransaction(TxMode.write, () {
+      if (db.box<Sale>().get(installment.saleId) == null) {
         throw StateError('Venda não encontrada.');
       }
-      return db.box<Installment>().put(valueAfterSync);
+      return db.box<Installment>().put(installment);
     });
+    final saved = installment.copyWith(id: id);
+    final client = activeSupabaseClient();
+    if (client == null) return id;
+    await client.from('installments').insert(saved.toRemote());
+    db.box<Installment>().put(
+      saved.copyWith(isSynced: true),
+      mode: PutMode.update,
+    );
+    return id;
   }
 
   Future<void> createPlannedInstallmentsForSale({
@@ -124,43 +127,44 @@ class InstallmentRepository {
       updatedAt: paidAt,
     );
 
-    var isSynced = true;
-    try {
-      await Supabase.instance.client
-          .from('installments')
-          .update(settled.toRemote())
-          .eq('id', settled.uuid);
-      await Supabase.instance.client
-          .from('sales')
-          .update({
-            'amount_paid': sale.amountPaid + amount,
-            'updated_at': paidAt.toIso8601String(),
-          })
-          .eq('id', sale.uuid);
-    } catch (_) {
-      isSynced = false;
-    }
-
-    final settledAfterSync = settled.copyWith(isSynced: isSynced);
-    final installmentId = db.runInTransaction(TxMode.write, () {
+    final written = db.runInTransaction(TxMode.write, () {
       final currentSale = db.box<Sale>().get(saleId);
       if (currentSale == null || currentSale.isDeleted) {
         throw StateError('Venda não encontrada.');
       }
-      if (db.box<Installment>().get(settledAfterSync.id!) == null) {
+      if (db.box<Installment>().get(settled.id!) == null) {
         throw StateError('Parcela não encontrada.');
       }
-      db.box<Sale>().put(
-        currentSale.copyWith(
-          amountPaid: currentSale.amountPaid + amount,
-          updatedAt: paidAt,
-          isSynced: isSynced && currentSale.isSynced,
-        ),
+      final salePending = currentSale.copyWith(
+        amountPaid: currentSale.amountPaid + amount,
+        updatedAt: paidAt,
+        isSynced: false,
+      );
+      final installmentPending = settled.copyWith(isSynced: false);
+      db.box<Sale>().put(salePending, mode: PutMode.update);
+      db.box<Installment>().put(installmentPending, mode: PutMode.update);
+      return (sale: salePending, installment: installmentPending);
+    });
+    final client = activeSupabaseClient();
+    if (client != null) {
+      await client
+          .from('installments')
+          .update(written.installment.toRemote())
+          .eq('id', written.installment.uuid);
+      await client
+          .from('sales')
+          .update(written.sale.toRemote())
+          .eq('id', written.sale.uuid);
+      db.box<Installment>().put(
+        written.installment.copyWith(isSynced: true),
         mode: PutMode.update,
       );
-      db.box<Installment>().put(settledAfterSync, mode: PutMode.update);
-      return settledAfterSync.id!;
-    });
+      db.box<Sale>().put(
+        written.sale.copyWith(isSynced: true),
+        mode: PutMode.update,
+      );
+    }
+    final installmentId = written.installment.id!;
 
     final saleAfterPayment = db.box<Sale>().get(saleId);
     if (saleAfterPayment != null &&
@@ -224,25 +228,28 @@ class InstallmentRepository {
     if (value.id == null || value.id == 0) {
       throw ArgumentError('ID obrigatório para atualizar.');
     }
-    bool isSynced = true;
-    try {
-      await Supabase.instance.client
-          .from('installments')
-          .update(value.toRemote())
-          .eq('id', value.uuid);
-    } catch (_) {
-      isSynced = false;
-    }
-    final valueAfterSync = value.copyWith(isSynced: isSynced);
     final db = await _dbHelper.store;
-    return db.runInTransaction(TxMode.write, () {
-      if (db.box<Installment>().get(valueAfterSync.id!) == null) return 0;
-      if (db.box<Sale>().get(valueAfterSync.saleId) == null) {
+    final pending = value.copyWith(isSynced: false);
+    final updated = db.runInTransaction(TxMode.write, () {
+      if (db.box<Installment>().get(pending.id!) == null) return 0;
+      if (db.box<Sale>().get(pending.saleId) == null) {
         throw StateError('Venda não encontrada.');
       }
-      db.box<Installment>().put(valueAfterSync, mode: PutMode.update);
+      db.box<Installment>().put(pending, mode: PutMode.update);
       return 1;
     });
+    if (updated == 0) return 0;
+    final client = activeSupabaseClient();
+    if (client == null) return 1;
+    await client
+        .from('installments')
+        .update(pending.toRemote())
+        .eq('id', pending.uuid);
+    db.box<Installment>().put(
+      pending.copyWith(isSynced: true),
+      mode: PutMode.update,
+    );
+    return 1;
   }
 
   Future<List<Installment>> getInstallmentsBySaleId(int saleId) async {
@@ -299,35 +306,29 @@ class InstallmentRepository {
     final installment = db.box<Installment>().get(id);
     if (installment == null || installment.isDeleted) return 0;
 
-    var synced = false;
-    if (installment.uuid.isNotEmpty) {
-      try {
-        await Supabase.instance.client
-            .from('installments')
-            .update({
-              'is_deleted': true,
-              'updated_at': DateTime.now().toIso8601String(),
-            })
-            .eq('id', installment.uuid);
-        synced = true;
-      } catch (_) {
-        synced = false;
-      }
-    }
-
-    return db.runInTransaction(TxMode.write, () {
+    final now = DateTime.now();
+    final marked = db.runInTransaction(TxMode.write, () {
       final current = db.box<Installment>().get(id);
       if (current == null || current.isDeleted) return 0;
       db.box<Installment>().put(
-        current.copyWith(
-          isDeleted: true,
-          isSynced: synced,
-          updatedAt: DateTime.now(),
-        ),
+        current.copyWith(isDeleted: true, isSynced: false, updatedAt: now),
         mode: PutMode.update,
       );
       return 1;
     });
+    if (marked == 0) return 0;
+    final client = activeSupabaseClient();
+    final deleted = db.box<Installment>().get(id);
+    if (client == null || deleted == null || deleted.uuid.isEmpty) return 1;
+    await client
+        .from('installments')
+        .update(remoteDeletionStamp(now))
+        .eq('id', deleted.uuid);
+    db.box<Installment>().put(
+      deleted.copyWith(isSynced: true),
+      mode: PutMode.update,
+    );
+    return 1;
   }
 
   Future<void> pushUnsynced() async {
@@ -347,10 +348,7 @@ class InstallmentRepository {
           if (installment.isDeleted) {
             await Supabase.instance.client
                 .from('installments')
-                .update({
-                  'is_deleted': true,
-                  'updated_at': DateTime.now().toIso8601String(),
-                })
+                .update(remoteDeletionStamp(DateTime.now()))
                 .eq('id', installment.uuid);
           } else {
             await Supabase.instance.client
