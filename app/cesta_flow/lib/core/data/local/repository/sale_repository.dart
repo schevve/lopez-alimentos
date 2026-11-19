@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../objectbox.g.dart';
+import '../../remote/active_supabase_client.dart';
 import '../db_helper.dart';
 import '../model/basket_model.dart';
 import '../model/customer_model.dart';
@@ -9,6 +10,7 @@ import '../model/installment_model.dart';
 import '../model/sale_basket_input.dart';
 import '../model/sale_basket_model.dart';
 import '../model/sale_model.dart';
+import '../remote_deletion.dart';
 import '../sync_entity_lookup.dart';
 
 class SaleBasketLine {
@@ -52,6 +54,14 @@ class SaleRepository {
     }
   }
 
+  Sale _withCurrentUser(Sale sale) {
+    final userId = sale.userId;
+    if (userId != null && userId.isNotEmpty) return sale;
+    final current = currentUserId();
+    if (current == null || current.isEmpty) return sale;
+    return sale.copyWith(userId: current);
+  }
+
   Future<int> registerSale(Sale value, List<SaleBasketInput> lines) async {
     SaleBasketInput.ensureValid(lines);
     final db = await _dbHelper.store;
@@ -59,9 +69,10 @@ class SaleRepository {
     if (customer == null || customer.isDeleted) {
       throw StateError('Cliente não encontrado.');
     }
-    final sale = value.customerUuid.isEmpty
+    final identified = value.customerUuid.isEmpty
         ? value.copyWith(customerUuid: customer.uuid)
         : value;
+    final sale = _withCurrentUser(identified);
     final resolvedLines = <({Basket basket, SaleBasketInput line, bool isNew})>[];
     for (final line in lines) {
       if (line.isCatalog) {
@@ -84,60 +95,72 @@ class SaleRepository {
       }
     }
 
-    var synced = true;
-    try {
-      await Supabase.instance.client.from('sales').insert(sale.toRemote());
-      for (final resolved in resolvedLines) {
-        if (resolved.isNew) {
-          await Supabase.instance.client
-              .from('baskets')
-              .insert(resolved.basket.toRemote());
-        }
-        await Supabase.instance.client.from('sale_baskets').insert(
-          SaleBasket(
-            saleId: 0,
-            basketId: 0,
-            saleUuid: sale.uuid,
-            basketUuid: resolved.basket.uuid,
-            quantity: resolved.line.quantity,
-            createdAt: sale.createdAt,
-          ).toRemote(),
-        );
-      }
-    } catch (_) {
-      synced = false;
-    }
-    final saleAfterSync = sale.copyWith(isSynced: synced);
-    return db.runInTransaction(TxMode.write, () {
-      final currentCustomer = db.box<Customer>().get(saleAfterSync.customerId);
+    final pendingSale = sale.copyWith(isSynced: false);
+    final createdBasketIds = <int>[];
+    final linkIds = <int>[];
+    final saleId = db.runInTransaction(TxMode.write, () {
+      final currentCustomer = db.box<Customer>().get(pendingSale.customerId);
       if (currentCustomer == null || currentCustomer.isDeleted) {
         throw StateError('Cliente não encontrado.');
       }
-      final saleId = db.box<Sale>().put(saleAfterSync);
+      final saleId = db.box<Sale>().put(pendingSale);
       for (final resolved in resolvedLines) {
-        final basketAfterSync = resolved.isNew
-            ? resolved.basket.copyWith(isSynced: synced)
-            : resolved.basket;
         final basketId = resolved.isNew
-            ? db.box<Basket>().put(basketAfterSync)
-            : basketAfterSync.id!;
-        if (!resolved.isNew && basketAfterSync.id == null) {
+            ? db.box<Basket>().put(resolved.basket.copyWith(isSynced: false))
+            : resolved.basket.id;
+        if (basketId == null) {
           throw StateError('Cesta do catálogo sem ID local.');
         }
-        db.box<SaleBasket>().put(
-          SaleBasket(
-            saleId: saleId,
-            basketId: basketId,
-            saleUuid: saleAfterSync.uuid,
-            basketUuid: basketAfterSync.uuid,
-            quantity: resolved.line.quantity,
-            createdAt: saleAfterSync.createdAt,
-            isSynced: synced,
+        if (resolved.isNew) createdBasketIds.add(basketId);
+        linkIds.add(
+          db.box<SaleBasket>().put(
+            SaleBasket(
+              saleId: saleId,
+              basketId: basketId,
+              saleUuid: pendingSale.uuid,
+              basketUuid: resolved.basket.uuid,
+              quantity: resolved.line.quantity,
+              createdAt: pendingSale.createdAt,
+              isSynced: false,
+            ),
           ),
         );
       }
       return saleId;
     });
+    final client = activeSupabaseClient();
+    if (client == null) return saleId;
+    await client.from('sales').insert(pendingSale.toRemote());
+    db.box<Sale>().put(
+      pendingSale.copyWith(id: saleId, isSynced: true),
+      mode: PutMode.update,
+    );
+    for (final resolved in resolvedLines) {
+      if (!resolved.isNew) continue;
+      await client.from('baskets').insert(resolved.basket.toRemote());
+    }
+    for (final basketId in createdBasketIds) {
+      final basket = db.box<Basket>().get(basketId);
+      if (basket == null) continue;
+      db.box<Basket>().put(basket.copyWith(isSynced: true), mode: PutMode.update);
+    }
+    for (var index = 0; index < resolvedLines.length; index++) {
+      final resolved = resolvedLines[index];
+      await client.from('sale_baskets').insert(
+        SaleBasket(
+          saleId: saleId,
+          basketId: 0,
+          saleUuid: pendingSale.uuid,
+          basketUuid: resolved.basket.uuid,
+          quantity: resolved.line.quantity,
+          createdAt: pendingSale.createdAt,
+        ).toRemote(),
+      );
+      final link = db.box<SaleBasket>().get(linkIds[index]);
+      if (link == null) continue;
+      db.box<SaleBasket>().put(link.copyWith(isSynced: true), mode: PutMode.update);
+    }
+    return saleId;
   }
 
   Future<Sale?> getSaleById(int id) async {
@@ -167,25 +190,22 @@ class SaleRepository {
         'O valor pago não pode exceder o preço total da venda.',
       );
     }
-    bool isSynced = true;
-    try {
-      await Supabase.instance.client
-          .from('sales')
-          .update(value.toRemote())
-          .eq('id', value.uuid);
-    } catch (_) {
-      isSynced = false;
-    }
-    final valueAfterSync = value.copyWith(isSynced: isSynced);
     final db = await _dbHelper.store;
-    return db.runInTransaction(TxMode.write, () {
-      if (db.box<Sale>().get(valueAfterSync.id!) == null) return 0;
-      if (db.box<Customer>().get(valueAfterSync.customerId) == null) {
+    final pending = _withCurrentUser(value).copyWith(isSynced: false);
+    final updated = db.runInTransaction(TxMode.write, () {
+      if (db.box<Sale>().get(pending.id!) == null) return 0;
+      if (db.box<Customer>().get(pending.customerId) == null) {
         throw StateError('Cliente não encontrado.');
       }
-      db.box<Sale>().put(valueAfterSync, mode: PutMode.update);
+      db.box<Sale>().put(pending, mode: PutMode.update);
       return 1;
     });
+    if (updated == 0) return 0;
+    final client = activeSupabaseClient();
+    if (client == null) return 1;
+    await client.from('sales').update(pending.toRemote()).eq('id', pending.uuid);
+    db.box<Sale>().put(pending.copyWith(isSynced: true), mode: PutMode.update);
+    return 1;
   }
 
   Future<List<Sale>> getSalesByCustomerId(int customerId) async {
@@ -321,63 +341,73 @@ class SaleRepository {
     final baskets = _basketsOnlyUsedBy(db, links, {id});
     final installments = _activeInstallments(db, [id]);
     final now = DateTime.now();
-    final saleSynced = await _markRemoteDeleted('sales', sale.uuid);
-    final linkSynced = <bool>[
-      for (final link in links)
-        await _markRemoteSaleBasketDeleted(link.saleUuid, link.basketUuid),
-    ];
-    final basketSynced = <bool>[
-      for (final basket in baskets)
-        await _markRemoteDeleted('baskets', basket.uuid),
-    ];
-    final installmentSynced = <bool>[
-      for (final installment in installments)
-        await _markRemoteDeleted('installments', installment.uuid),
-    ];
-
-    return db.runInTransaction(TxMode.write, () {
+    final marked = db.runInTransaction(TxMode.write, () {
       final current = db.box<Sale>().get(id);
       if (current == null || current.isDeleted) return 0;
       db.box<Sale>().put(
-        current.copyWith(
-          isDeleted: true,
-          isSynced: saleSynced,
-          updatedAt: now,
-        ),
+        current.copyWith(isDeleted: true, isSynced: false, updatedAt: now),
         mode: PutMode.update,
       );
-      for (var index = 0; index < links.length; index++) {
+      for (final link in links) {
         db.box<SaleBasket>().put(
-          links[index].copyWith(
-            isDeleted: true,
-            isSynced: linkSynced[index],
-            updatedAt: now,
-          ),
+          link.copyWith(isDeleted: true, isSynced: false, updatedAt: now),
           mode: PutMode.update,
         );
       }
-      for (var index = 0; index < baskets.length; index++) {
+      for (final basket in baskets) {
         db.box<Basket>().put(
-          baskets[index].copyWith(
-            isDeleted: true,
-            isSynced: basketSynced[index],
-            updatedAt: now,
-          ),
+          basket.copyWith(isDeleted: true, isSynced: false, updatedAt: now),
           mode: PutMode.update,
         );
       }
-      for (var index = 0; index < installments.length; index++) {
+      for (final installment in installments) {
         db.box<Installment>().put(
-          installments[index].copyWith(
-            isDeleted: true,
-            isSynced: installmentSynced[index],
-            updatedAt: now,
-          ),
+          installment.copyWith(isDeleted: true, isSynced: false, updatedAt: now),
           mode: PutMode.update,
         );
       }
       return 1;
     });
+    if (marked == 0) return 0;
+    final client = activeSupabaseClient();
+    if (client == null) return 1;
+    if (sale.uuid.isNotEmpty) {
+      await _markRemoteDeleted('sales', sale.uuid);
+      final current = db.box<Sale>().get(id);
+      if (current != null) {
+        db.box<Sale>().put(current.copyWith(isSynced: true), mode: PutMode.update);
+      }
+    }
+    for (final link in links) {
+      await _markRemoteSaleBasketDeleted(link.saleUuid, link.basketUuid);
+      if (link.id == null) continue;
+      final current = db.box<SaleBasket>().get(link.id!);
+      if (current == null) continue;
+      db.box<SaleBasket>().put(
+        current.copyWith(isSynced: true),
+        mode: PutMode.update,
+      );
+    }
+    for (final basket in baskets) {
+      if (basket.uuid.isEmpty) continue;
+      await _markRemoteDeleted('baskets', basket.uuid);
+      if (basket.id == null) continue;
+      final current = db.box<Basket>().get(basket.id!);
+      if (current == null) continue;
+      db.box<Basket>().put(current.copyWith(isSynced: true), mode: PutMode.update);
+    }
+    for (final installment in installments) {
+      if (installment.uuid.isEmpty) continue;
+      await _markRemoteDeleted('installments', installment.uuid);
+      if (installment.id == null) continue;
+      final current = db.box<Installment>().get(installment.id!);
+      if (current == null) continue;
+      db.box<Installment>().put(
+        current.copyWith(isSynced: true),
+        mode: PutMode.update,
+      );
+    }
+    return 1;
   }
 
   List<SaleBasket> _activeLinks(Store db, List<int> saleIds) {
@@ -443,18 +473,13 @@ class SaleRepository {
 
   Future<bool> _markRemoteDeleted(String table, String id) async {
     if (id.isEmpty) return false;
-    try {
-      await Supabase.instance.client
-          .from(table)
-          .update({
-            'is_deleted': true,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', id);
-      return true;
-    } catch (_) {
-      return false;
-    }
+    final client = activeSupabaseClient();
+    if (client == null) return false;
+    await client
+        .from(table)
+        .update(remoteDeletionStamp(DateTime.now()))
+        .eq('id', id);
+    return true;
   }
 
   Future<bool> _markRemoteSaleBasketDeleted(
@@ -462,19 +487,14 @@ class SaleRepository {
     String basketUuid,
   ) async {
     if (saleUuid.isEmpty || basketUuid.isEmpty) return false;
-    try {
-      await Supabase.instance.client
-          .from('sale_baskets')
-          .update({
-            'is_deleted': true,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('sale_id', saleUuid)
-          .eq('basket_id', basketUuid);
-      return true;
-    } catch (_) {
-      return false;
-    }
+    final client = activeSupabaseClient();
+    if (client == null) return false;
+    await client
+        .from('sale_baskets')
+        .update(remoteDeletionStamp(DateTime.now()))
+        .eq('sale_id', saleUuid)
+        .eq('basket_id', basketUuid);
+    return true;
   }
 
   Future<void> pushUnsynced() async {
@@ -497,8 +517,10 @@ class SaleRepository {
           if (sale.isDeleted) {
             synced = await _markRemoteDeleted('sales', sale.uuid);
           } else {
-            await Supabase.instance.client.from('sales').upsert(sale.toRemote());
-            synced = true;
+            final ready = _withCurrentUser(sale);
+            await Supabase.instance.client.from('sales').upsert(ready.toRemote());
+            db.box<Sale>().put(ready.copyWith(isSynced: true), mode: PutMode.update);
+            continue;
           }
         } catch (_) {
           synced = false;

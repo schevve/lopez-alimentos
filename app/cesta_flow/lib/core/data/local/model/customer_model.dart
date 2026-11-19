@@ -1,5 +1,7 @@
 import 'package:objectbox/objectbox.dart';
 
+import '../remote_deletion.dart';
+
 @Entity()
 class Customer {
   @Id(assignable: true)
@@ -129,7 +131,7 @@ class Customer {
       documentRG: (map['rg'] ?? map['document_rg']) as String?,
       score: (map['score'] as num?)?.toDouble(),
       isBlocked: map['is_blocked'] as bool? ?? false,
-      isDeleted: map['is_deleted'] as bool? ?? false,
+      isDeleted: readRemoteDeleted(map),
       isSynced: map['is_synced'] as bool? ?? false,
       createdAt: _readDate(map['created_at']) ?? DateTime.now(),
       updatedAt: _readDate(map['updated_at']),

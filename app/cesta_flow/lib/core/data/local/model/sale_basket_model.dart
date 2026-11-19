@@ -1,5 +1,7 @@
 import 'package:objectbox/objectbox.dart';
 
+import '../remote_deletion.dart';
+
 @Entity()
 class SaleBasket {
   @Id(assignable: true)
@@ -77,7 +79,7 @@ class SaleBasket {
       quantity: (map['quantity'] as num?)?.toInt() ?? 1,
       createdAt: _readDate(map['created_at']) ?? DateTime.now(),
       updatedAt: _readDate(map['updated_at']),
-      isDeleted: map['is_deleted'] as bool? ?? false,
+      isDeleted: readRemoteDeleted(map),
       isSynced: map['is_synced'] as bool? ?? false,
     );
   }
