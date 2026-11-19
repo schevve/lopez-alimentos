@@ -39,6 +39,12 @@ class Profile {
     this.role = ProfileRole.user,
   });
 
+  String get displayName {
+    final first = firstName?.trim() ?? '';
+    final last = lastName?.trim() ?? '';
+    return [first, last].where((part) => part.isNotEmpty).join(' ');
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,
