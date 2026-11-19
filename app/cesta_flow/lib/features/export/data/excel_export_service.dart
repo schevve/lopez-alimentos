@@ -6,6 +6,7 @@ import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/installment_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_basket_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
+import 'package:cesta_flow/features/export/data/export_column_labels.dart';
 import 'package:cesta_flow/features/export/data/export_period_filter.dart';
 import 'package:excel_plus/excel_plus.dart';
 import 'package:objectbox/objectbox.dart';
@@ -125,9 +126,10 @@ class ExcelExportService {
 
     final headers = _headersFor(rows);
     for (var column = 0; column < headers.length; column++) {
+      final fieldKey = headers[column];
       sheet.updateCell(
         CellIndex.indexByColumnRow(columnIndex: column, rowIndex: 0),
-        TextCellValue(headers[column]),
+        TextCellValue(ExportColumnLabels.label(sheetName, fieldKey)),
       );
     }
 
