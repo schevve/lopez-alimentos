@@ -32,9 +32,6 @@ Future<void> main() async {
     publishableKey: 'sb_publishable_Y5sHcuLfegaSCvK_c5RUFg_-ecEu179',
   );
 
-  // Se o usuário desmarcou "Lembrar-me" no último login, encerra a sessão.
-  await AuthService.instance.aplicarPreferenciaLembrarMe();
-
   runApp(const MainApp());
 }
 

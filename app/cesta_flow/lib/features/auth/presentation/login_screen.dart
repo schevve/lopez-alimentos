@@ -23,7 +23,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _senhaController = TextEditingController();
   bool _senhaVisivel = false;
-  bool _lembrarMe = true;
   bool _carregando = false;
   String? _erro;
 
@@ -61,7 +60,6 @@ class _LoginScreenState extends State<LoginScreen> {
       await AuthService.instance.entrar(
         email: _emailController.text,
         senha: _senhaController.text,
-        lembrarMe: _lembrarMe,
       );
     } on LoginException catch (e) {
       if (mounted) setState(() => _erro = e.message);
@@ -259,87 +257,40 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 16),
-                                  Row(
-                                    children: [
-                                      Checkbox(
-                                        value: _lembrarMe,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            5,
-                                          ),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      borderRadius: BorderRadius.circular(4),
+                                      clipBehavior: Clip.antiAlias,
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(4),
+                                        splashColor: Colors.white.withValues(
+                                          alpha: .10,
                                         ),
-                                        side: const BorderSide(
-                                          color: Color(0xFFBCD5BB),
-                                          width: 1.5,
+                                        highlightColor: Colors.white.withValues(
+                                          alpha: .06,
                                         ),
-                                        fillColor:
-                                            WidgetStateProperty.resolveWith(
-                                              (states) =>
-                                                  states.contains(
-                                                    WidgetState.selected,
-                                                  )
-                                                  ? const Color(0xFFDCEFD7)
-                                                  : Colors.white.withValues(
-                                                      alpha: .08,
-                                                    ),
-                                            ),
-                                        checkColor: _verdeEscuro,
-                                        onChanged: (valor) => setState(
-                                          () => _lembrarMe = valor ?? false,
+                                        onTap: () => debugPrint(
+                                          'Navegar para recuperação de senha',
                                         ),
-                                      ),
-                                      const Expanded(
-                                        flex: 4,
-                                        child: Text(
-                                          'Lembrar-me',
-                                          style: TextStyle(color: Colors.white),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Flexible(
-                                        flex: 6,
-                                        fit: FlexFit.tight,
-                                        // O alinhamento ocupa a sobra; o toque fica só no texto.
-                                        child: Align(
-                                          alignment: Alignment.centerRight,
-                                          child: Material(
-                                            color: Colors.transparent,
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                            clipBehavior: Clip.antiAlias,
-                                            child: InkWell(
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                              splashColor: Colors.white
-                                                  .withValues(alpha: .10),
-                                              highlightColor: Colors.white
-                                                  .withValues(alpha: .06),
-                                              onTap: () => debugPrint(
-                                                'Navegar para recuperação de senha',
-                                              ),
-                                              child: Padding(
-                                                padding: const EdgeInsets.all(
-                                                  4,
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(4),
+                                          child: Text(
+                                            'Esqueceu a senha?',
+                                            textAlign: TextAlign.end,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .labelLarge
+                                                ?.copyWith(
+                                                  color: const Color(
+                                                    0xFFD2DECE,
+                                                  ),
                                                 ),
-                                                child: Text(
-                                                  'Esqueceu a senha?',
-                                                  textAlign: TextAlign.end,
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .labelLarge
-                                                      ?.copyWith(
-                                                        color: const Color(
-                                                          0xFFD2DECE,
-                                                        ),
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
                                           ),
                                         ),
                                       ),
-                                    ],
+                                    ),
                                   ),
                                   // Erro vindo do servidor (ex.: senha incorreta).
                                   if (_erro != null) ...[

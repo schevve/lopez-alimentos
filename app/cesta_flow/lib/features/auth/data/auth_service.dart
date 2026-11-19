@@ -1,4 +1,3 @@
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Erro de login com mensagem pronta para ser exibida ao usuário.
@@ -17,8 +16,6 @@ class AuthService {
 
   static final AuthService instance = AuthService._();
 
-  static const String _chaveLembrarMe = 'auth_lembrar_me';
-
   SupabaseClient get _client => Supabase.instance.client;
 
   /// Há uma sessão ativa (usuário logado)?
@@ -28,7 +25,6 @@ class AuthService {
   Future<void> entrar({
     required String email,
     required String senha,
-    required bool lembrarMe,
   }) async {
     try {
       await _client.auth.signInWithPassword(
@@ -46,32 +42,10 @@ class AuthService {
         'Não foi possível entrar agora. Tente novamente.',
       );
     }
-
-    // Só guarda a preferência depois que o login deu certo.
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_chaveLembrarMe, lembrarMe);
-    } catch (_) {
-      // Falhar ao salvar a preferência não deve impedir o login.
-    }
   }
 
   /// Encerra a sessão do usuário.
   Future<void> sair() => _client.auth.signOut();
-
-  /// Chamar uma vez ao abrir o app: se o usuário desmarcou "Lembrar-me" no
-  /// último login, a sessão salva é encerrada e ele volta para a tela de login.
-  Future<void> aplicarPreferenciaLembrarMe() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final lembrar = prefs.getBool(_chaveLembrarMe) ?? true;
-      if (!lembrar && estaLogado) {
-        await _client.auth.signOut();
-      }
-    } catch (_) {
-      // Na dúvida, mantém a sessão como está.
-    }
-  }
 
   String _traduzirErro(AuthException e) {
     switch (e.code) {
