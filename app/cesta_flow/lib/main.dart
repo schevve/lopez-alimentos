@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:cesta_flow/core/data/local/db_helper.dart';
+import 'package:cesta_flow/core/data/remote/remote_sync_service.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-import 'package:sqflite/sqflite.dart';
-import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -21,9 +19,26 @@ import 'package:cesta_flow/features/shared/bottom_bar.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializa o banco SQLite para Flutter Web.
-  if (kIsWeb) {
-    databaseFactory = databaseFactoryFfiWeb;
+  // Abre o armazenamento local antes de liberar as telas.
+  try {
+    await DatabaseHelper().store;
+  } catch (error) {
+    runApp(
+      MaterialApp(
+        home: Scaffold(
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: SelectableText(
+                'Não foi possível abrir o banco local. '
+                'Tente abrir o aplicativo novamente.\n\n$error',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    return;
   }
 
   // Inicializa o Supabase.
@@ -47,6 +62,15 @@ class _MainAppState extends State<MainApp> {
   void initState() {
     super.initState();
     _enableWakeLock();
+    _synchronizeOnStartup();
+  }
+
+  Future<void> _synchronizeOnStartup() async {
+    try {
+      await RemoteSyncService().synchronize();
+    } catch (e) {
+      debugPrint('Falha na sincronização inicial: $e');
+    }
   }
 
   Future<void> _enableWakeLock() async {

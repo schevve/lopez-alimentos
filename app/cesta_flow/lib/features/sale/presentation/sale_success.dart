@@ -56,6 +56,10 @@ class _SaleSuccessState extends State<SaleSuccess> {
                 letterSpacing: 1,
               ),
             ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Voltar'),
+            ),
           ],
         ),
       ),
