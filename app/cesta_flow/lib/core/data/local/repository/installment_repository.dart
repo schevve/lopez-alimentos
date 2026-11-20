@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -7,6 +8,7 @@ import '../db_helper.dart';
 import '../model/installment_model.dart';
 import '../model/sale_model.dart';
 import '../remote_deletion.dart';
+import '../sync_timestamps.dart';
 import '../sync_entity_lookup.dart';
 import 'sale_repository.dart';
 
@@ -27,10 +29,16 @@ class InstallmentRepository {
     if (sale == null || sale.isDeleted) {
       throw StateError('Venda não encontrada.');
     }
-    final installment = (value.saleUuid.isEmpty
-            ? value.copyWith(saleUuid: sale.uuid)
-            : value)
-        .copyWith(isSynced: false);
+    final withSale = value.saleUuid.isEmpty
+        ? value.copyWith(saleUuid: sale.uuid)
+        : value;
+    final installment = withSale.copyWith(
+      updatedAt: SyncTimestamps.forCreate(
+        withSale.createdAt,
+        withSale.updatedAt,
+      ),
+      isSynced: false,
+    );
     final id = db.runInTransaction(TxMode.write, () {
       if (db.box<Sale>().get(installment.saleId) == null) {
         throw StateError('Venda não encontrada.');
@@ -176,22 +184,49 @@ class InstallmentRepository {
 
   bool _isPaid(Installment installment) => installment.paymentDate != null;
 
+  List<Installment> _sortedUnpaidInstallments(List<Installment> installments) {
+    final pending = installments.where((item) => !_isPaid(item)).toList()
+      ..sort((a, b) {
+        final dueA = a.dueDate;
+        final dueB = b.dueDate;
+        if (dueA == null && dueB == null) {
+          return a.createdAt.compareTo(b.createdAt);
+        }
+        if (dueA == null) return 1;
+        if (dueB == null) return -1;
+        final dueCompare = dueA.compareTo(dueB);
+        if (dueCompare != 0) return dueCompare;
+        return a.createdAt.compareTo(b.createdAt);
+      });
+    return pending;
+  }
+
+  /// Atualiza [dueDate] das parcelas ainda não pagas após um registro de pagamento.
+  Future<void> rescheduleRemainingUnpaidInstallments({
+    required int saleId,
+    required DateTime firstDueDate,
+  }) async {
+    final pending = _sortedUnpaidInstallments(
+      await getInstallmentsBySaleId(saleId),
+    );
+    if (pending.isEmpty) return;
+    final now = DateTime.now();
+    for (var index = 0; index < pending.length; index++) {
+      final dueDate = DateTime(
+        firstDueDate.year,
+        firstDueDate.month + index,
+        firstDueDate.day,
+      );
+      await updateInstallment(
+        pending[index].copyWith(dueDate: dueDate, updatedAt: now),
+      );
+    }
+  }
+
   Future<Installment?> _nextUnpaidInstallment(int saleId) async {
-    final installments = await getInstallmentsBySaleId(saleId);
-    final pending =
-        installments.where((item) => !_isPaid(item)).toList()
-          ..sort((a, b) {
-            final dueA = a.dueDate;
-            final dueB = b.dueDate;
-            if (dueA == null && dueB == null) {
-              return a.createdAt.compareTo(b.createdAt);
-            }
-            if (dueA == null) return 1;
-            if (dueB == null) return -1;
-            final dueCompare = dueA.compareTo(dueB);
-            if (dueCompare != 0) return dueCompare;
-            return a.createdAt.compareTo(b.createdAt);
-          });
+    final pending = _sortedUnpaidInstallments(
+      await getInstallmentsBySaleId(saleId),
+    );
     if (pending.isEmpty) return null;
     return pending.first;
   }
@@ -224,12 +259,29 @@ class InstallmentRepository {
     }
   }
 
+  /// Parcelas não quitadas, ordenadas por data prevista de pagamento,
+  /// excluindo vendas excluídas.
+  Future<List<Installment>> getUnpaidInstallments() async {
+    final db = await _dbHelper.store;
+    final saleBox = db.box<Sale>();
+    final installments = await getAllInstallments();
+    final activeUnpaid = installments.where((installment) {
+      if (_isPaid(installment)) return false;
+      final sale = saleBox.get(installment.saleId);
+      return sale != null && !sale.isDeleted;
+    });
+    return _sortedUnpaidInstallments(activeUnpaid.toList());
+  }
+
   Future<int> updateInstallment(Installment value) async {
     if (value.id == null || value.id == 0) {
       throw ArgumentError('ID obrigatório para atualizar.');
     }
     final db = await _dbHelper.store;
-    final pending = value.copyWith(isSynced: false);
+    final pending = value.copyWith(
+      updatedAt: SyncTimestamps.forUpdate(),
+      isSynced: false,
+    );
     final updated = db.runInTransaction(TxMode.write, () {
       if (db.box<Installment>().get(pending.id!) == null) return 0;
       if (db.box<Sale>().get(pending.saleId) == null) {
@@ -370,33 +422,52 @@ class InstallmentRepository {
 
   Future<void> pullSince(DateTime since) async {
     final iso = since.toUtc().toIso8601String();
+    debugPrint('[InstallmentRepository.pullSince] since=$iso');
     final List<dynamic> rows;
     try {
       rows = await Supabase.instance.client
           .from('installments')
           .select()
           .gt('updated_at', iso);
-    } catch (_) {
+    } catch (e, stackTrace) {
+      debugPrint('[InstallmentRepository.pullSince] erro ao buscar: $e');
+      debugPrint('$stackTrace');
       return;
     }
+    debugPrint(
+      '[InstallmentRepository.pullSince] ${rows.length} registro(s) remoto(s)',
+    );
     final db = await _dbHelper.store;
+    var merged = 0;
+    var skipped = 0;
     for (final raw in rows) {
       if (raw is! Map<String, dynamic>) continue;
       final remote = Installment.fromMap(raw);
-      if (remote.saleUuid.isEmpty) continue;
+      if (remote.saleUuid.isEmpty) {
+        skipped++;
+        continue;
+      }
       final sale = findSaleByUuid(db, remote.saleUuid);
-      if (sale?.id == null) continue;
+      if (sale?.id == null) {
+        skipped++;
+        continue;
+      }
       final existing = findInstallmentByUuid(db, remote.uuid);
-      final merged = remote.copyWith(
+      final mergedInstallment = remote.copyWith(
         id: existing?.id,
         saleId: sale!.id!,
         saleUuid: sale.uuid,
         isSynced: true,
       );
       db.box<Installment>().put(
-        merged,
+        mergedInstallment,
         mode: existing == null ? PutMode.put : PutMode.update,
       );
+      merged++;
     }
+    debugPrint(
+      '[InstallmentRepository.pullSince] $merged parcela(s) mesclada(s), '
+      '$skipped ignorada(s)',
+    );
   }
 }

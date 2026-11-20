@@ -99,8 +99,9 @@ void main() {
     await tester.scrollUntilVisible(find.text('Parcela 2'), 400);
     expect(find.text('Parcela 1'), findsOneWidget);
     expect(find.text('Parcela 2'), findsOneWidget);
-    expect(find.text('Paga'), findsOneWidget);
-    expect(find.text('Pendente'), findsOneWidget);
+    expect(find.text('Pago'), findsNWidgets(2));
+    expect(find.text('Atrasado'), findsOneWidget);
+    expect(find.text('Receber'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

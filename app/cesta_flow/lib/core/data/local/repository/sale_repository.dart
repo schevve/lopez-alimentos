@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -11,6 +12,7 @@ import '../model/sale_basket_input.dart';
 import '../model/sale_basket_model.dart';
 import '../model/sale_model.dart';
 import '../remote_deletion.dart';
+import '../sync_timestamps.dart';
 import '../sync_entity_lookup.dart';
 
 class SaleBasketLine {
@@ -82,12 +84,14 @@ class SaleRepository {
         }
         resolvedLines.add((basket: catalog, line: line, isNew: false));
       } else {
+        final basketCreatedAt = sale.createdAt;
         resolvedLines.add((
           basket: Basket(
             uuid: const Uuid().v4(),
             name: line.name!.trim(),
             price: line.unitPrice!,
-            createdAt: sale.createdAt,
+            createdAt: basketCreatedAt,
+            updatedAt: SyncTimestamps.forCreate(basketCreatedAt),
           ),
           line: line,
           isNew: true,
@@ -95,7 +99,8 @@ class SaleRepository {
       }
     }
 
-    final pendingSale = sale.copyWith(isSynced: false);
+    final saleStamp = SyncTimestamps.forCreate(sale.createdAt, sale.updatedAt);
+    final pendingSale = sale.copyWith(updatedAt: saleStamp, isSynced: false);
     final createdBasketIds = <int>[];
     final linkIds = <int>[];
     final saleId = db.runInTransaction(TxMode.write, () {
@@ -121,6 +126,7 @@ class SaleRepository {
               basketUuid: resolved.basket.uuid,
               quantity: resolved.line.quantity,
               createdAt: pendingSale.createdAt,
+              updatedAt: saleStamp,
               isSynced: false,
             ),
           ),
@@ -154,6 +160,7 @@ class SaleRepository {
           basketUuid: resolved.basket.uuid,
           quantity: resolved.line.quantity,
           createdAt: pendingSale.createdAt,
+          updatedAt: saleStamp,
         ).toRemote(),
       );
       final link = db.box<SaleBasket>().get(linkIds[index]);
@@ -191,7 +198,10 @@ class SaleRepository {
       );
     }
     final db = await _dbHelper.store;
-    final pending = _withCurrentUser(value).copyWith(isSynced: false);
+    final pending = _withCurrentUser(value).copyWith(
+      updatedAt: SyncTimestamps.forUpdate(),
+      isSynced: false,
+    );
     final updated = db.runInTransaction(TxMode.write, () {
       if (db.box<Sale>().get(pending.id!) == null) return 0;
       if (db.box<Customer>().get(pending.customerId) == null) {
@@ -532,6 +542,7 @@ class SaleRepository {
   }
 
   Future<void> pullSince(DateTime since) async {
+    debugPrint('[SaleRepository.pullSince] since=${since.toUtc().toIso8601String()}');
     final db = await _dbHelper.store;
     await _pullSalesSince(db, since);
   }
@@ -544,26 +555,42 @@ class SaleRepository {
           .from('sales')
           .select()
           .gt('updated_at', iso);
-    } catch (_) {
+    } catch (e, stackTrace) {
+      debugPrint('[SaleRepository.pullSince] erro ao buscar: $e');
+      debugPrint('$stackTrace');
       return;
     }
+    debugPrint('[SaleRepository.pullSince] ${rows.length} registro(s) remoto(s)');
+    var merged = 0;
+    var skipped = 0;
     for (final raw in rows) {
       if (raw is! Map<String, dynamic>) continue;
       final remote = Sale.fromMap(raw);
-      if (remote.customerUuid.isEmpty) continue;
+      if (remote.customerUuid.isEmpty) {
+        skipped++;
+        continue;
+      }
       final customer = findCustomerByUuid(db, remote.customerUuid);
-      if (customer?.id == null) continue;
+      if (customer?.id == null) {
+        skipped++;
+        continue;
+      }
       final existing = findSaleByUuid(db, remote.uuid);
-      final merged = remote.copyWith(
+      final mergedSale = remote.copyWith(
         id: existing?.id,
         customerId: customer!.id!,
         isSynced: true,
       );
       db.box<Sale>().put(
-        merged,
+        mergedSale,
         mode: existing == null ? PutMode.put : PutMode.update,
       );
+      merged++;
     }
+    debugPrint(
+      '[SaleRepository.pullSince] $merged venda(s) mesclada(s), '
+      '$skipped ignorada(s)',
+    );
   }
 
 }

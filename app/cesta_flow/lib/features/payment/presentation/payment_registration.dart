@@ -45,6 +45,9 @@ class _PaymentRegistration extends State<PaymentRegistration> {
   bool _loading = true;
   bool _isSubmitting = false;
   String? _loadError;
+  int _unpaidInstallmentsCount = 0;
+
+  bool get _showNextVisitField => _unpaidInstallmentsCount > 1;
 
   @override
   void initState() {
@@ -83,12 +86,15 @@ class _PaymentRegistration extends State<PaymentRegistration> {
       );
       final remaining = SaleRepository.remainingBalance(sale);
       final nextInstallment = _nextInstallmentAmountFor(sale, installments);
+      final unpaidCount =
+          installments.where((item) => !item.isPaid).length;
       if (!mounted) return;
       setState(() {
         _sale = sale;
         _customer = customer;
         _remainingBalance = remaining;
         _nextInstallmentAmount = nextInstallment;
+        _unpaidInstallmentsCount = unpaidCount;
         _amountController.text = formatMoneyField(nextInstallment);
         _loading = false;
       });
@@ -380,58 +386,64 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                 );
               },
             ),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 255, 255, 255),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: 4,
-                children: [
-                  Text(
-                    "Próxima visita",
-                    style: TextStyle(
-                      color: AppColors.greenText,
-                      fontWeight: FontWeight(900),
+            if (_showNextVisitField)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(255, 255, 255, 255),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: 4,
+                  children: [
+                    Text(
+                      'Próxima visita',
+                      style: TextStyle(
+                        color: AppColors.greenText,
+                        fontWeight: FontWeight(900),
+                      ),
                     ),
-                  ),
-                  AppTextFormField(
-                    controller: _nextVisitController,
-                    labelText: 'Próxima visita',
-                    keyboardType: TextInputType.datetime,
-                    inputFormatters: [FormatDate()],
-                    validator: (value) {
-                      final text = value?.trim() ?? '';
-                      if (text.isEmpty) return null;
-                      if (text.length < 10) return 'Informe a data completa';
-                      return null;
-                    },
-                  ),
-                  SizedBox(height: 2),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      spacing: 8,
-                      children: [
-                        for (final option in _suggestedVisitOptions)
-                          OutlinedButton(
-                            onPressed: () =>
-                                _applySuggestedVisitDate(option.date),
-                            style: _suggestedAmountButtonStyle,
-                            child: Text(
-                              option.label,
-                              style: const TextStyle(fontSize: 16),
+                    AppTextFormField(
+                      controller: _nextVisitController,
+                      labelText: 'Próxima visita *',
+                      keyboardType: TextInputType.datetime,
+                      inputFormatters: [FormatDate()],
+                      validator: (value) {
+                        final text = value?.trim() ?? '';
+                        if (text.isEmpty) {
+                          return 'Informe a data da próxima visita';
+                        }
+                        if (text.length < 10) return 'Informe a data completa';
+                        if (parseDateField(text) == null) {
+                          return 'Data inválida';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 2),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: 8,
+                        children: [
+                          for (final option in _suggestedVisitOptions)
+                            OutlinedButton(
+                              onPressed: () =>
+                                  _applySuggestedVisitDate(option.date),
+                              style: _suggestedAmountButtonStyle,
+                              child: Text(
+                                option.label,
+                                style: const TextStyle(fontSize: 16),
+                              ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
             FilledButton(
               onPressed: _isSubmitting ? null : _submitForm,
               style: FilledButton.styleFrom(
@@ -459,6 +471,14 @@ class _PaymentRegistration extends State<PaymentRegistration> {
     if (!_formKey.currentState!.validate()) return;
 
     final amount = parseMoneyField(_amountController.text);
+    final nextVisitText = _showNextVisitField
+        ? _nextVisitController.text.trim()
+        : '';
+    final nextDueDate = _showNextVisitField
+        ? parseDateField(nextVisitText)
+        : null;
+    if (_showNextVisitField && nextDueDate == null) return;
+
     setState(() => _isSubmitting = true);
     try {
       await _installmentRepository.registerPayment(
@@ -466,12 +486,18 @@ class _PaymentRegistration extends State<PaymentRegistration> {
         amount: amount,
         paymentMethod: _paymentMethod,
       );
+      if (nextDueDate != null) {
+        await _installmentRepository.rescheduleRemainingUnpaidInstallments(
+          saleId: widget.saleId,
+          firstDueDate: nextDueDate,
+        );
+      }
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => PaymentSuccess(
             paymentValue: formatCurrency(amount),
-            dueDate: _nextVisitController.text.trim(),
+            dueDate: nextVisitText,
           ),
         ),
       );

@@ -7,6 +7,7 @@ import '../db_helper.dart';
 import '../model/basket_model.dart';
 import '../model/sale_basket_model.dart';
 import '../remote_deletion.dart';
+import '../sync_timestamps.dart';
 import '../sync_entity_lookup.dart';
 
 class BasketRepository {
@@ -16,7 +17,10 @@ class BasketRepository {
 
   Future<int> registerBasket(Basket value) async {
     final db = await _dbHelper.store;
-    final pending = value.copyWith(isSynced: false);
+    final pending = value.copyWith(
+      updatedAt: SyncTimestamps.forCreate(value.createdAt, value.updatedAt),
+      isSynced: false,
+    );
     final id = db.runInTransaction(TxMode.write, () {
       return db.box<Basket>().put(pending);
     });

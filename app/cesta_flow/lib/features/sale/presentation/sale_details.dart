@@ -5,6 +5,7 @@ import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/core/data/local/model/installment_model.dart';
 import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
+import 'package:cesta_flow/features/dashboard/presentation/widgets/payment_summary_card.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 
@@ -163,11 +164,15 @@ class _SaleDetailsState extends State<SaleDetails> {
                   'Nenhuma parcela registrada.',
                   style: TextStyle(color: Color(0xFF59665E)),
                 ),
-              for (var index = 0; index < data.installments.length; index++)
+              for (var index = 0; index < data.installments.length; index++) ...[
+                if (index > 0) const SizedBox(height: 14),
                 _InstallmentCard(
+                  saleId: widget.saleId,
                   number: index + 1,
                   installment: data.installments[index],
+                  onAfterReceive: _refresh,
                 ),
+              ],
             ],
           ),
         );
@@ -318,58 +323,52 @@ class _ProductCard extends StatelessWidget {
 }
 
 class _InstallmentCard extends StatelessWidget {
-  const _InstallmentCard({required this.number, required this.installment});
+  const _InstallmentCard({
+    required this.saleId,
+    required this.number,
+    required this.installment,
+    required this.onAfterReceive,
+  });
 
+  final int saleId;
   final int number;
   final Installment installment;
+  final Future<void> Function() onAfterReceive;
 
   @override
   Widget build(BuildContext context) {
     final isPaid = installment.isPaid;
-    return Card(
-      color: Colors.white,
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Parcela $number',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Text(
-                  isPaid ? 'Paga' : 'Pendente',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: isPaid
-                        ? const Color(0xFF1B4D31)
-                        : const Color(0xFFB54708),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            _InfoLine(
-              label: isPaid ? 'Valor pago' : 'Valor previsto',
-              value: formatCurrency(
-                isPaid ? installment.paidAmount : installment.expectedAmount,
-              ),
-            ),
-            if (isPaid && installment.paymentMethod != null)
-              _InfoLine(
-                label: 'Forma de pagamento',
-                value: installment.paymentMethod!,
-              ),
-          ],
-        ),
-      ),
+    final due = installment.dueDate;
+    final dueLabel = due == null
+        ? 'data não definida'
+        : _formatDate(due);
+    final paymentDate = installment.paymentDate;
+
+    final badge = isPaid
+        ? PaymentSummaryBadge.paid
+        : badgeForUnpaidDueDate(due);
+    final subtitle = isPaid
+        ? 'Pago em ${paymentDate == null ? '—' : _formatDate(paymentDate)}'
+        : 'Previsto para $dueLabel';
+    final amount = formatCurrency(
+      isPaid ? installment.paidAmount : installment.expectedAmount,
+    );
+
+    return PaymentSummaryCard(
+      title: 'Parcela $number',
+      subtitle: subtitle,
+      amount: amount,
+      amountLabel: isPaid ? 'Valor pago' : 'Valor previsto',
+      badge: badge,
+      saleId: saleId,
+      isPaid: isPaid,
+      onAfterReceive: onAfterReceive,
     );
   }
+
+  String _formatDate(DateTime date) =>
+      '${date.day.toString().padLeft(2, '0')}/'
+      '${date.month.toString().padLeft(2, '0')}/${date.year}';
 }
 
 class _InfoLine extends StatelessWidget {

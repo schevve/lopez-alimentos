@@ -73,8 +73,8 @@ class Installment {
       'due_date': dueDate?.toIso8601String(),
       'payment_date': paymentDate?.toIso8601String(),
       'payment_method': paymentMethod,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt?.toIso8601String(),
+      'created_at': createdAt.toUtc().toIso8601String(),
+      'updated_at': (updatedAt ?? createdAt).toUtc().toIso8601String(),
     };
   }
 

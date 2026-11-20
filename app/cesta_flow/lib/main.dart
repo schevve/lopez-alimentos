@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/data/remote/sync_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/remote/remote_sync_service.dart';
@@ -52,6 +53,21 @@ Future<void> main() async {
   runApp(const MainApp());
 }
 
+Future<void> synchronizeWhenLoggedIn() async {
+  SyncPreferences().setLastPushAt(
+    DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+  );
+  if (Supabase.instance.client.auth.currentSession == null) {
+    debugPrint('Sincronização ignorada: usuário não está logado.');
+    return;
+  }
+  try {
+    await RemoteSyncService().synchronize();
+  } catch (e) {
+    debugPrint('Falha na sincronização: $e');
+  }
+}
+
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
 
@@ -64,15 +80,6 @@ class _MainAppState extends State<MainApp> {
   void initState() {
     super.initState();
     _enableWakeLock();
-    _synchronizeOnStartup();
-  }
-
-  Future<void> _synchronizeOnStartup() async {
-    try {
-      await RemoteSyncService().synchronize();
-    } catch (e) {
-      debugPrint('Falha na sincronização inicial: $e');
-    }
   }
 
   Future<void> _enableWakeLock() async {
@@ -134,6 +141,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    synchronizeWhenLoggedIn();
     _carregarPerfil();
   }
 
@@ -157,7 +165,9 @@ class _MainScreenState extends State<MainScreen> {
   String? get _subtituloDrawer {
     final email = Supabase.instance.client.auth.currentUser?.email;
     final nome = _profile?.displayName ?? '';
-    final papel = _profile?.role == ProfileRole.admin ? 'Administrador' : 'Usuário';
+    final papel = _profile?.role == ProfileRole.admin
+        ? 'Administrador'
+        : 'Usuário';
 
     if (nome.isNotEmpty && email != null) {
       return '$papel · $email';
