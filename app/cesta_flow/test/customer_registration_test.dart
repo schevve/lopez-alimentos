@@ -44,11 +44,11 @@ Future<void> _fillCustomerForm(WidgetTester tester) async {
     (0, 'Cliente de teste'),
     (1, '01/01/2000'),
     (3, '(45) 99999-0000'),
-    (4, 'Rua das Flores'),
-    (5, '10'),
+    (5, 'PR'),
     (6, 'Toledo'),
-    (7, 'PR'),
-    (9, '12345678901'),
+    (7, 'Rua das Flores'),
+    (8, '10'),
+    (9, '11144477735'),
   ]) {
     await tester.ensureVisible(fields.at(index));
     await tester.enterText(fields.at(index), value);
@@ -82,8 +82,7 @@ void main() {
         ),
       ),
     );
-    await tester.enterText(find.byType(TextFormField).at(6), 'Toledo');
-    await tester.enterText(find.byType(TextFormField).at(7), 'PR');
+    await _fillCustomerForm(tester);
 
     await tester.ensureVisible(_submitButton());
     await tester.tap(_submitButton());
@@ -139,7 +138,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Já existe um cliente cadastrado com este CPF ou RG.'),
+      find.text('Já existe um cliente com este CPF ou RG.'),
       findsOneWidget,
     );
     expect(find.byType(CustomerRegistration), findsOneWidget);
@@ -162,7 +161,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Não foi possível salvar o cliente. Tente novamente.'),
+      find.text('Não foi possível registrar o cliente. Tente novamente.'),
       findsOneWidget,
     );
     expect(find.byType(CustomerRegistration), findsOneWidget);

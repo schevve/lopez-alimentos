@@ -1,3 +1,5 @@
+import 'package:cesta_flow/core/constants/util/format_cpf.dart';
+import 'package:cesta_flow/core/constants/util/format_date.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
@@ -9,6 +11,11 @@ class CustomerEdit extends StatelessWidget {
   final CustomerRepository? repository;
 
   const CustomerEdit({super.key, required this.customer, this.repository});
+
+  String? _opcional(dynamic valor) {
+    final texto = (valor ?? '').toString().trim();
+    return texto.isEmpty ? null : texto;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,33 +40,22 @@ class CustomerEdit extends StatelessWidget {
   ) async {
     final customerRepository = repository ?? CustomerRepository();
     final updatedCustomer = customer.copyWith(
-      name: data['nome'],
-      dateOfBirth: cleanDate(data['data_nascimento']),
-      email: data['email'],
-      phone: data['telefone'],
-      address: data['rua'],
-      addressNumber: data['numero'],
-      city: data['cidade'],
-      state: data['estado'],
-      cep: data['cep'],
-      documentCPF: data['cpf'],
-      documentRG: data['rg'],
+      name: data['nome'].toString().trim(),
+      dateOfBirth: cleanDate(data['data_nascimento'].toString().trim()),
+      email: _opcional(data['email']),
+      phone: data['telefone'].toString().trim(),
+      address: data['rua'].toString().trim(),
+      addressNumber: data['numero'].toString().trim(),
+      city: data['cidade'].toString().trim(),
+      state: data['estado'].toString().trim(),
+      cep: _opcional(data['cep']),
+      documentCPF: formatCpf(onlyDigits(data['cpf'].toString())),
+      documentRG: _opcional(data['rg']),
       updatedAt: DateTime.now(),
     );
     await customerRepository.updateCustomer(updatedCustomer);
     if (context.mounted) {
       Navigator.of(context).pop(true);
     }
-  }
-
-  DateTime cleanDate(String dateString) {
-    final parts = dateString.split('/');
-    if (parts.length != 3) {
-      throw FormatException('Data inválida: $dateString');
-    }
-    final day = int.parse(parts[0]);
-    final month = int.parse(parts[1]);
-    final year = int.parse(parts[2]);
-    return DateTime(year, month, day);
   }
 }
