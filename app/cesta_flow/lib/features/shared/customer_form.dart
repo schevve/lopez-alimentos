@@ -182,21 +182,22 @@ class _CustomerFormState extends State<CustomerForm> {
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-
-            child: FilledButton.icon(
-              onPressed: _isSubmitting ? null : _submitForm,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.secondary,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 16,
-                  horizontal: 32,
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _isSubmitting ? null : _submitForm,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.secondary,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 32,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
               icon: _isSubmitting
                   ? const SizedBox(
                       width: 22,
@@ -215,6 +216,7 @@ class _CustomerFormState extends State<CustomerForm> {
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 2,
+                ),
                 ),
               ),
             ),
