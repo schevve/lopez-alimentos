@@ -1,4 +1,9 @@
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
+import 'package:cesta_flow/core/constants/util/customer_form_validators.dart';
+import 'package:cesta_flow/core/constants/util/format_cep.dart';
+import 'package:cesta_flow/core/constants/util/format_cpf.dart';
+import 'package:cesta_flow/core/constants/util/format_date.dart';
+import 'package:cesta_flow/core/constants/util/format_phone.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/features/shared/app_text_form_field.dart';
 import 'package:flutter/material.dart';
@@ -29,17 +34,15 @@ class _CustomerFormState extends State<CustomerForm> {
   final _formData = <String, dynamic>{};
   bool _isSubmitting = false;
 
-  String _formatDate(DateTime? date) {
-    if (date == null) return '';
-
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    return '$day/$month/${date.year}';
-  }
-
   Future<void> _submitForm() async {
     if (_isSubmitting) return;
-    if (!_formKey.currentState!.validate()) return;
+
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Corrija os campos destacados.')),
+      );
+      return;
+    }
 
     _formKey.currentState!.save();
 
@@ -65,17 +68,13 @@ class _CustomerFormState extends State<CustomerForm> {
           Row(
             children: [
               Container(width: 4, height: 24, color: Colors.orange),
-
               SizedBox(width: 8),
-
               Icon(
                 Icons.person_add_alt_1_outlined,
                 color: Colors.orange,
                 size: 22,
               ),
-
               SizedBox(width: 8),
-
               Text(
                 "IDENTIFICAÇÃO",
                 style: TextStyle(
@@ -89,6 +88,7 @@ class _CustomerFormState extends State<CustomerForm> {
           Padding(padding: EdgeInsetsGeometry.all(10)),
           Form(
             key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             child: Column(
               spacing: 16,
               children: [
@@ -101,90 +101,101 @@ class _CustomerFormState extends State<CustomerForm> {
                     color: Color(0xff1C5631),
                   ),
                   onSaved: (value) => _formData['nome'] = value,
+                  validator: (value) =>
+                      validateRequired(value, 'Informe o nome completo.'),
                 ),
-
                 AppTextFormField(
                   labelText: 'Data de Nascimento *',
                   hintText: 'dd/mm/aaaa',
-                  initialValue: _formatDate(customer?.dateOfBirth),
+                  initialValue: formatDateFromDateTime(customer?.dateOfBirth),
                   keyboardType: TextInputType.datetime,
-                  inputFormatters: [FormatDate()],
+                  inputFormatters: [FormatDateInput()],
                   onSaved: (value) => _formData['data_nascimento'] = value,
+                  validator: validateBirthDate,
                 ),
-
                 AppTextFormField(
                   labelText: 'Email (opcional)',
                   initialValue: customer?.email ?? '',
                   keyboardType: TextInputType.emailAddress,
                   onSaved: (value) => _formData['email'] = value,
+                  validator: validateEmail,
                 ),
-
                 AppTextFormField(
                   labelText: 'Telefone *',
                   initialValue: customer?.phone ?? '',
                   keyboardType: TextInputType.phone,
                   inputFormatters: [FormatPhoneNumber()],
                   onSaved: (value) => _formData['telefone'] = value,
+                  validator: validatePhone,
                 ),
-          
                 AppTextFormField(
                   labelText: 'CEP (opcional)',
                   initialValue: customer?.cep ?? '',
                   keyboardType: TextInputType.number,
+                  inputFormatters: [CepInputFormatter()],
                   onSaved: (value) => _formData['cep'] = value,
+                  validator: validateCep,
                 ),
-                
                 AppTextFormField(
                   labelText: 'Estado *',
                   initialValue: customer?.state ?? '',
                   keyboardType: TextInputType.text,
                   onSaved: (value) => _formData['estado'] = value,
                   validator: (value) =>
-                      value?.isNotEmpty ?? false ? null : "erro",
+                      validateRequired(value, 'Informe o estado.'),
                 ),
-
                 AppTextFormField(
                   labelText: 'Cidade *',
                   initialValue: customer?.city ?? '',
                   keyboardType: TextInputType.text,
                   onSaved: (value) => _formData['cidade'] = value,
                   validator: (value) =>
-                      value?.isNotEmpty ?? false ? null : "erro",
+                      validateRequired(value, 'Informe a cidade.'),
                 ),
-
                 AppTextFormField(
                   labelText: 'Rua *',
                   initialValue: customer?.address ?? '',
                   keyboardType: TextInputType.text,
                   onSaved: (value) => _formData['rua'] = value,
+                  validator: (value) =>
+                      validateRequired(value, 'Informe a rua.'),
                 ),
-
                 AppTextFormField(
                   labelText: 'Número *',
                   initialValue: customer?.addressNumber ?? '',
                   keyboardType: TextInputType.number,
                   onSaved: (value) => _formData['numero'] = value,
+                  validator: (value) =>
+                      validateRequired(value, 'Informe o número.'),
                 ),
-
                 AppTextFormField(
                   labelText: 'CPF *',
                   initialValue: customer?.documentCPF ?? '',
                   keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(11),
+                    CpfInputFormatter(),
+                  ],
                   onSaved: (value) => _formData['cpf'] = value,
+                  validator: validateCpf,
                 ),
-
                 AppTextFormField(
                   labelText: 'RG (opcional)',
                   initialValue: customer?.documentRG ?? '',
                   keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(14),
+                  ],
                   onSaved: (value) => _formData['rg'] = value,
+                  validator: validateRg,
                 ),
               ],
             ),
           ),
           Container(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-
             child: FilledButton.icon(
               onPressed: _isSubmitting ? null : _submitForm,
               style: FilledButton.styleFrom(
@@ -221,66 +232,6 @@ class _CustomerFormState extends State<CustomerForm> {
           ),
         ],
       ),
-    );
-  }
-
-  DateTime cleanDate(String dateString) {
-    final parts = dateString.split('/');
-    if (parts.length != 3) {
-      throw FormatException('Data inválida: $dateString');
-    }
-    final day = int.parse(parts[0]);
-    final month = int.parse(parts[1]);
-    final year = int.parse(parts[2]);
-    return DateTime(year, month, day);
-  }
-}
-
-class FormatPhoneNumber extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    print('Old Value: ${oldValue.text}, New Value: ${newValue.text}');
-    final digitsOnly = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digitsOnly.length == 11) {
-      final match = RegExp(r'^(\d{2})(\d{5})(\d{4})$').firstMatch(digitsOnly);
-      print('Digits Only: $digitsOnly, Match: $match');
-      if (match != null) {
-        return TextEditingValue(
-          text: '(${match.group(1)}) ${match.group(2)}-${match.group(3)}',
-          selection: TextSelection.collapsed(offset: 14),
-        );
-      }
-    }
-    if (digitsOnly.length > 11) {
-      return oldValue;
-    }
-    return newValue;
-  }
-}
-
-class FormatDate extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digitsOnly = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digitsOnly.length > 8) {
-      return oldValue;
-    }
-    String formatted = '';
-    for (int i = 0; i < digitsOnly.length; i++) {
-      if (i == 2 || i == 4) {
-        formatted += '/';
-      }
-      formatted += digitsOnly[i];
-    }
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }
