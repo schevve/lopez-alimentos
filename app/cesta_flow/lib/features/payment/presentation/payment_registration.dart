@@ -1,5 +1,4 @@
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
-import 'package:cesta_flow/core/constants/util/format_cpf.dart';
 import 'package:cesta_flow/core/constants/util/format_currency.dart';
 import 'package:cesta_flow/core/constants/util/input_formatters.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
@@ -9,6 +8,7 @@ import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/payment/presentation/payment_success.dart';
+import 'package:cesta_flow/features/sale/presentation/sale_customer_selection.dart';
 import 'package:cesta_flow/features/shared/app_text_form_field.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
@@ -209,9 +209,6 @@ class _PaymentRegistration extends State<PaymentRegistration> {
     }
 
     final customer = _customer;
-    final customerLabel = customer == null
-        ? 'Cliente #${sale.customerId}'
-        : '${customer.name}, CPF: ${formatCpf(customer.documentCPF)}';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -227,30 +224,52 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                 color: const Color.fromARGB(255, 255, 255, 255),
                 borderRadius: BorderRadius.circular(12),
               ),
-    
+
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start, 
+                crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: 8,
                 children: [
-                  Text("Dados da venda",
-                  style: TextStyle(color: AppColors.greenText, fontWeight: FontWeight(900), fontSize: 20,)),
-
-                  Text("Cliente",
-                  style: TextStyle(color: AppColors.greenText, fontWeight: FontWeight(900))),
-                  AppTextFormField(
-                    labelText: 'Cliente',
-                    initialValue: customerLabel,
-                    readOnly: true,
+                  Text(
+                    "Dados da venda",
+                    style: TextStyle(
+                      color: AppColors.greenText,
+                      fontWeight: FontWeight(900),
+                      fontSize: 20,
+                    ),
                   ),
-                  Text("Data da compra",
-                  style: TextStyle(color: AppColors.greenText, fontWeight: FontWeight(900))),
+
+                  Text(
+                    "Cliente",
+                    style: TextStyle(
+                      color: AppColors.greenText,
+                      fontWeight: FontWeight(900),
+                    ),
+                  ),
+                  CustomerSelectionCard(
+                    name: customer?.name ?? 'Cliente #${sale.customerId}',
+                    cpf: customer?.documentCPF,
+                    showInitials: customer != null,
+                    borderColor: AppColors.primary,
+                  ),
+                  Text(
+                    "Data da compra",
+                    style: TextStyle(
+                      color: AppColors.greenText,
+                      fontWeight: FontWeight(900),
+                    ),
+                  ),
                   AppTextFormField(
                     labelText: 'Data da compra',
                     initialValue: _formatDate(sale.createdAt),
                     readOnly: true,
                   ),
-                  Text("Valor do pagamento (R\$)",
-                  style: TextStyle(color: AppColors.greenText, fontWeight: FontWeight(900))),
+                  Text(
+                    "Valor do pagamento (R\$)",
+                    style: TextStyle(
+                      color: AppColors.greenText,
+                      fontWeight: FontWeight(900),
+                    ),
+                  ),
                   AppTextFormField(
                     controller: _amountController,
                     labelText: 'Valor do pagamento *',
@@ -316,7 +335,11 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                   children: [
                     const Text(
                       'Forma de pagamento *',
-                      style: TextStyle(color: AppColors.greenText, fontWeight: FontWeight(900), fontSize: 20,)
+                      style: TextStyle(
+                        color: AppColors.greenText,
+                        fontWeight: FontWeight(900),
+                        fontSize: 20,
+                      ),
                     ),
                     GridView.count(
                       crossAxisCount: 2,

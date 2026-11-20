@@ -1,5 +1,4 @@
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
-import 'package:cesta_flow/core/constants/util/format_cpf.dart';
 import 'package:cesta_flow/core/constants/util/format_currency.dart';
 import 'package:cesta_flow/core/constants/util/input_formatters.dart';
 import 'package:cesta_flow/core/data/local/db_helper.dart';
@@ -12,6 +11,7 @@ import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/sale/presentation/basket_selection.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_customer_selection.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_success.dart';
+import 'package:cesta_flow/features/shared/app_text_form_field.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
@@ -113,163 +113,255 @@ class _SaleRegistrationState extends State<SaleRegistration> {
     });
   }
 
+  ButtonStyle get _suggestedAmountButtonStyle => OutlinedButton.styleFrom(
+    minimumSize: Size.zero,
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+    side: const BorderSide(color: AppColors.secondary, width: 2),
+    backgroundColor: AppColors.secondary,
+    foregroundColor: AppColors.white,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+  );
+
+  ButtonStyle _optionButtonStyle({required bool selected}) =>
+      OutlinedButton.styleFrom(
+        backgroundColor: selected ? const Color(0xff1C5631) : Colors.white,
+        foregroundColor: selected ? Colors.white : const Color(0xff1C5631),
+        side: const BorderSide(color: Color(0xff1C5631)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+      );
+
   @override
   Widget build(BuildContext context) {
+    final customer = _selectedCustomer;
+
     return Stack(
       children: [
         Scaffold(
-      backgroundColor: const Color(0xffF3FCF3),
-      appBar: const TopBar(pagTitle: 'Registrar venda'),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 16,
-            children: [
-              _CustomerSection(
-                customer: _selectedCustomer,
-                onSelect: () async {
-                  final value = await Navigator.push<Customer>(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const CustomerSelection(),
+          backgroundColor: const Color(0xffF3FCF3),
+          appBar: const TopBar(pagTitle: 'Registrar venda'),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: 16,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(255, 255, 255, 255),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  );
-                  if (value != null && mounted) {
-                    setState(() => _selectedCustomer = value);
-                  }
-                },
-              ),
-              FormField<void>(
-                validator: (_) {
-                  if (_basketLines.isEmpty) {
-                    return 'Adicione ao menos uma cesta';
-                  }
-                  return null;
-                },
-                builder: (field) {
-                  return Column(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: 8,
+                      children: [
+                        const Text(
+                          'Dados da venda',
+                          style: TextStyle(
+                            color: AppColors.greenText,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 20,
+                          ),
+                        ),
+                        const Text(
+                          'Cliente',
+                          style: TextStyle(
+                            color: AppColors.greenText,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        CustomerSelectionCard(
+                          name: customer?.name ?? 'Selecionar cliente',
+                          cpf: customer?.documentCPF,
+                          showInitials: customer != null,
+                          borderColor: AppColors.primary,
+                          onTap: () async {
+                            final value = await Navigator.push<Customer>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const CustomerSelection(),
+                              ),
+                            );
+                            if (value != null && mounted) {
+                              setState(() => _selectedCustomer = value);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  FormField<void>(
+                    validator: (_) {
+                      if (_basketLines.isEmpty) {
+                        return 'Adicione ao menos uma cesta';
+                      }
+                      return null;
+                    },
+                    builder: (field) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        spacing: 8,
+                        children: [
+                          const Text(
+                            'Cestas *',
+                            style: TextStyle(
+                              color: AppColors.greenText,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 20,
+                            ),
+                          ),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              onPressed: _pickBasket,
+                              style: _optionButtonStyle(selected: false),
+                              child: const Text('Adicionar cesta'),
+                            ),
+                          ),
+                          if (field.hasError)
+                            Text(
+                              field.errorText!,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                                fontSize: 12,
+                              ),
+                            ),
+                          for (var i = 0; i < _basketLines.length; i++)
+                            _BasketLineCard(
+                              line: _basketLines[i],
+                              onDecrement: () => _changeQuantity(i, -1),
+                              onIncrement: () => _changeQuantity(i, 1),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     spacing: 8,
                     children: [
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton(
-                          onPressed: _pickBasket,
-                          style: OutlinedButton.styleFrom(
-                            alignment: Alignment.centerLeft,
-                            fixedSize: const Size(double.infinity, 64),
-                            side: const BorderSide(
-                              color: Color(0xff1C5631),
-                              width: 2,
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 12,
-                              horizontal: 16,
-                            ),
-                          ),
-                          child: const Text(
-                            'Adicionar cesta',
-                            style: TextStyle(
-                              fontSize: 20,
-                              color: Color(0xff1C5631),
-                            ),
-                          ),
+                      const Text(
+                        'Quantidade de parcelas *',
+                        style: TextStyle(
+                          color: AppColors.greenText,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 20,
                         ),
                       ),
-                      if (field.errorText != null)
-                        Text(
-                          field.errorText!,
+                      GridView.count(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        childAspectRatio: 2.2,
+                        children: [
+                          for (var count = 1; count <= 3; count++)
+                            OutlinedButton(
+                              onPressed: () =>
+                                  setState(() => _installmentCount = count),
+                              style: _optionButtonStyle(
+                                selected: _installmentCount == count,
+                              ),
+                              child: Text('$count'),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(255, 255, 255, 255),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      spacing: 8,
+                      children: [
+                        const Text(
+                          'Data da venda',
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
+                            color: AppColors.greenText,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
-                      for (var i = 0; i < _basketLines.length; i++)
-                        _BasketLineCard(
-                          line: _basketLines[i],
-                          onDecrement: () => _changeQuantity(i, -1),
-                          onIncrement: () => _changeQuantity(i, 1),
+                        AppTextFormField(
+                          controller: _dateController,
+                          labelText: 'Data da venda *',
+                          keyboardType: TextInputType.datetime,
+                          inputFormatters: [FormatDate()],
+                          validator: (value) {
+                            if (value == null || value.trim().length < 10) {
+                              return 'Informe a data da venda';
+                            }
+                            return null;
+                          },
                         ),
-                    ],
-                  );
-                },
-              ),
-              DropdownButtonFormField<int>(
-                initialValue: _installmentCount,
-                decoration: const InputDecoration(labelText: 'Quantidade de parcelas *'),
-                items: [
-                  for (var n = 1; n <= 3; n++)
-                    DropdownMenuItem(value: n, child: Text('$n')),
+                        const Text(
+                          'Valor total da venda (R\$)',
+                          style: TextStyle(
+                            color: AppColors.greenText,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        AppTextFormField(
+                          controller: _totalController,
+                          labelText: 'Valor total da venda *',
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: [FormatMoney()],
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Informe o valor total';
+                            }
+                            if (parseMoneyField(value) <= 0) {
+                              return 'O valor deve ser maior que zero';
+                            }
+                            return null;
+                          },
+                        ),
+                        if (_basketLines.isNotEmpty)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: OutlinedButton(
+                              onPressed: _useSuggestedTotal,
+                              style: _suggestedAmountButtonStyle,
+                              child: Text(
+                                formatCurrency(_suggestedTotal),
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  FilledButton(
+                    onPressed: _isSubmitting ? null : _submitForm,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.secondary,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 32,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    child: const Text(
+                      'Registrar venda',
+                      style: TextStyle(color: AppColors.white, fontSize: 24),
+                    ),
+                  ),
                 ],
-                onChanged: (value) {
-                  if (value == null) return;
-                  setState(() => _installmentCount = value);
-                },
               ),
-              TextFormField(
-                controller: _dateController,
-                decoration: const InputDecoration(labelText: 'Data da Venda *'),
-                keyboardType: TextInputType.datetime,
-                inputFormatters: [FormatDate()],
-                validator: (value) {
-                  if (value == null || value.trim().length < 10) {
-                    return 'Informe a data da venda';
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _totalController,
-                decoration: InputDecoration(
-                  labelText: 'Valor total da venda *',
-                  helperText: _totalEditedManually
-                      ? 'Sugerido: ${formatCurrency(_suggestedTotal)}'
-                      : 'Calculado automaticamente pelas cestas',
-                  suffixIcon: _totalEditedManually
-                      ? IconButton(
-                          tooltip: 'Usar valor sugerido',
-                          onPressed:
-                              _basketLines.isEmpty ? null : _useSuggestedTotal,
-                          icon: const Icon(Icons.refresh),
-                        )
-                      : null,
-                ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [FormatMoney()],
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Informe o valor total';
-                  }
-                  if (parseMoneyField(value) <= 0) {
-                    return 'O valor deve ser maior que zero';
-                  }
-                  return null;
-                },
-              ),
-              FilledButton(
-                onPressed: _isSubmitting ? null : _submitForm,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.greenButton,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16,
-                    horizontal: 32,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: const Text(
-                  'Registrar Venda',
-                  style: TextStyle(color: Color(0xff1C5631), fontSize: 24),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
         ),
         if (_isSubmitting) ...[
           ModalBarrier(
@@ -284,9 +376,8 @@ class _SaleRegistrationState extends State<SaleRegistration> {
 
   Future<void> _submitForm() async {
     if (_selectedCustomer == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecione um cliente')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Selecione um cliente')));
       return;
     }
     if (!_formKey.currentState!.validate()) return;
@@ -339,9 +430,7 @@ class _SaleRegistrationState extends State<SaleRegistration> {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Não foi possível registrar a venda: $error'),
-        ),
+        SnackBar(content: Text('Não foi possível registrar a venda: $error')),
       );
     }
   }
@@ -385,47 +474,6 @@ class _SaleRegistrationLoading extends StatelessWidget {
   }
 }
 
-class _CustomerSection extends StatelessWidget {
-  const _CustomerSection({required this.customer, required this.onSelect});
-
-  final Customer? customer;
-  final VoidCallback onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      spacing: 8,
-      children: [
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            onPressed: onSelect,
-            style: OutlinedButton.styleFrom(
-              alignment: Alignment.centerLeft,
-              fixedSize: const Size(double.infinity, 64),
-              side: const BorderSide(color: Color(0xff1C5631), width: 2),
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            ),
-            child: const Text(
-              'Selecionar Cliente',
-              style: TextStyle(fontSize: 20, color: Color(0xff1C5631)),
-            ),
-          ),
-        ),
-        InputDecorator(
-          decoration: const InputDecoration(labelText: 'Cliente *'),
-          child: Text(
-            customer == null
-                ? 'Nenhum cliente selecionado'
-                : '${customer!.name}, CPF: ${formatCpf(customer!.documentCPF)}',
-            style: const TextStyle(fontSize: 16),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _BasketLineCard extends StatelessWidget {
   const _BasketLineCard({
     required this.line,
@@ -439,37 +487,56 @@ class _BasketLineCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 8,
-          children: [
-            Text(
-              line.basket.name,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 255, 255, 255),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 8,
+        children: [
+          Text(
+            line.basket.name,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: AppColors.greenText,
             ),
-            Text(
-              '${formatCurrency(line.basket.price)} · Subtotal ${formatCurrency(line.subtotal)}',
-            ),
-            Row(
-              children: [
-                const Text('Quantidade'),
-                const Spacer(),
-                IconButton(
-                  onPressed: onDecrement,
-                  icon: const Icon(Icons.remove_circle_outline),
+          ),
+          Text(
+            '${formatCurrency(line.basket.price)} · Subtotal ${formatCurrency(line.subtotal)}',
+            style: const TextStyle(color: AppColors.primary),
+          ),
+          Row(
+            children: [
+              const Text(
+                'Quantidade',
+                style: TextStyle(
+                  color: AppColors.greenText,
+                  fontWeight: FontWeight.w900,
                 ),
-                Text('${line.quantity}', style: const TextStyle(fontSize: 18)),
-                IconButton(
-                  onPressed: onIncrement,
-                  icon: const Icon(Icons.add_circle_outline),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: onDecrement,
+                icon: const Icon(
+                  Icons.remove_circle_outline,
+                  color: AppColors.primary,
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+              Text('${line.quantity}', style: const TextStyle(fontSize: 18)),
+              IconButton(
+                onPressed: onIncrement,
+                icon: const Icon(
+                  Icons.add_circle_outline,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

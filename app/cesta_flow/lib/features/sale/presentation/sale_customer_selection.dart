@@ -198,8 +198,9 @@ class _CustomerSelectionState extends State<CustomerSelection> {
                 final customer = _filteredCustomers[index];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: _CustomerSelectionCard(
-                    customer: customer,
+                  child: CustomerSelectionCard(
+                    name: customer.name,
+                    cpf: customer.documentCPF,
                     onTap: () => Navigator.pop(context, customer),
                   ),
                 );
@@ -359,15 +360,25 @@ class _CustomerSelectionState extends State<CustomerSelection> {
   }
 }
 
-class _CustomerSelectionCard extends StatelessWidget {
-  const _CustomerSelectionCard({required this.customer, required this.onTap});
+class CustomerSelectionCard extends StatelessWidget {
+  const CustomerSelectionCard({
+    super.key,
+    required this.name,
+    this.cpf,
+    this.showInitials = true,
+    this.borderColor,
+    this.onTap,
+  });
 
-  final Customer customer;
-  final VoidCallback onTap;
+  final String name;
+  final String? cpf;
+  final bool showInitials;
+  final Color? borderColor;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final initials = customer.name
+    final initials = name
         .trim()
         .split(RegExp(r'\s+'))
         .where((part) => part.isNotEmpty)
@@ -375,70 +386,81 @@ class _CustomerSelectionCard extends StatelessWidget {
         .map((part) => part[0].toUpperCase())
         .join();
 
+    final radius = BorderRadius.circular(18);
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: const Color(0xFFE7F1E9),
+            child: !showInitials || initials.isEmpty
+                ? const Icon(
+                    Icons.person_outline_rounded,
+                    color: AppColors.primary,
+                  )
+                : Text(
+                    initials,
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF18251F),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    height: 1.25,
+                  ),
+                ),
+                if (cpf != null) ...[
+                  const SizedBox(height: 5),
+                  Text(
+                    'CPF: $cpf',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF59665E),
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (onTap != null) ...[
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right_rounded, color: Color(0xFF718078)),
+          ],
+        ],
+      ),
+    );
+
     return Material(
       color: Colors.white,
       elevation: 1,
       shadowColor: const Color(0xFF194D30).withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: const Color(0xFFE7F1E9),
-                child: initials.isEmpty
-                    ? const Icon(
-                        Icons.person_outline_rounded,
-                        color: AppColors.primary,
-                      )
-                    : Text(
-                        initials,
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      customer.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF18251F),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        height: 1.25,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      'CPF: ${customer.documentCPF}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF59665E),
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right_rounded, color: Color(0xFF718078)),
-            ],
-          ),
+      shape: RoundedRectangleBorder(
+        borderRadius: radius,
+        side: BorderSide(
+          color: borderColor ?? Colors.transparent,
+          width: borderColor == null ? 0 : 2,
         ),
       ),
+      child: onTap == null
+          ? content
+          : InkWell(onTap: onTap, borderRadius: radius, child: content),
     );
   }
 }
