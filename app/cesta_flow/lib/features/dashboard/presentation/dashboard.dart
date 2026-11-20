@@ -93,50 +93,54 @@ class _DashboardState extends State<Dashboard> {
     return Scaffold(
       backgroundColor: const Color(0xFFF0FDF4),
       appBar: const TopBar(pagTitle: 'Início', showDrawer: true),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 14),
-            MetricsRow(
-              cards: [
-                MetricCard(
-                  title: 'Vendas',
-                  value: _metricValue(formatCurrency(_salesAmountLast7Days)),
-                  subtitle: 'Últimos 7 dias',
-                  icon: Icons.shopping_cart,
-                  iconColor: const Color(0xFF1D5335),
-                ),
-                MetricCard(
-                  title: 'Clientes',
-                  value: _metricValue(_customersCount.toString()),
-                  subtitle: 'Cadastrados',
-                  icon: Icons.people,
-                  iconColor: const Color(0xFF1D5335),
-                ),
-                MetricCard(
-                  title: 'Pendências',
-                  value: _metricValue(_pendingCustomersCount.toString()),
-                  subtitle: 'Sem pagamento',
-                  icon: Icons.warning,
-                  iconColor: const Color(0xFFC62828),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'Últimas vendas',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.black,
+      body: RefreshIndicator(
+        onRefresh: _loadDashboardData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 14),
+              MetricsRow(
+                cards: [
+                  MetricCard(
+                    title: 'Vendas',
+                    value: _metricValue(formatCurrency(_salesAmountLast7Days)),
+                    subtitle: 'Últimos 7 dias',
+                    icon: Icons.shopping_cart,
+                    iconColor: const Color(0xFF1D5335),
+                  ),
+                  MetricCard(
+                    title: 'Clientes',
+                    value: _metricValue(_customersCount.toString()),
+                    subtitle: 'Cadastrados',
+                    icon: Icons.people,
+                    iconColor: const Color(0xFF1D5335),
+                  ),
+                  MetricCard(
+                    title: 'Pendências',
+                    value: _metricValue(_pendingCustomersCount.toString()),
+                    subtitle: 'Sem pagamento',
+                    icon: Icons.warning,
+                    iconColor: const Color(0xFFC62828),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 14),
-            ..._buildSalesSection(),
-            const SizedBox(height: 100), // space for FAB
-          ],
+              const SizedBox(height: 14),
+              Text(
+                'Últimas vendas',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.black,
+                ),
+              ),
+              const SizedBox(height: 14),
+              ..._buildSalesSection(),
+              const SizedBox(height: 100), // space for FAB
+            ],
+          ),
         ),
       ),
       // Floating Action Button
