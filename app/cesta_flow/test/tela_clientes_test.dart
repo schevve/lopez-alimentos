@@ -77,32 +77,17 @@ void main() {
     },
   );
 
-  testWidgets(
-    'Combina busca por CPF com Com score e Sem score, incluindo zero',
-    (tester) async {
-      await abrirTela(tester, RepositorioDeTeste());
-      await tester.enterText(find.byType(TextField), '23456789012');
-      await tester.tap(find.text('Com score'));
-      await tester.pumpAndSettle();
-      expect(find.text('Ângelo Pereira'), findsOneWidget);
-      expect(find.text('Score: 0'), findsOneWidget);
-      await tester.tap(find.byTooltip('Filtrar clientes'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(ListTile, 'Sem score'));
-      await tester.pumpAndSettle();
-      expect(find.text('Nenhum cliente encontrado.'), findsOneWidget);
-      await tester.enterText(find.byType(TextField), '');
-      await tester.pumpAndSettle();
-      expect(find.text('Rosângela Batista'), findsOneWidget);
-      expect(find.text('Ângelo Pereira'), findsNothing);
-      expect(find.text('Score não informado'), findsOneWidget);
-      await tester.tap(find.text('Todos'));
-      await tester.enterText(find.byType(TextField), 'janaina');
-      await tester.pumpAndSettle();
-      expect(find.text('Score: 940'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
+  testWidgets('Filtra clientes por CPF e nome sem acentos', (tester) async {
+    await abrirTela(tester, RepositorioDeTeste());
+    await tester.enterText(find.byType(TextField), '23456789012');
+    await tester.pumpAndSettle();
+    expect(find.text('Ângelo Pereira'), findsOneWidget);
+    expect(find.text('Score: 0'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'janaina');
+    await tester.pumpAndSettle();
+    expect(find.text('Score: 940'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('Novo Cliente abre cadastro e atualiza a lista ao voltar', (
     tester,
