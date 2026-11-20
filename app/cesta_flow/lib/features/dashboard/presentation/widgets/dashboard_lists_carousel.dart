@@ -3,7 +3,7 @@ import 'package:cesta_flow/core/constants/util/format_currency.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/installment_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
-import 'package:cesta_flow/features/dashboard/presentation/widgets/pending_payment_card.dart';
+import 'package:cesta_flow/features/dashboard/presentation/widgets/payment_summary_card.dart';
 import 'package:cesta_flow/features/dashboard/presentation/widgets/sale_card.dart';
 import 'package:flutter/material.dart';
 
@@ -203,12 +203,13 @@ class _DashboardListsCarouselState extends State<DashboardListsCarousel> {
     final due = installment.dueDate;
     final dueLabel = due == null ? 'data não definida' : _formatDate(due);
 
-    return PendingPaymentCard(
-      saleId: installment.saleId,
-      customerName: customer?.name ?? 'Cliente #${customerId ?? installment.saleId}',
-      dueDateLabel: dueLabel,
+    return PaymentSummaryCard(
+      title: customer?.name ?? 'Cliente #${customerId ?? installment.saleId}',
+      subtitle: 'Previsto para $dueLabel',
       amount: formatCurrency(installment.expectedAmount),
-      isOverdue: _isOverdue(due),
+      amountLabel: 'Valor previsto',
+      badge: badgeForUnpaidDueDate(due),
+      saleId: installment.saleId,
       onAfterReceive: widget.onAfterReceive,
     );
   }
@@ -228,14 +229,6 @@ class _DashboardListsCarouselState extends State<DashboardListsCarousel> {
       amount: formatCurrency(sale.price),
       onAfterReceive: widget.onAfterReceive,
     );
-  }
-
-  bool _isOverdue(DateTime? dueDate) {
-    if (dueDate == null) return false;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final dueDay = DateTime(dueDate.year, dueDate.month, dueDate.day);
-    return dueDay.isBefore(today);
   }
 
   String _formatDate(DateTime date) {
