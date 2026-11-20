@@ -8,6 +8,7 @@ import '../db_helper.dart';
 import '../model/installment_model.dart';
 import '../model/sale_model.dart';
 import '../remote_deletion.dart';
+import '../sync_timestamps.dart';
 import '../sync_entity_lookup.dart';
 import 'sale_repository.dart';
 
@@ -28,10 +29,16 @@ class InstallmentRepository {
     if (sale == null || sale.isDeleted) {
       throw StateError('Venda não encontrada.');
     }
-    final installment = (value.saleUuid.isEmpty
-            ? value.copyWith(saleUuid: sale.uuid)
-            : value)
-        .copyWith(isSynced: false);
+    final withSale = value.saleUuid.isEmpty
+        ? value.copyWith(saleUuid: sale.uuid)
+        : value;
+    final installment = withSale.copyWith(
+      updatedAt: SyncTimestamps.forCreate(
+        withSale.createdAt,
+        withSale.updatedAt,
+      ),
+      isSynced: false,
+    );
     final id = db.runInTransaction(TxMode.write, () {
       if (db.box<Sale>().get(installment.saleId) == null) {
         throw StateError('Venda não encontrada.');
@@ -257,7 +264,10 @@ class InstallmentRepository {
       throw ArgumentError('ID obrigatório para atualizar.');
     }
     final db = await _dbHelper.store;
-    final pending = value.copyWith(isSynced: false);
+    final pending = value.copyWith(
+      updatedAt: SyncTimestamps.forUpdate(),
+      isSynced: false,
+    );
     final updated = db.runInTransaction(TxMode.write, () {
       if (db.box<Installment>().get(pending.id!) == null) return 0;
       if (db.box<Sale>().get(pending.saleId) == null) {

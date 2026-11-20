@@ -7,6 +7,7 @@ import '../db_helper.dart';
 import '../model/customer_model.dart';
 import '../model/sale_model.dart';
 import '../remote_deletion.dart';
+import '../sync_timestamps.dart';
 import '../sync_entity_lookup.dart';
 import 'sale_repository.dart';
 
@@ -17,7 +18,10 @@ class CustomerRepository {
 
   Future<int> registerCustomer(Customer value) async {
     final db = await _dbHelper.store;
-    final pending = value.copyWith(isSynced: false);
+    final pending = value.copyWith(
+      updatedAt: SyncTimestamps.forCreate(value.createdAt, value.updatedAt),
+      isSynced: false,
+    );
     final id = db.runInTransaction(TxMode.write, () {
       return db.box<Customer>().put(pending);
     });
@@ -25,7 +29,10 @@ class CustomerRepository {
     final client = activeSupabaseClient();
     if (client == null) return id;
     await client.from('customers').insert(saved.toRemote());
-    db.box<Customer>().put(saved.copyWith(isSynced: true), mode: PutMode.update);
+    db.box<Customer>().put(
+      saved.copyWith(isSynced: true),
+      mode: PutMode.update,
+    );
     return id;
   }
 
@@ -46,12 +53,16 @@ class CustomerRepository {
       query.close();
     }
   }
+
   Future<int> updateCustomer(Customer value) async {
     if (value.id == null || value.id == 0) {
       throw ArgumentError('ID obrigatório para atualizar.');
     }
     final db = await _dbHelper.store;
-    final pending = value.copyWith(isSynced: false);
+    final pending = value.copyWith(
+      updatedAt: SyncTimestamps.forUpdate(),
+      isSynced: false,
+    );
     final updated = db.runInTransaction(TxMode.write, () {
       if (db.box<Customer>().get(pending.id!) == null) return 0;
       db.box<Customer>().put(pending, mode: PutMode.update);
@@ -60,8 +71,14 @@ class CustomerRepository {
     if (updated == 0) return 0;
     final client = activeSupabaseClient();
     if (client == null) return 1;
-    await client.from('customers').update(pending.toRemote()).eq('id', pending.uuid);
-    db.box<Customer>().put(pending.copyWith(isSynced: true), mode: PutMode.update);
+    await client
+        .from('customers')
+        .update(pending.toRemote())
+        .eq('id', pending.uuid);
+    db.box<Customer>().put(
+      pending.copyWith(isSynced: true),
+      mode: PutMode.update,
+    );
     return 1;
   }
 
@@ -72,9 +89,7 @@ class CustomerRepository {
 
     final sales = db
         .box<Sale>()
-        .query(
-          Sale_.customerId.equals(id).and(Sale_.isDeleted.equals(false)),
-        )
+        .query(Sale_.customerId.equals(id).and(Sale_.isDeleted.equals(false)))
         .build();
     final saleIds = sales.find().map((sale) => sale.id!).toList();
     sales.close();
@@ -102,13 +117,19 @@ class CustomerRepository {
         .from('customers')
         .update(remoteDeletionStamp(now))
         .eq('id', deleted.uuid);
-    db.box<Customer>().put(deleted.copyWith(isSynced: true), mode: PutMode.update);
+    db.box<Customer>().put(
+      deleted.copyWith(isSynced: true),
+      mode: PutMode.update,
+    );
     return 1;
   }
 
   Future<void> pushUnsynced() async {
     final db = await _dbHelper.store;
-    final query = db.box<Customer>().query(Customer_.isSynced.equals(false)).build();
+    final query = db
+        .box<Customer>()
+        .query(Customer_.isSynced.equals(false))
+        .build();
     List<Customer> pending;
     try {
       pending = query.find();
@@ -135,7 +156,10 @@ class CustomerRepository {
         }
       }
       if (!synced) continue;
-      db.box<Customer>().put(customer.copyWith(isSynced: true), mode: PutMode.update);
+      db.box<Customer>().put(
+        customer.copyWith(isSynced: true),
+        mode: PutMode.update,
+      );
     }
   }
 

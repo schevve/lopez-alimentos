@@ -12,6 +12,7 @@ import '../model/sale_basket_input.dart';
 import '../model/sale_basket_model.dart';
 import '../model/sale_model.dart';
 import '../remote_deletion.dart';
+import '../sync_timestamps.dart';
 import '../sync_entity_lookup.dart';
 
 class SaleBasketLine {
@@ -83,12 +84,14 @@ class SaleRepository {
         }
         resolvedLines.add((basket: catalog, line: line, isNew: false));
       } else {
+        final basketCreatedAt = sale.createdAt;
         resolvedLines.add((
           basket: Basket(
             uuid: const Uuid().v4(),
             name: line.name!.trim(),
             price: line.unitPrice!,
-            createdAt: sale.createdAt,
+            createdAt: basketCreatedAt,
+            updatedAt: SyncTimestamps.forCreate(basketCreatedAt),
           ),
           line: line,
           isNew: true,
@@ -96,7 +99,8 @@ class SaleRepository {
       }
     }
 
-    final pendingSale = sale.copyWith(isSynced: false);
+    final saleStamp = SyncTimestamps.forCreate(sale.createdAt, sale.updatedAt);
+    final pendingSale = sale.copyWith(updatedAt: saleStamp, isSynced: false);
     final createdBasketIds = <int>[];
     final linkIds = <int>[];
     final saleId = db.runInTransaction(TxMode.write, () {
@@ -122,6 +126,7 @@ class SaleRepository {
               basketUuid: resolved.basket.uuid,
               quantity: resolved.line.quantity,
               createdAt: pendingSale.createdAt,
+              updatedAt: saleStamp,
               isSynced: false,
             ),
           ),
@@ -155,6 +160,7 @@ class SaleRepository {
           basketUuid: resolved.basket.uuid,
           quantity: resolved.line.quantity,
           createdAt: pendingSale.createdAt,
+          updatedAt: saleStamp,
         ).toRemote(),
       );
       final link = db.box<SaleBasket>().get(linkIds[index]);
@@ -192,7 +198,10 @@ class SaleRepository {
       );
     }
     final db = await _dbHelper.store;
-    final pending = _withCurrentUser(value).copyWith(isSynced: false);
+    final pending = _withCurrentUser(value).copyWith(
+      updatedAt: SyncTimestamps.forUpdate(),
+      isSynced: false,
+    );
     final updated = db.runInTransaction(TxMode.write, () {
       if (db.box<Sale>().get(pending.id!) == null) return 0;
       if (db.box<Customer>().get(pending.customerId) == null) {
