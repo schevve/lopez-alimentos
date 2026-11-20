@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -532,6 +533,7 @@ class SaleRepository {
   }
 
   Future<void> pullSince(DateTime since) async {
+    debugPrint('[SaleRepository.pullSince] since=${since.toUtc().toIso8601String()}');
     final db = await _dbHelper.store;
     await _pullSalesSince(db, since);
   }
@@ -544,26 +546,42 @@ class SaleRepository {
           .from('sales')
           .select()
           .gt('updated_at', iso);
-    } catch (_) {
+    } catch (e, stackTrace) {
+      debugPrint('[SaleRepository.pullSince] erro ao buscar: $e');
+      debugPrint('$stackTrace');
       return;
     }
+    debugPrint('[SaleRepository.pullSince] ${rows.length} registro(s) remoto(s)');
+    var merged = 0;
+    var skipped = 0;
     for (final raw in rows) {
       if (raw is! Map<String, dynamic>) continue;
       final remote = Sale.fromMap(raw);
-      if (remote.customerUuid.isEmpty) continue;
+      if (remote.customerUuid.isEmpty) {
+        skipped++;
+        continue;
+      }
       final customer = findCustomerByUuid(db, remote.customerUuid);
-      if (customer?.id == null) continue;
+      if (customer?.id == null) {
+        skipped++;
+        continue;
+      }
       final existing = findSaleByUuid(db, remote.uuid);
-      final merged = remote.copyWith(
+      final mergedSale = remote.copyWith(
         id: existing?.id,
         customerId: customer!.id!,
         isSynced: true,
       );
       db.box<Sale>().put(
-        merged,
+        mergedSale,
         mode: existing == null ? PutMode.put : PutMode.update,
       );
+      merged++;
     }
+    debugPrint(
+      '[SaleRepository.pullSince] $merged venda(s) mesclada(s), '
+      '$skipped ignorada(s)',
+    );
   }
 
 }

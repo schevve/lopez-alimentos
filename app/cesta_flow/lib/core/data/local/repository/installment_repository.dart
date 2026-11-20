@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -397,33 +398,52 @@ class InstallmentRepository {
 
   Future<void> pullSince(DateTime since) async {
     final iso = since.toUtc().toIso8601String();
+    debugPrint('[InstallmentRepository.pullSince] since=$iso');
     final List<dynamic> rows;
     try {
       rows = await Supabase.instance.client
           .from('installments')
           .select()
           .gt('updated_at', iso);
-    } catch (_) {
+    } catch (e, stackTrace) {
+      debugPrint('[InstallmentRepository.pullSince] erro ao buscar: $e');
+      debugPrint('$stackTrace');
       return;
     }
+    debugPrint(
+      '[InstallmentRepository.pullSince] ${rows.length} registro(s) remoto(s)',
+    );
     final db = await _dbHelper.store;
+    var merged = 0;
+    var skipped = 0;
     for (final raw in rows) {
       if (raw is! Map<String, dynamic>) continue;
       final remote = Installment.fromMap(raw);
-      if (remote.saleUuid.isEmpty) continue;
+      if (remote.saleUuid.isEmpty) {
+        skipped++;
+        continue;
+      }
       final sale = findSaleByUuid(db, remote.saleUuid);
-      if (sale?.id == null) continue;
+      if (sale?.id == null) {
+        skipped++;
+        continue;
+      }
       final existing = findInstallmentByUuid(db, remote.uuid);
-      final merged = remote.copyWith(
+      final mergedInstallment = remote.copyWith(
         id: existing?.id,
         saleId: sale!.id!,
         saleUuid: sale.uuid,
         isSynced: true,
       );
       db.box<Installment>().put(
-        merged,
+        mergedInstallment,
         mode: existing == null ? PutMode.put : PutMode.update,
       );
+      merged++;
     }
+    debugPrint(
+      '[InstallmentRepository.pullSince] $merged parcela(s) mesclada(s), '
+      '$skipped ignorada(s)',
+    );
   }
 }

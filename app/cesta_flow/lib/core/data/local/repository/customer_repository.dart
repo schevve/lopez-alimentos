@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../objectbox.g.dart';
@@ -140,25 +141,32 @@ class CustomerRepository {
 
   Future<void> pullSince(DateTime since) async {
     final iso = since.toUtc().toIso8601String();
+    debugPrint('[CustomerRepository.pullSince] since=$iso');
     final List<dynamic> rows;
     try {
       rows = await Supabase.instance.client
           .from('customers')
           .select()
           .gt('updated_at', iso);
-    } catch (_) {
+    } catch (e, stackTrace) {
+      debugPrint('[CustomerRepository.pullSince] erro ao buscar: $e');
+      debugPrint('$stackTrace');
       return;
     }
+    debugPrint('[CustomerRepository.pullSince] ${rows.length} registro(s) remoto(s)');
     final db = await _dbHelper.store;
+    var merged = 0;
     for (final raw in rows) {
       if (raw is! Map<String, dynamic>) continue;
       final remote = Customer.fromMap(raw);
       final existing = findCustomerByUuid(db, remote.uuid);
-      final merged = remote.copyWith(
-        id: existing?.id,
-        isSynced: true,
+      final mergedCustomer = remote.copyWith(id: existing?.id, isSynced: true);
+      db.box<Customer>().put(
+        mergedCustomer,
+        mode: existing == null ? PutMode.put : PutMode.update,
       );
-      db.box<Customer>().put(merged, mode: existing == null ? PutMode.put : PutMode.update);
+      merged++;
     }
+    debugPrint('[CustomerRepository.pullSince] $merged cliente(s) mesclado(s)');
   }
 }
