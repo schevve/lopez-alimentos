@@ -41,8 +41,13 @@ String? validateCep(String? value) {
   return onlyDigits(value).length == 8 ? null : 'O CEP deve ter 8 dígitos.';
 }
 
-String? validateCpf(String? value) =>
-    onlyDigits(value).length == 11 ? null : 'O CPF deve ter 11 dígitos.';
+String? validateCpf(String? value) {
+  final cpf = onlyDigits(value);
+  if (cpf.isEmpty) return 'Informe o CPF.';
+  if (cpf.length != 11) return 'O CPF deve ter 11 dígitos.';
+  if (!isValidCpf(value)) return 'Informe um CPF válido.';
+  return null;
+}
 
 String? validateRg(String? value) {
   final digits = onlyDigits(value);

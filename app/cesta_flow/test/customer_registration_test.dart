@@ -48,7 +48,7 @@ Future<void> _fillCustomerForm(WidgetTester tester) async {
     (6, 'Toledo'),
     (7, 'Rua das Flores'),
     (8, '10'),
-    (9, '12345678901'),
+    (9, '11144477735'),
   ]) {
     await tester.ensureVisible(fields.at(index));
     await tester.enterText(fields.at(index), value);
@@ -82,8 +82,7 @@ void main() {
         ),
       ),
     );
-    await tester.enterText(find.byType(TextFormField).at(5), 'PR');
-    await tester.enterText(find.byType(TextFormField).at(6), 'Toledo');
+    await _fillCustomerForm(tester);
 
     await tester.ensureVisible(_submitButton());
     await tester.tap(_submitButton());
