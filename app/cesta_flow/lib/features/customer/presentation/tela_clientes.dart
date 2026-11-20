@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/constants/util/launch_phone_call.dart';
 import 'package:cesta_flow/features/customer/presentation/customer_details.dart';
 import 'package:flutter/material.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
@@ -119,6 +120,21 @@ class _ClientesScreenState extends State<ClientesScreen> {
       await Navigator.of(
         context,
       ).push<void>(MaterialPageRoute(builder: (_) => const SaleRegistration()));
+      return;
+    }
+
+    if (acao == 'Ligar') {
+      final abriu = await launchPhoneCall(cliente.phone);
+      if (!mounted) return;
+      if (!abriu) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Não foi possível abrir o aplicativo de chamadas.'),
+            ),
+          );
+      }
       return;
     }
 
