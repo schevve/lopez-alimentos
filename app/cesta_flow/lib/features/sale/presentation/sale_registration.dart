@@ -10,7 +10,7 @@ import 'package:cesta_flow/core/data/local/repository/installment_repository.dar
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/sale/presentation/basket_selection.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_customer_selection.dart';
-import 'package:cesta_flow/features/sale/presentation/sale_success.dart';
+import 'package:cesta_flow/features/shared/registration_success_screen.dart';
 import 'package:cesta_flow/features/shared/app_text_form_field.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
@@ -420,9 +420,8 @@ class _SaleRegistrationState extends State<SaleRegistration> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => SaleSuccess(
-            valor: saleData.price,
-            clienteNome: _selectedCustomer!.name,
+          builder: (context) => const RegistrationSuccessScreen(
+            message: 'Venda registrada!',
           ),
         ),
       );

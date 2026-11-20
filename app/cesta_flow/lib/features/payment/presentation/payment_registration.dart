@@ -7,7 +7,7 @@ import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
-import 'package:cesta_flow/features/payment/presentation/payment_success.dart';
+import 'package:cesta_flow/features/shared/registration_success_screen.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_customer_selection.dart';
 import 'package:cesta_flow/features/shared/app_text_form_field.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
@@ -495,9 +495,8 @@ class _PaymentRegistration extends State<PaymentRegistration> {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => PaymentSuccess(
-            paymentValue: formatCurrency(amount),
-            dueDate: nextVisitText,
+          builder: (context) => const RegistrationSuccessScreen(
+            message: 'Pagamento registrado!',
           ),
         ),
       );
