@@ -176,22 +176,49 @@ class InstallmentRepository {
 
   bool _isPaid(Installment installment) => installment.paymentDate != null;
 
+  List<Installment> _sortedUnpaidInstallments(List<Installment> installments) {
+    final pending = installments.where((item) => !_isPaid(item)).toList()
+      ..sort((a, b) {
+        final dueA = a.dueDate;
+        final dueB = b.dueDate;
+        if (dueA == null && dueB == null) {
+          return a.createdAt.compareTo(b.createdAt);
+        }
+        if (dueA == null) return 1;
+        if (dueB == null) return -1;
+        final dueCompare = dueA.compareTo(dueB);
+        if (dueCompare != 0) return dueCompare;
+        return a.createdAt.compareTo(b.createdAt);
+      });
+    return pending;
+  }
+
+  /// Atualiza [dueDate] das parcelas ainda não pagas após um registro de pagamento.
+  Future<void> rescheduleRemainingUnpaidInstallments({
+    required int saleId,
+    required DateTime firstDueDate,
+  }) async {
+    final pending = _sortedUnpaidInstallments(
+      await getInstallmentsBySaleId(saleId),
+    );
+    if (pending.isEmpty) return;
+    final now = DateTime.now();
+    for (var index = 0; index < pending.length; index++) {
+      final dueDate = DateTime(
+        firstDueDate.year,
+        firstDueDate.month + index,
+        firstDueDate.day,
+      );
+      await updateInstallment(
+        pending[index].copyWith(dueDate: dueDate, updatedAt: now),
+      );
+    }
+  }
+
   Future<Installment?> _nextUnpaidInstallment(int saleId) async {
-    final installments = await getInstallmentsBySaleId(saleId);
-    final pending =
-        installments.where((item) => !_isPaid(item)).toList()
-          ..sort((a, b) {
-            final dueA = a.dueDate;
-            final dueB = b.dueDate;
-            if (dueA == null && dueB == null) {
-              return a.createdAt.compareTo(b.createdAt);
-            }
-            if (dueA == null) return 1;
-            if (dueB == null) return -1;
-            final dueCompare = dueA.compareTo(dueB);
-            if (dueCompare != 0) return dueCompare;
-            return a.createdAt.compareTo(b.createdAt);
-          });
+    final pending = _sortedUnpaidInstallments(
+      await getInstallmentsBySaleId(saleId),
+    );
     if (pending.isEmpty) return null;
     return pending.first;
   }

@@ -64,3 +64,16 @@ String getCurrentFormattedDate() {
   final year = now.year.toString();
   return '$day/$month/$year';
 }
+
+DateTime? parseDateField(String value) {
+  final trimmed = value.trim();
+  if (trimmed.length < 10) return null;
+  final parts = trimmed.split('/');
+  if (parts.length != 3) return null;
+  final day = int.tryParse(parts[0]);
+  final month = int.tryParse(parts[1]);
+  final year = int.tryParse(parts[2]);
+  if (day == null || month == null || year == null) return null;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  return DateTime(year, month, day);
+}
