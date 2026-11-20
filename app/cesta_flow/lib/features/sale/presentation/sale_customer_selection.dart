@@ -198,8 +198,9 @@ class _CustomerSelectionState extends State<CustomerSelection> {
                 final customer = _filteredCustomers[index];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: _CustomerSelectionCard(
-                    customer: customer,
+                  child: CustomerSelectionCard(
+                    name: customer.name,
+                    cpf: customer.documentCPF,
                     onTap: () => Navigator.pop(context, customer),
                   ),
                 );
@@ -359,15 +360,25 @@ class _CustomerSelectionState extends State<CustomerSelection> {
   }
 }
 
-class _CustomerSelectionCard extends StatelessWidget {
-  const _CustomerSelectionCard({required this.customer, required this.onTap});
+class CustomerSelectionCard extends StatelessWidget {
+  const CustomerSelectionCard({
+    super.key,
+    required this.name,
+    this.cpf,
+    this.showInitials = true,
+    this.borderColor,
+    required this.onTap,
+  });
 
-  final Customer customer;
+  final String name;
+  final String? cpf;
+  final bool showInitials;
+  final Color? borderColor;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final initials = customer.name
+    final initials = name
         .trim()
         .split(RegExp(r'\s+'))
         .where((part) => part.isNotEmpty)
@@ -379,7 +390,13 @@ class _CustomerSelectionCard extends StatelessWidget {
       color: Colors.white,
       elevation: 1,
       shadowColor: const Color(0xFF194D30).withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(18),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(
+          color: borderColor ?? Colors.transparent,
+          width: borderColor == null ? 0 : 2,
+        ),
+      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
@@ -390,7 +407,7 @@ class _CustomerSelectionCard extends StatelessWidget {
               CircleAvatar(
                 radius: 24,
                 backgroundColor: const Color(0xFFE7F1E9),
-                child: initials.isEmpty
+                child: !showInitials || initials.isEmpty
                     ? const Icon(
                         Icons.person_outline_rounded,
                         color: AppColors.primary,
@@ -410,7 +427,7 @@ class _CustomerSelectionCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      customer.name,
+                      name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -420,16 +437,18 @@ class _CustomerSelectionCard extends StatelessWidget {
                         height: 1.25,
                       ),
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      'CPF: ${customer.documentCPF}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF59665E),
-                        fontSize: 13,
+                    if (cpf != null) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        'CPF: $cpf',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFF59665E),
+                          fontSize: 13,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
