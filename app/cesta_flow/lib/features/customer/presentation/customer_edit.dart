@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/constants/util/format_date.dart';
 import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
@@ -44,16 +45,5 @@ class CustomerEdit extends StatelessWidget {
       documentRG: data['rg'],
     );
     await repository.updateCustomer(updatedcustomer);
-  }
-
-  DateTime cleanDate(String dateString) {
-    final parts = dateString.split('/');
-    if (parts.length != 3) {
-      throw FormatException('Data inválida: $dateString');
-    }
-    final day = int.parse(parts[0]);
-    final month = int.parse(parts[1]);
-    final year = int.parse(parts[2]);
-    return DateTime(year, month, day);
   }
 }

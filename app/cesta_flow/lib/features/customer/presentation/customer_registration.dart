@@ -1,10 +1,10 @@
 import 'package:cesta_flow/core/constants/util/format_cpf.dart';
+import 'package:cesta_flow/core/constants/util/format_date.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:cesta_flow/features/shared/customer_form.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:objectbox/objectbox.dart' show UniqueViolationException;
 
 class CustomerRegistration extends StatefulWidget {
@@ -91,7 +91,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
     );
   }
 
-  String _digitos(String valor) => valor.replaceAll(RegExp(r'\D'), '');
+  String _digitos(String valor) => onlyDigits(valor);
 
   // Campos opcionais vazios viram null (o RG é único: "" repetido daria erro).
   String? _opcional(dynamic valor) {
@@ -152,67 +152,5 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
         _avisar('Não foi possível registrar o cliente. Tente novamente.');
       }
     }
-  }
-}
-
-String _formatDate(DateTime date) =>
-    '${date.day.toString().padLeft(2, '0')}/'
-    '${date.month.toString().padLeft(2, '0')}/${date.year}';
-
-DateTime cleanDate(String dateString) {
-  final parts = dateString.split('/');
-  if (parts.length != 3) {
-    throw FormatException('Data inválida: $dateString');
-  }
-  final day = int.parse(parts[0]);
-  final month = int.parse(parts[1]);
-  final year = int.parse(parts[2]);
-  return DateTime(year, month, day);
-}
-
-class FormatPhoneNumber extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digitsOnly = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digitsOnly.length == 11) {
-      final match = RegExp(r'^(\d{2})(\d{5})(\d{4})$').firstMatch(digitsOnly);
-      if (match != null) {
-        return TextEditingValue(
-          text: '(${match.group(1)}) ${match.group(2)}-${match.group(3)}',
-          selection: TextSelection.collapsed(offset: 14),
-        );
-      }
-    }
-    if (digitsOnly.length > 11) {
-      return oldValue;
-    }
-    return newValue;
-  }
-}
-
-class FormatDate extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digitsOnly = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digitsOnly.length > 8) {
-      return oldValue;
-    }
-    String formatted = '';
-    for (int i = 0; i < digitsOnly.length; i++) {
-      if (i == 2 || i == 4) {
-        formatted += '/';
-      }
-      formatted += digitsOnly[i];
-    }
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
   }
 }
