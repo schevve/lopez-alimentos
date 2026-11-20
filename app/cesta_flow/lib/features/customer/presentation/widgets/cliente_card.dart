@@ -34,52 +34,48 @@ class ClienteCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // NULL significa que o score ainda não foi informado, nunca score zero.
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final nome = Text(
-                cliente.name,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -.45,
-                  color: Color(0xFF18251F),
-                ),
-              );
-              final badge = Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0F3F1),
-                  borderRadius: BorderRadius.circular(24),
-                ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
                 child: Text(
-                  cliente.score == null
-                      ? 'Score não informado'
-                      : 'Score: ${_formatScore(cliente.score!)}',
+                  cliente.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF46524B),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -.45,
+                    color: Color(0xFF18251F),
                   ),
                 ),
-              );
-              if (constraints.maxWidth < 380 ||
-                  MediaQuery.textScalerOf(context).scale(14) > 18) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [nome, const SizedBox(height: 8), badge],
-                );
-              }
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: nome),
-                  const SizedBox(width: 12),
-                  badge,
-                ],
-              );
-            },
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F3F1),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Text(
+                    cliente.score == null
+                        ? 'Score não informado'
+                        : 'Score: ${_formatScore(cliente.score!)}',
+                    textAlign: TextAlign.end,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF46524B),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           Text(
