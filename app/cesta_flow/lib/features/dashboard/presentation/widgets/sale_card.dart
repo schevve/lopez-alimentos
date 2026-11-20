@@ -11,6 +11,7 @@ class SaleCard extends StatelessWidget {
   final String? distance;
   final String product;
   final String amount;
+  final Future<void> Function()? onAfterReceive;
   const SaleCard({
     required this.saleId,
     required this.name,
@@ -20,6 +21,7 @@ class SaleCard extends StatelessWidget {
     this.distance,
     required this.product,
     required this.amount,
+    this.onAfterReceive,
     super.key,
   });
   @override
@@ -191,14 +193,15 @@ class SaleCard extends StatelessWidget {
                       foreground: Colors.white,
                       onTap: saleId == null
                           ? null
-                          : () {
-                              Navigator.push(
+                          : () async {
+                              await Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) =>
                                       PaymentRegistration(saleId: saleId!),
                                 ),
                               );
+                              await onAfterReceive?.call();
                             },
                     ),
                   ),

@@ -259,6 +259,20 @@ class InstallmentRepository {
     }
   }
 
+  /// Parcelas não quitadas, ordenadas por data prevista de pagamento,
+  /// excluindo vendas excluídas.
+  Future<List<Installment>> getUnpaidInstallments() async {
+    final db = await _dbHelper.store;
+    final saleBox = db.box<Sale>();
+    final installments = await getAllInstallments();
+    final activeUnpaid = installments.where((installment) {
+      if (_isPaid(installment)) return false;
+      final sale = saleBox.get(installment.saleId);
+      return sale != null && !sale.isDeleted;
+    });
+    return _sortedUnpaidInstallments(activeUnpaid.toList());
+  }
+
   Future<int> updateInstallment(Installment value) async {
     if (value.id == null || value.id == 0) {
       throw ArgumentError('ID obrigatório para atualizar.');
