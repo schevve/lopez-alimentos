@@ -62,31 +62,6 @@ class _CustomerFormState extends State<CustomerForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(width: 4, height: 24, color: Colors.orange),
-
-              SizedBox(width: 8),
-
-              Icon(
-                Icons.person_add_alt_1_outlined,
-                color: Colors.orange,
-                size: 22,
-              ),
-
-              SizedBox(width: 8),
-
-              Text(
-                "IDENTIFICAÇÃO",
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.redAccent,
-                ),
-              ),
-            ],
-          ),
-          Padding(padding: EdgeInsetsGeometry.all(10)),
           Form(
             key: _formKey,
             child: Column(
@@ -179,46 +154,43 @@ class _CustomerFormState extends State<CustomerForm> {
                   keyboardType: TextInputType.number,
                   onSaved: (value) => _formData['rg'] = value,
                 ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _isSubmitting ? null : _submitForm,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.secondary,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16,
-                    horizontal: 32,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-              icon: _isSubmitting
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(
-                      Icons.person_add_alt_1_outlined,
-                      color: AppColors.white,
-                      size: 26,
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _isSubmitting ? null : _submitForm,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.secondary,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 32,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
                     ),
-              label: Text(
-                _isSubmitting ? 'Salvando...' : widget.buttonText,
-                style: TextStyle(
-                  color: AppColors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 2,
+                    icon: _isSubmitting
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(
+                            Icons.person_add_alt_1_outlined,
+                            color: AppColors.white,
+                            size: 26,
+                          ),
+                    label: Text(
+                      _isSubmitting ? 'Salvando...' : widget.buttonText,
+                      style: TextStyle(
+                        color: AppColors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ),
                 ),
-                ),
-              ),
+              ],
             ),
           ),
         ],
