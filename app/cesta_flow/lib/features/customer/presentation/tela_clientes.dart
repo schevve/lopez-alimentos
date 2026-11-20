@@ -5,6 +5,7 @@ import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 
 import '../../shared/top_bar.dart';
 import 'customer_registration.dart';
+
 import 'package:cesta_flow/features/sale/presentation/sale_registration.dart';
 
 import 'widgets/cliente_card.dart';
@@ -47,17 +48,37 @@ class _ClientesScreenState extends State<ClientesScreen> {
     _clientes = _repository.getAllCustomers();
   }
 
-  void _recarregar() {
-    setState(() {
-      _clientes = _repository.getAllCustomers();
-    });
+  Future<void> _recarregar({bool mostrarCarregamento = true}) async {
+    final future = _repository.getAllCustomers();
+    if (mostrarCarregamento) {
+      setState(() => _clientes = future);
+    }
+
+    try {
+      final clientes = await future;
+      if (mostrarCarregamento || !mounted) return;
+      setState(() => _clientes = Future.value(clientes));
+    } catch (error, stackTrace) {
+      if (mostrarCarregamento || !mounted) return;
+      setState(() => _clientes = Future.error(error, stackTrace));
+    }
   }
 
   Future<void> _novoCliente() async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(builder: (_) => const CustomerRegistration()),
+    final customer = await Navigator.of(context).push<Customer>(
+      MaterialPageRoute(
+        builder: (_) => CustomerRegistration(repository: _repository),
+      ),
     );
-    if (mounted) _recarregar();
+    if (!mounted) return;
+    _recarregar();
+    if (customer != null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('${customer.name} cadastrado com sucesso.')),
+        );
+    }
   }
 
   // Busca local por nome (sem acentos) ou CPF, combinada com o filtro de score.
@@ -112,9 +133,9 @@ class _ClientesScreenState extends State<ClientesScreen> {
     }
 
     if (acao == 'Nova Venda') {
-      await Navigator.of(context).push<void>(
-        MaterialPageRoute(builder: (_) => const SaleRegistration()),
-      );
+      await Navigator.of(
+        context,
+      ).push<void>(MaterialPageRoute(builder: (_) => const SaleRegistration()));
       return;
     }
 
@@ -238,7 +259,11 @@ class _ClientesScreenState extends State<ClientesScreen> {
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.person_add_alt_1_outlined, color: Colors.white, size: 26),
+                  Icon(
+                    Icons.person_add_alt_1_outlined,
+                    color: Colors.white,
+                    size: 26,
+                  ),
                   SizedBox(width: 8),
                   Text(
                     'Novo Cliente',
@@ -253,142 +278,172 @@ class _ClientesScreenState extends State<ClientesScreen> {
             ),
           ),
     floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-    body: FutureBuilder<List<Customer>>(
-      future: _clientes,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Não foi possível carregar os clientes.'),
-                TextButton(
-                  onPressed: _recarregar,
-                  child: const Text('Tentar novamente'),
+    body: RefreshIndicator(
+      onRefresh: () => _recarregar(mostrarCarregamento: false),
+      child: FutureBuilder<List<Customer>>(
+        future: _clientes,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const _PaginaRolavel(
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (snapshot.hasError) {
+            return _PaginaRolavel(
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Não foi possível carregar os clientes.'),
+                    TextButton(
+                      onPressed: _recarregar,
+                      child: const Text('Tentar novamente'),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          );
-        }
-        final todos = snapshot.data ?? [];
-        final clientes = _clientesFiltrados(todos);
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final largura = constraints.maxWidth;
-            final compacto = largura < 600;
-            final margem = largura < 360
-                ? 12.0
-                : compacto
-                ? 20.0
-                : 32.0;
-            final colunas = largura >= 1700
-                ? 4
-                : largura >= 1200
-                ? 3
-                : largura >= 720
-                ? 2
-                : 1;
-            final linhas = (clientes.length / colunas).ceil();
-            return CustomScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Container(
-                    margin: EdgeInsets.fromLTRB(margem, 16, margem, 12),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _verde,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: TextField(
-                      controller: _buscaController,
-                      onChanged: (_) => setState(() {}),
-                      decoration: InputDecoration(
-                        hintText: 'Buscar por nome, CPF...',
-                        hintStyle: const TextStyle(
-                          color: Color(0xFF808A84),
-                          fontSize: 18,
-                        ),
-                        fillColor: Colors.white,
-                        filled: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 20,
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.search,
-                          color: _verde,
-                          size: 26,
-                        ),
-                        suffixIcon: IconButton(
-                          tooltip: 'Filtrar clientes',
-                          onPressed: _abrirFiltros,
-                          icon: const Icon(
-                            Icons.tune,
-                            color: Color(0xFF46524B),
+              ),
+            );
+          }
+          final todos = snapshot.data ?? [];
+          final clientes = _clientesFiltrados(todos);
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final largura = constraints.maxWidth;
+              final compacto = largura < 600;
+              final margem = largura < 360
+                  ? 12.0
+                  : compacto
+                  ? 20.0
+                  : 32.0;
+              final colunas = largura >= 1700
+                  ? 4
+                  : largura >= 1200
+                  ? 3
+                  : largura >= 720
+                  ? 2
+                  : 1;
+              final linhas = (clientes.length / colunas).ceil();
+              return CustomScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Container(
+                      margin: EdgeInsets.fromLTRB(margem, 16, margem, 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _verde,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: TextField(
+                        controller: _buscaController,
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          hintText: 'Buscar por nome, CPF...',
+                          hintStyle: const TextStyle(
+                            color: Color(0xFF808A84),
+                            fontSize: 18,
+                          ),
+                          fillColor: Colors.white,
+                          filled: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 20,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: _verde,
+                            size: 26,
+                          ),
+                          suffixIcon: IconButton(
+                            tooltip: 'Filtrar clientes',
+                            onPressed: _abrirFiltros,
+                            icon: const Icon(
+                              Icons.tune,
+                              color: Color(0xFF46524B),
+                            ),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
                           ),
                         ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
-                        ),
                       ),
                     ),
                   ),
-                ),
-                SliverToBoxAdapter(child: _filtros(margem, todos)),
-                if (clientes.isEmpty)
-                  const SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(child: Text('Nenhum cliente encontrado.')),
-                  )
-                else
-                  SliverPadding(
-                    padding: EdgeInsets.fromLTRB(margem, 20, margem, 112),
-                    sliver: SliverList.builder(
-                      itemCount: linhas,
-                      itemBuilder: (context, linha) => Padding(
-                        padding: const EdgeInsets.only(bottom: 20),
-                        // Cartões têm altura natural, inclusive com fontes ampliadas.
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            for (
-                              var coluna = 0;
-                              coluna < colunas;
-                              coluna++
-                            ) ...[
-                              if (coluna > 0) const SizedBox(width: 20),
-                              Expanded(
-                                child:
-                                    linha * colunas + coluna < clientes.length
-                                    ? ClienteCard(
-                                        cliente:
+                  SliverToBoxAdapter(child: _filtros(margem, todos)),
+                  if (clientes.isEmpty)
+                    const SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Center(child: Text('Nenhum cliente encontrado.')),
+                    )
+                  else
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(margem, 20, margem, 112),
+                      sliver: SliverList.builder(
+                        itemCount: linhas,
+                        itemBuilder: (context, linha) => Padding(
+                          padding: const EdgeInsets.only(bottom: 20),
+                          // Cartões têm altura natural, inclusive com fontes ampliadas.
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              for (
+                                var coluna = 0;
+                                coluna < colunas;
+                                coluna++
+                              ) ...[
+                                if (coluna > 0) const SizedBox(width: 20),
+                                Expanded(
+                                  child:
+                                      linha * colunas + coluna < clientes.length
+                                      ? ClienteCard(
+                                          cliente:
+                                              clientes[linha * colunas +
+                                                  coluna],
+                                          onAcao: (acao) => _acao(
                                             clientes[linha * colunas + coluna],
-                                        onAcao: (acao) => _acao(
-                                          clientes[linha * colunas + coluna],
-                                          acao,
-                                        ),
-                                      )
-                                    : const SizedBox.shrink(),
-                              ),
+                                            acao,
+                                          ),
+                                        )
+                                      : const SizedBox.shrink(),
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
-            );
-          },
-        );
-      },
+                ],
+              );
+            },
+          );
+        },
+      ),
     ),
   );
+}
+
+class _PaginaRolavel extends StatelessWidget {
+  const _PaginaRolavel({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: constraints.maxHeight,
+          width: constraints.maxWidth,
+          child: child,
+        ),
+      ),
+    );
+  }
 }

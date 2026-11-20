@@ -1,5 +1,5 @@
+import 'package:cesta_flow/core/constants/util/format_cpf.dart';
 import 'package:cesta_flow/core/constants/util/format_date.dart';
-import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
@@ -8,8 +8,14 @@ import 'package:flutter/material.dart';
 
 class CustomerEdit extends StatelessWidget {
   final Customer customer;
+  final CustomerRepository? repository;
 
-  const CustomerEdit({super.key, required this.customer});
+  const CustomerEdit({super.key, required this.customer, this.repository});
+
+  String? _opcional(dynamic valor) {
+    final texto = (valor ?? '').toString().trim();
+    return texto.isEmpty ? null : texto;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,28 +28,34 @@ class CustomerEdit extends StatelessWidget {
           customer: customer,
           buttonText: 'Salvar alterações',
           title: 'Editar cliente',
-          onSubmit: _updateCustomer,
+          onSubmit: (data) => _updateCustomer(context, data),
         ),
       ),
     );
   }
 
-  Future<void> _updateCustomer(Map<String, dynamic> data) async {
-    final repository = CustomerRepository(dbHelper: DatabaseHelper());
-    final updatedcustomer = Customer(
-      id: customer.id,
-      name: data['nome'],
-      dateOfBirth: cleanDate(data['data_nascimento']),
-      email: data['email'],
-      phone: data['telefone'],
-      address: data['rua'],
-      adressNumber: data['numero'],
-      city: data['cidade'],
-      state: data['estado'],
-      cep: data['cep'],
-      documentCPF: data['cpf'],
-      documentRG: data['rg'],
+  Future<void> _updateCustomer(
+    BuildContext context,
+    Map<String, dynamic> data,
+  ) async {
+    final customerRepository = repository ?? CustomerRepository();
+    final updatedCustomer = customer.copyWith(
+      name: data['nome'].toString().trim(),
+      dateOfBirth: cleanDate(data['data_nascimento'].toString().trim()),
+      email: _opcional(data['email']),
+      phone: data['telefone'].toString().trim(),
+      address: data['rua'].toString().trim(),
+      addressNumber: data['numero'].toString().trim(),
+      city: data['cidade'].toString().trim(),
+      state: data['estado'].toString().trim(),
+      cep: _opcional(data['cep']),
+      documentCPF: formatCpf(onlyDigits(data['cpf'].toString())),
+      documentRG: _opcional(data['rg']),
+      updatedAt: DateTime.now(),
     );
-    await repository.updateCustomer(updatedcustomer);
+    await customerRepository.updateCustomer(updatedCustomer);
+    if (context.mounted) {
+      Navigator.of(context).pop(true);
+    }
   }
 }

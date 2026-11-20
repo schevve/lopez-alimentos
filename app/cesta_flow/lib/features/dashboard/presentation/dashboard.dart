@@ -1,12 +1,13 @@
-import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/constants/util/format_currency.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
+import 'package:cesta_flow/core/data/local/model/installment_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
+import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
+import 'package:cesta_flow/features/dashboard/presentation/widgets/dashboard_lists_carousel.dart';
 import 'package:cesta_flow/features/dashboard/presentation/widgets/metric_card.dart';
 import 'package:cesta_flow/features/dashboard/presentation/widgets/metrics_row.dart';
-import 'package:cesta_flow/features/dashboard/presentation/widgets/sale_card.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_registration.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
@@ -23,11 +24,15 @@ class _DashboardState extends State<Dashboard> {
 
   final SaleRepository _saleRepository = SaleRepository();
   final CustomerRepository _customerRepository = CustomerRepository();
+  final InstallmentRepository _installmentRepository = InstallmentRepository();
 
   bool _isLoading = true;
   String? _errorMessage;
   List<Sale> _latestSales = const [];
+  List<Installment> _pendingInstallments = const [];
   Map<int, Customer> _customersById = const {};
+  Map<int, int> _saleCustomerIds = const {};
+  Map<int, String> _basketLabels = const {};
   double _salesAmountLast7Days = 0;
   int _customersCount = 0;
   int _pendingCustomersCount = 0;
@@ -50,11 +55,25 @@ class _DashboardState extends State<Dashboard> {
       final latestSales = await _saleRepository.getLatestSales(
         limit: _latestSalesLimit,
       );
+      final pendingInstallments =
+          await _installmentRepository.getUnpaidInstallments();
       final salesAmount = await _saleRepository.getTotalSalesAmountSince(
         DateTime.now().subtract(const Duration(days: 7)),
       );
       final pendingCustomers = await _saleRepository.getPendingCustomersCount();
       final customers = await _customerRepository.getAllCustomers();
+      final basketLabels = await _saleRepository.basketLabelsFor(
+        latestSales.map((sale) => sale.id).whereType<int>().toList(),
+      );
+      final saleCustomerIds = <int, int>{};
+      for (final installment in pendingInstallments) {
+        final saleId = installment.saleId;
+        if (saleCustomerIds.containsKey(saleId)) continue;
+        final sale = await _saleRepository.getSaleById(saleId);
+        if (sale != null) {
+          saleCustomerIds[saleId] = sale.customerId;
+        }
+      }
 
       if (!mounted) {
         return;
@@ -62,6 +81,9 @@ class _DashboardState extends State<Dashboard> {
 
       setState(() {
         _latestSales = latestSales;
+        _pendingInstallments = pendingInstallments;
+        _saleCustomerIds = saleCustomerIds;
+        _basketLabels = basketLabels;
         _salesAmountLast7Days = salesAmount;
         _pendingCustomersCount = pendingCustomers;
         _customersCount = customers.length;
@@ -78,7 +100,7 @@ class _DashboardState extends State<Dashboard> {
       }
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Não foi possível carregar as vendas.';
+        _errorMessage = 'Não foi possível carregar os dados.';
       });
     }
   }
@@ -88,50 +110,54 @@ class _DashboardState extends State<Dashboard> {
     return Scaffold(
       backgroundColor: const Color(0xFFF0FDF4),
       appBar: const TopBar(pagTitle: 'Início', showDrawer: true),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 14),
-            MetricsRow(
-              cards: [
-                MetricCard(
-                  title: 'Vendas',
-                  value: _metricValue(formatCurrency(_salesAmountLast7Days)),
-                  subtitle: 'Últimos 7 dias',
-                  icon: Icons.shopping_cart,
-                  iconColor: const Color(0xFF1D5335),
-                ),
-                MetricCard(
-                  title: 'Clientes',
-                  value: _metricValue(_customersCount.toString()),
-                  subtitle: 'Cadastrados',
-                  icon: Icons.people,
-                  iconColor: const Color(0xFF1D5335),
-                ),
-                MetricCard(
-                  title: 'Pendências',
-                  value: _metricValue(_pendingCustomersCount.toString()),
-                  subtitle: 'Sem pagamento',
-                  icon: Icons.warning,
-                  iconColor: const Color(0xFFC62828),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'Últimas vendas',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.black,
+      body: RefreshIndicator(
+        onRefresh: () => _loadDashboardData(),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 14),
+              MetricsRow(
+                cards: [
+                  MetricCard(
+                    title: 'Vendas',
+                    value: _metricValue(formatCurrency(_salesAmountLast7Days)),
+                    subtitle: 'Últimos 7 dias',
+                    icon: Icons.shopping_cart,
+                    iconColor: const Color(0xFF1D5335),
+                  ),
+                  MetricCard(
+                    title: 'Clientes',
+                    value: _metricValue(_customersCount.toString()),
+                    subtitle: 'Cadastrados',
+                    icon: Icons.people,
+                    iconColor: const Color(0xFF1D5335),
+                  ),
+                  MetricCard(
+                    title: 'Pendências',
+                    value: _metricValue(_pendingCustomersCount.toString()),
+                    subtitle: 'Sem pagamento',
+                    icon: Icons.warning,
+                    iconColor: const Color(0xFFC62828),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 14),
-            ..._buildSalesSection(),
-            const SizedBox(height: 100), // space for FAB
-          ],
+              const SizedBox(height: 14),
+              DashboardListsCarousel(
+                isLoading: _isLoading,
+                errorMessage: _errorMessage,
+                pendingInstallments: _pendingInstallments,
+                latestSales: _latestSales,
+                customersById: _customersById,
+                saleCustomerIds: _saleCustomerIds,
+                basketLabels: _basketLabels,
+                onAfterReceive: () => _loadDashboardData(),
+              ),
+              const SizedBox(height: 100), // space for FAB
+            ],
+          ),
         ),
       ),
       // Floating Action Button
@@ -195,71 +221,4 @@ class _DashboardState extends State<Dashboard> {
     return value;
   }
 
-  List<Widget> _buildSalesSection() {
-    if (_isLoading) {
-      return const [
-        Padding(
-          padding: EdgeInsets.symmetric(vertical: 32),
-          child: Center(child: CircularProgressIndicator()),
-        ),
-      ];
-    }
-
-    if (_errorMessage != null) {
-      return [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 32),
-          child: Text(
-            _errorMessage!,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 14, color: Color(0xFFC62828)),
-          ),
-        ),
-      ];
-    }
-
-    if (_latestSales.isEmpty) {
-      return const [
-        Padding(
-          padding: EdgeInsets.symmetric(vertical: 32),
-          child: Text(
-            'Nenhuma venda registrada ainda.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: Color(0xFF707070)),
-          ),
-        ),
-      ];
-    }
-
-    return [
-      for (var index = 0; index < _latestSales.length; index++) ...[
-        if (index > 0) const SizedBox(height: 14),
-        _buildSaleCard(_latestSales[index]),
-      ],
-    ];
-  }
-
-  Widget _buildSaleCard(Sale sale) {
-    final customer = _customersById[sale.customerId];
-    final address = customer == null
-        ? 'Endereço não informado'
-        : '${customer.address} (${customer.city})';
-
-    return SaleCard(
-      saleId: sale.id,
-      name: customer?.name ?? 'Cliente #${sale.customerId}',
-      status: 'Registrada em ${_formatDate(sale.date)}',
-      address: address,
-      product: sale.quantity > 1
-          ? '${sale.quantity}x ${sale.productName}'
-          : sale.productName,
-      amount: formatCurrency(sale.price * sale.quantity),
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    return '$day/$month/${date.year}';
-  }
 }

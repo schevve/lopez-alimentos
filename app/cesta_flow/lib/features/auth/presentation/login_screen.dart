@@ -1,6 +1,5 @@
 // Widgets e formatação nativos do Flutter.
-import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
-import 'package:flutter/foundation.dart';
+import 'package:cesta_flow/features/auth/data/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -21,38 +20,52 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Controllers e estado dos controles do formulário.
   final _formKey = GlobalKey<FormState>();
-  final _cpfController = TextEditingController();
+  final _emailController = TextEditingController();
   final _senhaController = TextEditingController();
   bool _senhaVisivel = false;
-  bool _lembrarMe = true;
+  bool _carregando = false;
+  String? _erro;
 
   @override
   void dispose() {
-    _cpfController.dispose();
+    _emailController.dispose();
     _senhaController.dispose();
     super.dispose();
   }
 
-  // Valida somente o preenchimento; autenticação será integrada depois.
-  String? _validarCpf(String? valor) {
-    return valor == null || valor.trim().isEmpty ? 'Informe seu CPF.' : null;
+  // Validação simples de formato; quem confere se o e-mail existe é o servidor.
+  String? _validarEmail(String? valor) {
+    final email = (valor ?? '').trim();
+    if (email.isEmpty) return 'Informe seu e-mail.';
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      return 'Informe um e-mail válido.';
+    }
+    return null;
   }
 
   String? _validarSenha(String? valor) {
-    return valor == null || valor.trim().isEmpty ? 'Informe sua senha.' : null;
+    return valor == null || valor.isEmpty ? 'Informe sua senha.' : null;
   }
 
-  void _entrar() {
+  // Autentica no Supabase. Ao dar certo, o AuthGate (main.dart) detecta a
+  // sessão e troca esta tela pela tela principal, então não navegamos aqui.
+  Future<void> _entrar() async {
+    if (_carregando) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _erro = null);
     if (!_formKey.currentState!.validate()) return;
-    // Saída solicitada para desenvolvimento, desativada em release.
-    if (kDebugMode) {
-      debugPrint('CPF: ${_cpfController.text}');
-      debugPrint('Senha: ${_senhaController.text}');
-      debugPrint('Lembrar-me: $_lembrarMe');
+
+    setState(() => _carregando = true);
+    try {
+      await AuthService.instance.entrar(
+        email: _emailController.text,
+        senha: _senhaController.text,
+      );
+    } on LoginException catch (e) {
+      if (mounted) setState(() => _erro = e.message);
+    } finally {
+      if (mounted) setState(() => _carregando = false);
     }
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => const Dashboard()),
-    );
   }
 
   InputDecoration _decoracaoCampo({String? placeholder, Widget? suffixIcon}) {
@@ -193,20 +206,23 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 32),
-                                  _label('CPF'),
+                                  _label('E-mail'),
                                   _campoComSombra(
                                     TextFormField(
-                                      controller: _cpfController,
-                                      keyboardType: TextInputType.number,
+                                      controller: _emailController,
+                                      keyboardType: TextInputType.emailAddress,
                                       textInputAction: TextInputAction.next,
+                                      autocorrect: false,
+                                      enableSuggestions: false,
                                       inputFormatters: [
-                                        FilteringTextInputFormatter.digitsOnly,
-                                        LengthLimitingTextInputFormatter(11),
-                                        _CpfInputFormatter(),
+                                        // Impede espaços digitados sem querer.
+                                        FilteringTextInputFormatter.deny(
+                                          RegExp(r'\s'),
+                                        ),
                                       ],
-                                      validator: _validarCpf,
+                                      validator: _validarEmail,
                                       decoration: _decoracaoCampo(
-                                        placeholder: '123.456.456-78',
+                                        placeholder: 'seu@email.com',
                                       ),
                                     ),
                                   ),
@@ -241,96 +257,67 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 16),
-                                  Row(
-                                    children: [
-                                      Checkbox(
-                                        value: _lembrarMe,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            5,
-                                          ),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      borderRadius: BorderRadius.circular(4),
+                                      clipBehavior: Clip.antiAlias,
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(4),
+                                        splashColor: Colors.white.withValues(
+                                          alpha: .10,
                                         ),
-                                        side: const BorderSide(
-                                          color: Color(0xFFBCD5BB),
-                                          width: 1.5,
+                                        highlightColor: Colors.white.withValues(
+                                          alpha: .06,
                                         ),
-                                        fillColor:
-                                            WidgetStateProperty.resolveWith(
-                                              (states) =>
-                                                  states.contains(
-                                                    WidgetState.selected,
-                                                  )
-                                                  ? const Color(0xFFDCEFD7)
-                                                  : Colors.white.withValues(
-                                                      alpha: .08,
-                                                    ),
-                                            ),
-                                        checkColor: _verdeEscuro,
-                                        onChanged: (valor) => setState(
-                                          () => _lembrarMe = valor ?? false,
+                                        onTap: () => debugPrint(
+                                          'Navegar para recuperação de senha',
                                         ),
-                                      ),
-                                      const Expanded(
-                                        flex: 4,
-                                        child: Text(
-                                          'Lembrar-me',
-                                          style: TextStyle(color: Colors.white),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Flexible(
-                                        flex: 6,
-                                        fit: FlexFit.tight,
-                                        // O alinhamento ocupa a sobra; o toque fica só no texto.
-                                        child: Align(
-                                          alignment: Alignment.centerRight,
-                                          child: Material(
-                                            color: Colors.transparent,
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                            clipBehavior: Clip.antiAlias,
-                                            child: InkWell(
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                              splashColor: Colors.white
-                                                  .withValues(alpha: .10),
-                                              highlightColor: Colors.white
-                                                  .withValues(alpha: .06),
-                                              onTap: () => debugPrint(
-                                                'Navegar para recuperação de senha',
-                                              ),
-                                              child: Padding(
-                                                padding: const EdgeInsets.all(
-                                                  4,
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(4),
+                                          child: Text(
+                                            'Esqueceu a senha?',
+                                            textAlign: TextAlign.end,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .labelLarge
+                                                ?.copyWith(
+                                                  color: const Color(
+                                                    0xFFD2DECE,
+                                                  ),
                                                 ),
-                                                child: Text(
-                                                  'Esqueceu a senha?',
-                                                  textAlign: TextAlign.end,
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .labelLarge
-                                                      ?.copyWith(
-                                                        color: const Color(
-                                                          0xFFD2DECE,
-                                                        ),
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
                                           ),
                                         ),
                                       ),
-                                    ],
+                                    ),
                                   ),
+                                  // Erro vindo do servidor (ex.: senha incorreta).
+                                  if (_erro != null) ...[
+                                    const SizedBox(height: 16),
+                                    Semantics(
+                                      liveRegion: true,
+                                      child: Text(
+                                        _erro!,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: Color(0xFFFFDAD6),
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                   const SizedBox(height: 24),
                                   SizedBox(
                                     height: 56,
                                     child: ElevatedButton(
-                                      onPressed: _entrar,
+                                      onPressed: _carregando ? null : _entrar,
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: _verdeBotao,
                                         foregroundColor: Colors.white,
+                                        disabledBackgroundColor: _verdeBotao,
+                                        disabledForegroundColor: Colors.white70,
                                         elevation: 3,
                                         shadowColor: Colors.black.withValues(
                                           alpha: .24,
@@ -354,13 +341,22 @@ class _LoginScreenState extends State<LoginScreen> {
                                           ),
                                         ),
                                       ),
-                                      child: const Text(
-                                        'Entrar',
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
+                                      child: _carregando
+                                          ? const SizedBox(
+                                              width: 24,
+                                              height: 24,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 3,
+                                                color: Colors.white,
+                                              ),
+                                            )
+                                          : const Text(
+                                              'Entrar',
+                                              style: TextStyle(
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
                                     ),
                                   ),
                                 ],
@@ -377,29 +373,6 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         },
       ),
-    );
-  }
-}
-
-// Máscara incremental preservando a posição do cursor ao editar o CPF.
-class _CpfInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digits = newValue.text;
-    final buffer = StringBuffer();
-    var cursor = 0;
-    for (var i = 0; i < digits.length; i++) {
-      if (i == 3 || i == 6) buffer.write('.');
-      if (i == 9) buffer.write('-');
-      buffer.write(digits[i]);
-      if (i < newValue.selection.extentOffset) cursor = buffer.length;
-    }
-    return TextEditingValue(
-      text: buffer.toString(),
-      selection: TextSelection.collapsed(offset: cursor),
     );
   }
 }

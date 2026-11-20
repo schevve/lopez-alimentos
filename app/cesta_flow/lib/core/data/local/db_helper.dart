@@ -1,9 +1,7 @@
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
-import 'package:sqflite/sqflite.dart' as sqlite;
 
 import '../../../objectbox.g.dart';
-import 'sqlite_migration.dart';
 
 /// Mantém uma única instância do armazenamento local durante a execução.
 class DatabaseHelper {
@@ -25,11 +23,6 @@ class DatabaseHelper {
       opened = await openStore(
         directory: path.join(directory.path, 'objectbox'),
       );
-      final legacyPath = path.join(
-        await sqlite.getDatabasesPath(),
-        'app_database.db',
-      );
-      await SqliteMigration.importFile(opened, legacyPath);
       return opened;
     } catch (_) {
       opened?.close();

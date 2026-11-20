@@ -1,11 +1,17 @@
+import 'package:cesta_flow/core/data/remote/sync_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:cesta_flow/core/data/local/db_helper.dart';
+import 'package:cesta_flow/core/data/remote/remote_sync_service.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
+import 'package:cesta_flow/core/data/remote/model/profile_model.dart';
+import 'package:cesta_flow/core/data/remote/repository/profile_repository.dart';
+import 'package:cesta_flow/features/auth/data/auth_service.dart';
+import 'package:cesta_flow/features/auth/presentation/login_screen.dart';
 import 'package:cesta_flow/features/customer/presentation/tela_clientes.dart';
 import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
 import 'package:cesta_flow/features/export/presentation/data_exportation.dart';
@@ -16,7 +22,7 @@ import 'package:cesta_flow/features/shared/bottom_bar.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Só libera as telas depois de concluir a migração local.
+  // Abre o armazenamento local antes de liberar as telas.
   try {
     await DatabaseHelper().store;
   } catch (error) {
@@ -28,7 +34,7 @@ Future<void> main() async {
               padding: const EdgeInsets.all(24),
               child: SelectableText(
                 'Não foi possível abrir o banco local. '
-                'Os dados anteriores foram preservados.\n\n$error',
+                'Tente abrir o aplicativo novamente.\n\n$error',
               ),
             ),
           ),
@@ -45,6 +51,21 @@ Future<void> main() async {
   );
 
   runApp(const MainApp());
+}
+
+Future<void> synchronizeWhenLoggedIn() async {
+  SyncPreferences().setLastPushAt(
+    DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+  );
+  if (Supabase.instance.client.auth.currentSession == null) {
+    debugPrint('Sincronização ignorada: usuário não está logado.');
+    return;
+  }
+  try {
+    await RemoteSyncService().synchronize();
+  } catch (e) {
+    debugPrint('Falha na sincronização: $e');
+  }
 }
 
 class MainApp extends StatefulWidget {
@@ -75,7 +96,25 @@ class _MainAppState extends State<MainApp> {
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: MainScreen(),
+      home: AuthGate(),
+    );
+  }
+}
+
+/// Decide qual tela mostrar: a principal, se há usuário logado, ou o login.
+/// Reage sozinho a login e logout, sem precisar de Navigator.
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = Supabase.instance.client.auth;
+    return StreamBuilder<AuthState>(
+      stream: auth.onAuthStateChange,
+      builder: (context, snapshot) {
+        final session = snapshot.data?.session ?? auth.currentSession;
+        return session != null ? const MainScreen() : const LoginScreen();
+      },
     );
   }
 }
@@ -89,6 +128,8 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   String _selectedKey = 'home';
+  Profile? _profile;
+  final _profileRepository = ProfileRepository();
 
   final Map<String, Widget> _pages = const {
     'home': Dashboard(),
@@ -96,6 +137,59 @@ class _MainScreenState extends State<MainScreen> {
     'customers': ClientesScreen(),
     'export': DataExportation(),
   };
+
+  @override
+  void initState() {
+    super.initState();
+    synchronizeWhenLoggedIn();
+    _carregarPerfil();
+  }
+
+  /// Após o login (ou ao reabrir com sessão salva), busca `profiles` do usuário.
+  Future<void> _carregarPerfil() async {
+    try {
+      final profile = await _profileRepository.getCurrentProfile();
+      if (!mounted) return;
+      setState(() => _profile = profile);
+    } catch (error, stack) {
+      debugPrint('Falha ao carregar perfil: $error\n$stack');
+    }
+  }
+
+  String get _tituloDrawer {
+    final nome = _profile?.displayName ?? '';
+    if (nome.isNotEmpty) return nome;
+    return Supabase.instance.client.auth.currentUser?.email ?? 'Usuário';
+  }
+
+  String? get _subtituloDrawer {
+    final email = Supabase.instance.client.auth.currentUser?.email;
+    final nome = _profile?.displayName ?? '';
+    final papel = _profile?.role == ProfileRole.admin
+        ? 'Administrador'
+        : 'Usuário';
+
+    if (nome.isNotEmpty && email != null) {
+      return '$papel · $email';
+    }
+    return papel;
+  }
+
+  // Encerra a sessão. O AuthGate percebe o logout e volta para o login.
+  Future<void> _sair() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await AuthService.instance.sair();
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Não foi possível sair. Verifique sua conexão e tente de novo.',
+          ),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -128,6 +222,13 @@ class _MainScreenState extends State<MainScreen> {
         indicatorColor: AppColors.black.withAlpha(50),
         selectedIndex: selectedIndex >= 0 ? selectedIndex : 0,
         onDestinationSelected: (index) {
+          // O último item do menu ("Sair") vem depois das páginas.
+          if (index == keys.length) {
+            Navigator.pop(context);
+            _sair();
+            return;
+          }
+
           if (index >= 0 && index < keys.length) {
             setState(() {
               _selectedKey = keys[index];
@@ -137,7 +238,32 @@ class _MainScreenState extends State<MainScreen> {
           Navigator.pop(context);
         },
         children: [
-          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 28, 28, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _tituloDrawer,
+                  style: const TextStyle(
+                    color: AppColors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (_subtituloDrawer != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    _subtituloDrawer!,
+                    style: TextStyle(
+                      color: AppColors.white.withValues(alpha: 0.85),
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
           const NavigationDrawerDestination(
             icon: Icon(Icons.home_rounded, color: AppColors.white),
             label: Text('Início', style: TextStyle(color: AppColors.white)),
@@ -156,6 +282,14 @@ class _MainScreenState extends State<MainScreen> {
               'Exportar Dados',
               style: TextStyle(color: AppColors.white),
             ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(28, 8, 28, 8),
+            child: Divider(color: Colors.white24),
+          ),
+          const NavigationDrawerDestination(
+            icon: Icon(Icons.logout_rounded, color: AppColors.white),
+            label: Text('Sair', style: TextStyle(color: AppColors.white)),
           ),
         ],
       ),

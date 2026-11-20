@@ -1,14 +1,29 @@
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
-import 'package:cesta_flow/core/constants/util/format_cpf.dart';
+import 'package:cesta_flow/core/constants/util/format_currency.dart';
+import 'package:cesta_flow/core/constants/util/input_formatters.dart';
 import 'package:cesta_flow/core/data/local/db_helper.dart';
+import 'package:cesta_flow/core/data/local/model/basket_model.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
+import 'package:cesta_flow/core/data/local/model/sale_basket_input.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
+import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
+import 'package:cesta_flow/features/sale/presentation/basket_selection.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_customer_selection.dart';
+import 'package:cesta_flow/features/sale/presentation/sale_success.dart';
+import 'package:cesta_flow/features/shared/app_text_form_field.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:cesta_flow/features/sale/presentation/sale_success.dart';
+import 'package:uuid/uuid.dart';
+
+class SelectedBasketLine {
+  SelectedBasketLine({required this.basket, this.quantity = 1});
+
+  final Basket basket;
+  int quantity;
+
+  double get subtotal => basket.price * quantity;
+}
 
 class SaleRegistration extends StatefulWidget {
   const SaleRegistration({super.key});
@@ -19,153 +34,387 @@ class SaleRegistration extends StatefulWidget {
 
 class _SaleRegistrationState extends State<SaleRegistration> {
   final _formKey = GlobalKey<FormState>();
-  final _formData = <String, dynamic>{};
+  final _totalController = TextEditingController(text: '0,00');
+  final _dateController = TextEditingController();
   Customer? _selectedCustomer;
+  final List<SelectedBasketLine> _basketLines = [];
+  bool _totalEditedManually = false;
+  bool _isSubmitting = false;
+  int _installmentCount = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _dateController.text = getCurrentFormattedDate();
+    _totalController.addListener(_onTotalFieldChanged);
+  }
+
+  @override
+  void dispose() {
+    _totalController.removeListener(_onTotalFieldChanged);
+    _totalController.dispose();
+    _dateController.dispose();
+    super.dispose();
+  }
+
+  void _onTotalFieldChanged() {
+    if (_updatingTotalProgrammatically) return;
+    _totalEditedManually = true;
+  }
+
+  var _updatingTotalProgrammatically = false;
+
+  double get _suggestedTotal =>
+      _basketLines.fold(0, (sum, line) => sum + line.subtotal);
+
+  void _syncSuggestedTotal() {
+    if (_totalEditedManually) return;
+    _updatingTotalProgrammatically = true;
+    _totalController.text = formatMoneyField(_suggestedTotal);
+    _updatingTotalProgrammatically = false;
+  }
+
+  void _useSuggestedTotal() {
+    setState(() {
+      _totalEditedManually = false;
+      _syncSuggestedTotal();
+    });
+  }
+
+  Future<void> _pickBasket() async {
+    final basket = await Navigator.push<Basket>(
+      context,
+      MaterialPageRoute(builder: (context) => const BasketSelection()),
+    );
+    if (basket == null || !mounted) return;
+    setState(() {
+      final existing = _basketLines.indexWhere(
+        (line) => line.basket.uuid == basket.uuid,
+      );
+      if (existing >= 0) {
+        _basketLines[existing].quantity++;
+      } else {
+        _basketLines.add(SelectedBasketLine(basket: basket));
+      }
+      _syncSuggestedTotal();
+    });
+  }
+
+  void _changeQuantity(int index, int delta) {
+    setState(() {
+      final line = _basketLines[index];
+      final next = line.quantity + delta;
+      if (next <= 0) {
+        _basketLines.removeAt(index);
+      } else {
+        line.quantity = next;
+      }
+      _syncSuggestedTotal();
+    });
+  }
+
+  ButtonStyle get _suggestedAmountButtonStyle => OutlinedButton.styleFrom(
+    minimumSize: Size.zero,
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+    side: const BorderSide(color: AppColors.secondary, width: 2),
+    backgroundColor: AppColors.secondary,
+    foregroundColor: AppColors.white,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+  );
+
+  ButtonStyle _optionButtonStyle({required bool selected}) =>
+      OutlinedButton.styleFrom(
+        backgroundColor: selected ? const Color(0xff1C5631) : Colors.white,
+        foregroundColor: selected ? Colors.white : const Color(0xff1C5631),
+        side: const BorderSide(color: Color(0xff1C5631)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+      );
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xffF3FCF3),
-      appBar: TopBar(pagTitle: "Registrar venda"),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, 32),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 16,
-            children: [
-              FormField(
-                builder: (contextt) {
-                  return Column(
-                    children: [
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton(
-                          onPressed: () {
-                            Navigator.push(
+    final customer = _selectedCustomer;
+
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: const Color(0xffF3FCF3),
+          appBar: const TopBar(pagTitle: 'Registrar venda'),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: 16,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(255, 255, 255, 255),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: 8,
+                      children: [
+                        const Text(
+                          'Dados da venda',
+                          style: TextStyle(
+                            color: AppColors.greenText,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 20,
+                          ),
+                        ),
+                        const Text(
+                          'Cliente',
+                          style: TextStyle(
+                            color: AppColors.greenText,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        CustomerSelectionCard(
+                          name: customer?.name ?? 'Selecionar cliente',
+                          cpf: customer?.documentCPF,
+                          showInitials: customer != null,
+                          borderColor: AppColors.primary,
+                          onTap: () async {
+                            final value = await Navigator.push<Customer>(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => CustomerSelection(),
+                                builder: (context) => const CustomerSelection(),
                               ),
-                            ).then((value) {
-                              if (value != null) {
-                                if (value is Customer) {
-                                  setState(() {
-                                    _selectedCustomer = value;
-                                    _formData['clienteId'] = value.id;
-                                  });
-                                }
-                              }
-                            });
+                            );
+                            if (value != null && mounted) {
+                              setState(() => _selectedCustomer = value);
+                            }
                           },
-                          style: OutlinedButton.styleFrom(
-                            alignment: Alignment.centerLeft,
-                            fixedSize: Size(double.infinity, 64),
-                            side: BorderSide(
-                              color: Color(0xff1C5631),
-                              width: 2,
-                            ),
-                            padding: EdgeInsets.symmetric(
-                              vertical: 12,
-                              horizontal: 16,
-                            ),
-                          ),
-                          child: Text(
-                            'Selecionar Cliente',
+                        ),
+                      ],
+                    ),
+                  ),
+                  FormField<void>(
+                    validator: (_) {
+                      if (_basketLines.isEmpty) {
+                        return 'Adicione ao menos uma cesta';
+                      }
+                      return null;
+                    },
+                    builder: (field) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        spacing: 8,
+                        children: [
+                          const Text(
+                            'Cestas *',
                             style: TextStyle(
+                              color: AppColors.greenText,
+                              fontWeight: FontWeight.w900,
                               fontSize: 20,
-                              color: Color(0xff1C5631),
                             ),
                           ),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              onPressed: _pickBasket,
+                              style: _optionButtonStyle(selected: false),
+                              child: const Text('Adicionar cesta'),
+                            ),
+                          ),
+                          if (field.hasError)
+                            Text(
+                              field.errorText!,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                                fontSize: 12,
+                              ),
+                            ),
+                          for (var i = 0; i < _basketLines.length; i++)
+                            _BasketLineCard(
+                              line: _basketLines[i],
+                              onDecrement: () => _changeQuantity(i, -1),
+                              onIncrement: () => _changeQuantity(i, 1),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    spacing: 8,
+                    children: [
+                      const Text(
+                        'Quantidade de parcelas *',
+                        style: TextStyle(
+                          color: AppColors.greenText,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 20,
                         ),
                       ),
-                      InputDecorator(
-                        decoration: InputDecoration(labelText: 'Cliente *'),
-                        child: Text(
-                          _selectedCustomer == null
-                              ? 'Nenhum cliente selecionado'
-                              : '${_selectedCustomer!.name}, CPF: ${formatCpf(_selectedCustomer!.documentCPF)}',
-                          style: TextStyle(fontSize: 16),
-                        ),
+                      GridView.count(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        childAspectRatio: 2.2,
+                        children: [
+                          for (var count = 1; count <= 3; count++)
+                            OutlinedButton(
+                              onPressed: () =>
+                                  setState(() => _installmentCount = count),
+                              style: _optionButtonStyle(
+                                selected: _installmentCount == count,
+                              ),
+                              child: Text('$count'),
+                            ),
+                        ],
                       ),
                     ],
-                  );
-                },
-                // onSaved: (value) => _formData['clienteId'] = value,
-              ),
-              TextFormField(
-                decoration: InputDecoration(labelText: 'Produto *'),
-                onSaved: (value) => _formData['produto'] = value,
-              ),
-              TextFormField(
-                decoration: InputDecoration(
-                  labelText: 'Observações (opcional)',
-                ),
-                onSaved: (value) => _formData['observacoes'] = value,
-              ),
-              TextFormField(
-                initialValue: getCurrentFormattedDate(),
-                decoration: InputDecoration(labelText: 'Data da Venda *'),
-                keyboardType: TextInputType.datetime,
-                inputFormatters: [FormatDate()],
-                onSaved: (value) => _formData['data_venda'] = value,
-              ),
-              TextFormField(
-                decoration: InputDecoration(
-                  labelText: 'Valor Total da Venda *',
-                ),
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [FormatMoney()],
-                onSaved: (value) => _formData['valor_total'] = value,
-              ),
-              FilledButton(
-                onPressed: () {
-                  _submitForm();
-                },
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.greenButton,
-                  padding: EdgeInsets.symmetric(vertical: 16, horizontal: 32),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
                   ),
-                ),
-                child: Text(
-                  'Registrar Venda',
-                  style: TextStyle(color: Color(0xff1C5631), fontSize: 24),
-                ),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(255, 255, 255, 255),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      spacing: 8,
+                      children: [
+                        const Text(
+                          'Data da venda',
+                          style: TextStyle(
+                            color: AppColors.greenText,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        AppTextFormField(
+                          controller: _dateController,
+                          labelText: 'Data da venda *',
+                          keyboardType: TextInputType.datetime,
+                          inputFormatters: [FormatDate()],
+                          validator: (value) {
+                            if (value == null || value.trim().length < 10) {
+                              return 'Informe a data da venda';
+                            }
+                            return null;
+                          },
+                        ),
+                        const Text(
+                          'Valor total da venda (R\$)',
+                          style: TextStyle(
+                            color: AppColors.greenText,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        AppTextFormField(
+                          controller: _totalController,
+                          labelText: 'Valor total da venda *',
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: [FormatMoney()],
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Informe o valor total';
+                            }
+                            if (parseMoneyField(value) <= 0) {
+                              return 'O valor deve ser maior que zero';
+                            }
+                            return null;
+                          },
+                        ),
+                        if (_basketLines.isNotEmpty)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: OutlinedButton(
+                              onPressed: _useSuggestedTotal,
+                              style: _suggestedAmountButtonStyle,
+                              child: Text(
+                                formatCurrency(_suggestedTotal),
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  FilledButton(
+                    onPressed: _isSubmitting ? null : _submitForm,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.secondary,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 32,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    child: const Text(
+                      'Registrar venda',
+                      style: TextStyle(color: AppColors.white, fontSize: 24),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
-      ),
+        if (_isSubmitting) ...[
+          ModalBarrier(
+            dismissible: false,
+            color: Colors.black.withValues(alpha: 0.45),
+          ),
+          const Center(child: _SaleRegistrationLoading()),
+        ],
+      ],
     );
   }
 
   Future<void> _submitForm() async {
-    print(_formKey.currentState!.validate());
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-      var db = DatabaseHelper();
-      var salesRepository = SaleRepository(dbHelper: db);
-      final saleData = Sale(
-        customerId: _formData['clienteId'],
-        productName: _formData['produto'],
-        price: double.parse(
-          (_formData['valor_total'] as String).replaceAll(',', '.'),
+    if (_selectedCustomer == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Selecione um cliente')));
+      return;
+    }
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSubmitting = true);
+
+    final price = parseMoneyField(_totalController.text);
+    final saleData = Sale(
+      uuid: const Uuid().v4(),
+      customerId: _selectedCustomer!.id!,
+      customerUuid: _selectedCustomer!.uuid,
+      price: price,
+      amountPaid: 0,
+      installments: _installmentCount,
+      createdAt: DateTime.parse(
+        _dateController.text.split('/').reversed.join('-'),
+      ),
+    );
+    final lines = [
+      for (final line in _basketLines)
+        SaleBasketInput.catalog(
+          basketUuid: line.basket.uuid,
+          quantity: line.quantity,
         ),
-        quantity: 1,
-        date: DateTime.parse(
-          _formData['data_venda'].split('/').reversed.join('-'),
-        ),
-        description: _formData['observacoes'] ?? '',
+    ];
+
+    final dbHelper = DatabaseHelper();
+    final salesRepository = SaleRepository(dbHelper: dbHelper);
+    final installmentRepository = InstallmentRepository(dbHelper: dbHelper);
+    try {
+      final saleId = await salesRepository.registerSale(saleData, lines);
+      await installmentRepository.createPlannedInstallmentsForSale(
+        saleId: saleId,
+        count: _installmentCount,
+        totalPrice: price,
+        firstDueDate: saleData.createdAt,
       );
-      print(saleData);
-      int saleId = await salesRepository.registerSale(saleData);
-      print('Venda registrada com sucesso! ID da venda: $saleId');
-      salesRepository.getAllSales().then((sales) {
-        print('Vendas registradas: ${sales.length}');
-      });
 
       if (!mounted) return;
       Navigator.pushReplacement(
@@ -177,57 +426,118 @@ class _SaleRegistrationState extends State<SaleRegistration> {
           ),
         ),
       );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Não foi possível registrar a venda: $error')),
+      );
     }
   }
 }
 
-class FormatDate extends TextInputFormatter {
+class _SaleRegistrationLoading extends StatelessWidget {
+  const _SaleRegistrationLoading();
+
   @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digitsOnly = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digitsOnly.length > 8) {
-      return oldValue;
-    }
-    String formatted = '';
-    for (int i = 0; i < digitsOnly.length; i++) {
-      if (i == 2 || i == 4) {
-        formatted += '/';
-      }
-      formatted += digitsOnly[i];
-    }
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      elevation: 4,
+      child: const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 20,
+          children: [
+            SizedBox(
+              height: 40,
+              width: 40,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                color: AppColors.primary,
+              ),
+            ),
+            Text(
+              'Registrando venda...',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-String getCurrentFormattedDate() {
-  final now = DateTime.now();
-  final day = now.day.toString().padLeft(2, '0');
-  final month = now.month.toString().padLeft(2, '0');
-  final year = now.year.toString();
-  return '$day/$month/$year';
-}
+class _BasketLineCard extends StatelessWidget {
+  const _BasketLineCard({
+    required this.line,
+    required this.onDecrement,
+    required this.onIncrement,
+  });
 
-class FormatMoney extends TextInputFormatter {
+  final SelectedBasketLine line;
+  final VoidCallback onDecrement;
+  final VoidCallback onIncrement;
+
   @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digitsOnly = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digitsOnly.isEmpty) {
-      return newValue.copyWith(text: '');
-    }
-    final value = double.parse(digitsOnly) / 100;
-    final formatted = value.toStringAsFixed(2).replaceAll('.', ',');
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 255, 255, 255),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 8,
+        children: [
+          Text(
+            line.basket.name,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: AppColors.greenText,
+            ),
+          ),
+          Text(
+            '${formatCurrency(line.basket.price)} · Subtotal ${formatCurrency(line.subtotal)}',
+            style: const TextStyle(color: AppColors.primary),
+          ),
+          Row(
+            children: [
+              const Text(
+                'Quantidade',
+                style: TextStyle(
+                  color: AppColors.greenText,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: onDecrement,
+                icon: const Icon(
+                  Icons.remove_circle_outline,
+                  color: AppColors.primary,
+                ),
+              ),
+              Text('${line.quantity}', style: const TextStyle(fontSize: 18)),
+              IconButton(
+                onPressed: onIncrement,
+                icon: const Icon(
+                  Icons.add_circle_outline,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

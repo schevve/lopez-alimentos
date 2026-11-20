@@ -2,8 +2,10 @@ import 'package:cesta_flow/core/constants/util/format_currency.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
-import 'package:cesta_flow/core/data/local/repository/payment_repository.dart';
+import 'package:cesta_flow/core/data/local/model/installment_model.dart';
+import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
+import 'package:cesta_flow/features/dashboard/presentation/widgets/payment_summary_card.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 
@@ -12,13 +14,13 @@ class SaleDetails extends StatefulWidget {
     super.key,
     required this.saleId,
     this.saleRepository,
-    this.paymentRepository,
+    this.installmentRepository,
     this.customerRepository,
   });
 
   final int saleId;
   final SaleRepository? saleRepository;
-  final PaymentRepository? paymentRepository;
+  final InstallmentRepository? installmentRepository;
   final CustomerRepository? customerRepository;
 
   @override
@@ -28,8 +30,8 @@ class SaleDetails extends StatefulWidget {
 class _SaleDetailsState extends State<SaleDetails> {
   late final SaleRepository _saleRepository =
       widget.saleRepository ?? SaleRepository();
-  late final PaymentRepository _paymentRepository =
-      widget.paymentRepository ?? PaymentRepository();
+  late final InstallmentRepository _installmentRepository =
+      widget.installmentRepository ?? InstallmentRepository();
   late final CustomerRepository _customerRepository =
       widget.customerRepository ?? CustomerRepository();
   late Future<_SaleDetailsData> _details;
@@ -46,12 +48,20 @@ class _SaleDetailsState extends State<SaleDetails> {
       return const _SaleDetailsData(sale: null);
     }
 
-    final paid = await _paymentRepository.getPaymentsBySaleIdAmount(
+    final paid = await _installmentRepository.paidAmountBySaleId(widget.saleId);
+    final installments = await _installmentRepository.getInstallmentsBySaleId(
       widget.saleId,
     );
+    final baskets = await _saleRepository.getBasketLines(widget.saleId);
     final customer = await _customerRepository.getCustomerById(sale.customerId);
 
-    return _SaleDetailsData(sale: sale, paid: paid, customer: customer);
+    return _SaleDetailsData(
+      sale: sale,
+      paid: paid,
+      customer: customer,
+      baskets: baskets,
+      installments: installments,
+    );
   }
 
   void _reload() {
@@ -92,7 +102,7 @@ class _SaleDetailsState extends State<SaleDetails> {
           return const _MessageState(message: 'Venda não encontrada.');
         }
 
-        final saleValue = sale.price * sale.quantity;
+        final saleValue = sale.price;
 
         return RefreshIndicator(
           onRefresh: _refresh,
@@ -126,7 +136,7 @@ class _SaleDetailsState extends State<SaleDetails> {
                       _MetricCard(
                         width: cardWidth,
                         title: 'Parcelas',
-                        value: '${_mockInstallments.length}',
+                        value: '${data.installments.length}',
                         icon: Icons.calendar_month_outlined,
                       ),
                     ],
@@ -136,17 +146,33 @@ class _SaleDetailsState extends State<SaleDetails> {
               const SizedBox(height: 24),
               const _SectionTitle(title: 'Produtos'),
               const SizedBox(height: 12),
-              _ProductCard(sale: sale),
+              if (data.baskets.isEmpty)
+                _ProductCard(
+                  line: SaleBasketLine(
+                    name: 'Cesta',
+                    price: sale.price,
+                    quantity: 1,
+                  ),
+                )
+              else
+                for (final line in data.baskets) _ProductCard(line: line),
               const SizedBox(height: 24),
               const _SectionTitle(title: 'Parcelas'),
-              const SizedBox(height: 6),
-              const Text(
-                'Valores ilustrativos. O modelo de parcelas ainda não está pronto.',
-                style: TextStyle(color: Color(0xFF59665E), height: 1.4),
-              ),
               const SizedBox(height: 12),
-              for (final installment in _mockInstallments)
-                _InstallmentCard(installment: installment),
+              if (data.installments.isEmpty)
+                const Text(
+                  'Nenhuma parcela registrada.',
+                  style: TextStyle(color: Color(0xFF59665E)),
+                ),
+              for (var index = 0; index < data.installments.length; index++) ...[
+                if (index > 0) const SizedBox(height: 14),
+                _InstallmentCard(
+                  saleId: widget.saleId,
+                  number: index + 1,
+                  installment: data.installments[index],
+                  onAfterReceive: _refresh,
+                ),
+              ],
             ],
           ),
         );
@@ -190,9 +216,7 @@ class _SaleDetailsState extends State<SaleDetails> {
               label: 'Cliente',
               value: customer?.name ?? 'Cliente #${sale.customerId}',
             ),
-            _InfoLine(label: 'Data', value: _formatDate(sale.date)),
-            if (sale.description.trim().isNotEmpty)
-              _InfoLine(label: 'Observações', value: sale.description),
+            _InfoLine(label: 'Data', value: _formatDate(sale.createdAt)),
           ],
         ),
       ),
@@ -204,29 +228,20 @@ class _SaleDetailsState extends State<SaleDetails> {
       '${date.month.toString().padLeft(2, '0')}/${date.year}';
 }
 
-const _mockInstallments = [
-  _MockInstallment(number: 1, amount: 50, status: 'Paga'),
-  _MockInstallment(number: 2, amount: 50, status: 'Pendente'),
-];
-
 class _SaleDetailsData {
-  const _SaleDetailsData({required this.sale, this.paid = 0, this.customer});
+  const _SaleDetailsData({
+    required this.sale,
+    this.paid = 0,
+    this.customer,
+    this.baskets = const [],
+    this.installments = const [],
+  });
 
   final Sale? sale;
   final double paid;
   final Customer? customer;
-}
-
-class _MockInstallment {
-  const _MockInstallment({
-    required this.number,
-    required this.amount,
-    required this.status,
-  });
-
-  final int number;
-  final double amount;
-  final String status;
+  final List<SaleBasketLine> baskets;
+  final List<Installment> installments;
 }
 
 class _MetricCard extends StatelessWidget {
@@ -275,47 +290,12 @@ class _MetricCard extends StatelessWidget {
 }
 
 class _ProductCard extends StatelessWidget {
-  const _ProductCard({required this.sale});
+  const _ProductCard({required this.line});
 
-  final Sale sale;
-
-  @override
-  Widget build(BuildContext context) {
-    final total = sale.price * sale.quantity;
-    return Card(
-      color: Colors.white,
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              sale.productName,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            _InfoLine(label: 'Quantidade', value: '${sale.quantity}'),
-            _InfoLine(
-              label: 'Valor unitário',
-              value: formatCurrency(sale.price),
-            ),
-            _InfoLine(label: 'Total', value: formatCurrency(total)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _InstallmentCard extends StatelessWidget {
-  const _InstallmentCard({required this.installment});
-
-  final _MockInstallment installment;
+  final SaleBasketLine line;
 
   @override
   Widget build(BuildContext context) {
-    final isPaid = installment.status == 'Paga';
     return Card(
       color: Colors.white,
       margin: const EdgeInsets.only(bottom: 10),
@@ -324,35 +304,71 @@ class _InstallmentCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Parcela ${installment.number}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Text(
-                  installment.status,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: isPaid
-                        ? const Color(0xFF1B4D31)
-                        : const Color(0xFFB54708),
-                  ),
-                ),
-              ],
+            Text(
+              line.name,
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
+            _InfoLine(label: 'Quantidade', value: '${line.quantity}'),
             _InfoLine(
-              label: 'Valor',
-              value: formatCurrency(installment.amount),
+              label: 'Preço da cesta',
+              value: formatCurrency(line.price),
             ),
+            _InfoLine(label: 'Total', value: formatCurrency(line.total)),
           ],
         ),
       ),
     );
   }
+}
+
+class _InstallmentCard extends StatelessWidget {
+  const _InstallmentCard({
+    required this.saleId,
+    required this.number,
+    required this.installment,
+    required this.onAfterReceive,
+  });
+
+  final int saleId;
+  final int number;
+  final Installment installment;
+  final Future<void> Function() onAfterReceive;
+
+  @override
+  Widget build(BuildContext context) {
+    final isPaid = installment.isPaid;
+    final due = installment.dueDate;
+    final dueLabel = due == null
+        ? 'data não definida'
+        : _formatDate(due);
+    final paymentDate = installment.paymentDate;
+
+    final badge = isPaid
+        ? PaymentSummaryBadge.paid
+        : badgeForUnpaidDueDate(due);
+    final subtitle = isPaid
+        ? 'Pago em ${paymentDate == null ? '—' : _formatDate(paymentDate)}'
+        : 'Previsto para $dueLabel';
+    final amount = formatCurrency(
+      isPaid ? installment.paidAmount : installment.expectedAmount,
+    );
+
+    return PaymentSummaryCard(
+      title: 'Parcela $number',
+      subtitle: subtitle,
+      amount: amount,
+      amountLabel: isPaid ? 'Valor pago' : 'Valor previsto',
+      badge: badge,
+      saleId: saleId,
+      isPaid: isPaid,
+      onAfterReceive: onAfterReceive,
+    );
+  }
+
+  String _formatDate(DateTime date) =>
+      '${date.day.toString().padLeft(2, '0')}/'
+      '${date.month.toString().padLeft(2, '0')}/${date.year}';
 }
 
 class _InfoLine extends StatelessWidget {
@@ -369,10 +385,7 @@ class _InfoLine extends StatelessWidget {
       children: [
         SizedBox(
           width: 130,
-          child: Text(
-            label,
-            style: const TextStyle(color: Color(0xFF59665E)),
-          ),
+          child: Text(label, style: const TextStyle(color: Color(0xFF59665E))),
         ),
         Expanded(
           child: Text(
@@ -402,11 +415,7 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _MessageState extends StatelessWidget {
-  const _MessageState({
-    required this.message,
-    this.actionLabel,
-    this.onAction,
-  });
+  const _MessageState({required this.message, this.actionLabel, this.onAction});
 
   final String message;
   final String? actionLabel;

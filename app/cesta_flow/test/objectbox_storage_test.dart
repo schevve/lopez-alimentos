@@ -1,26 +1,26 @@
 import 'dart:io';
 
 import 'package:cesta_flow/core/data/local/db_helper.dart';
+import 'package:cesta_flow/core/data/local/model/basket_model.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
-import 'package:cesta_flow/core/data/local/model/migration_state.dart';
-import 'package:cesta_flow/core/data/local/model/payment_model.dart';
+import 'package:cesta_flow/core/data/local/model/sale_basket_input.dart';
+import 'package:cesta_flow/core/data/local/model/installment_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
-import 'package:cesta_flow/core/data/local/repository/payment_repository.dart';
+import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
-import 'package:cesta_flow/core/data/local/sqlite_migration.dart';
 import 'package:cesta_flow/objectbox.g.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart' as sqlite;
 
 Customer customer({int? id, String cpf = '12345678901', String? rg}) =>
     Customer(
       id: id,
+      uuid: 'customer-$cpf',
       name: 'Cliente de teste',
       dateOfBirth: DateTime(1990, 1, 1),
       phone: '45999999999',
       address: 'Rua de teste',
-      adressNumber: '12',
+      addressNumber: '12',
       city: 'Cascavel',
       state: 'PR',
       documentCPF: cpf,
@@ -28,27 +28,22 @@ Customer customer({int? id, String cpf = '12345678901', String? rg}) =>
     );
 Sale sale(int customerId, {int? id, DateTime? date}) => Sale(
   id: id,
+  uuid: 'sale-${id ?? customerId}',
   customerId: customerId,
-  productName: 'Cesta',
-  price: 50,
-  quantity: 2,
-  date: date ?? DateTime(2026, 10, 1),
-  description: '',
+  price: 100,
+  createdAt: date ?? DateTime(2026, 10, 1),
 );
-Payment payment(int saleId, {int? id, double amount = 25}) => Payment(
-  id: id,
-  saleId: saleId,
-  method: 'Pix',
-  amount: amount,
-  date: DateTime(2026, 10, 2),
-);
+SaleBasketInput saleLine(Store store, {String uuid = 'basket-test'}) {
+  store.box<Basket>().put(Basket(uuid: uuid, name: 'Cesta teste', price: 100));
+  return SaleBasketInput.catalog(basketUuid: uuid, quantity: 1);
+}
 
 void main() {
   late Directory directory;
   late Store store;
   late CustomerRepository customers;
   late SaleRepository sales;
-  late PaymentRepository payments;
+  late InstallmentRepository payments;
   setUp(() {
     directory = Directory.systemTemp.createTempSync('cesta-objectbox-test-');
     store = Store(
@@ -58,7 +53,7 @@ void main() {
     final helper = DatabaseHelper.withStore(store);
     customers = CustomerRepository(dbHelper: helper);
     sales = SaleRepository(dbHelper: helper);
-    payments = PaymentRepository(dbHelper: helper);
+    payments = InstallmentRepository(dbHelper: helper);
   });
   tearDown(() {
     store.close();
@@ -76,7 +71,8 @@ void main() {
       customers.registerCustomer(customer()),
       throwsA(isA<UniqueViolationException>()),
     );
-    final updated = (await customers.getCustomerById(id))!.copyWith(score: 940);
+    final updated = (await customers.getCustomerById(id))!
+        .copyWith(score: 940.0);
     expect(await customers.updateCustomer(updated), 1);
     expect((await customers.getCustomerById(id))!.score, 940);
     await customers.updateCustomer(updated.copyWith(clearScore: true));
@@ -88,36 +84,62 @@ void main() {
 
   test('Vínculos, agregações, ordenação e exclusão em cascata', () async {
     final cid = await customers.registerCustomer(customer());
-    final sid = await sales.registerSale(sale(cid));
+    final sid = await sales.registerSale(sale(cid), [saleLine(store)]);
     final laterId = await sales.registerSale(
       sale(cid, date: DateTime(2026, 10, 3)),
+      [saleLine(store, uuid: 'basket-later')],
     );
-    await expectLater(sales.registerSale(sale(999)), throwsStateError);
-    await expectLater(payments.registerPayment(payment(999)), throwsStateError);
-    await payments.registerPayment(payment(sid));
-    await payments.registerPayment(payment(sid, amount: 35));
-    expect(await payments.getPaymentsBySaleIdAmount(sid), 60);
-    expect(await payments.getPaymentTotalsBySaleIds([sid, laterId]), {
-      sid: 60.0,
-    });
-    expect(await payments.getPaymentTotalsBySaleIds([]), isEmpty);
+    await expectLater(sales.registerSale(sale(999), []), throwsArgumentError);
+    await expectLater(
+      sales.registerSale(sale(999), [saleLine(store, uuid: 'basket-orphan')]),
+      throwsStateError,
+    );
+    await expectLater(
+      payments.registerPayment(saleId: 999, amount: 25),
+      throwsStateError,
+    );
+    await payments.registerPayment(saleId: sid, amount: 25);
+    await payments.registerPayment(saleId: sid, amount: 35);
+    await expectLater(
+      payments.registerPayment(saleId: sid, amount: 50),
+      throwsArgumentError,
+    );
+    expect(await payments.paidAmountBySaleId(sid), 60);
+
+    final plannedSaleId = await sales.registerSale(
+      sale(cid, date: DateTime(2026, 10, 4)),
+      [saleLine(store, uuid: 'basket-planned')],
+    );
+    await payments.createPlannedInstallmentsForSale(
+      saleId: plannedSaleId,
+      count: 3,
+      totalPrice: 100,
+      firstDueDate: DateTime(2026, 10, 4),
+    );
+    await payments.registerPayment(saleId: plannedSaleId, amount: 100);
+    final plannedInstallments =
+        await payments.getInstallmentsBySaleId(plannedSaleId);
+    expect(plannedInstallments.length, 1);
+    expect(plannedInstallments.single.isPaid, isTrue);
+    expect(await payments.paidTotalsBySaleIds([sid, laterId]), {sid: 60.0});
+    expect(await payments.paidTotalsBySaleIds([]), isEmpty);
     expect((await sales.getSalesByCustomerId(cid)).first.id, laterId);
     expect((await sales.getLatestSales(limit: 1)).single.id, laterId);
     expect(await sales.getTotalSalesAmountSince(DateTime(2026, 10, 2)), 100);
     expect(await sales.getPendingCustomersCount(), 1);
     await sales.deleteSale(sid);
-    expect(await payments.getAllPayments(), isEmpty);
-    await payments.registerPayment(payment(laterId));
+    expect(await payments.getAllInstallments(), isEmpty);
+    await payments.registerPayment(saleId: laterId, amount: 25);
     await customers.deleteCustomer(cid);
     expect(await sales.getAllSales(), isEmpty);
-    expect(await payments.getAllPayments(), isEmpty);
+    expect(await payments.getAllInstallments(), isEmpty);
   });
 
   test(
     'Migração preserva IDs, endereço antigo, nulos e é executada uma vez',
     () {
       final oldCustomer = customer(id: 12).toMap();
-      oldCustomer['addres_number'] = oldCustomer.remove('adress_number');
+      oldCustomer['addres_number'] = oldCustomer.remove('address_number');
       void migrate() => SqliteMigration.importRows(
         store,
         customers: [oldCustomer],
@@ -125,14 +147,14 @@ void main() {
         payments: [payment(40, id: 70).toMap()],
       );
       migrate();
-      expect(store.box<Customer>().get(12)!.adressNumber, '12');
+      expect(store.box<Customer>().get(12)!.addressNumber, '12');
       expect(store.box<Customer>().get(12)!.score, isNull);
-      expect(store.box<Payment>().get(70)!.saleId, 40);
+      expect(store.box<Installment>().get(70)!.saleId, 40);
       final newId = store.box<Customer>().put(customer(cpf: '98765432100'));
       expect(newId, greaterThan(12));
       migrate();
       expect(store.box<Customer>().count(), 2);
-      expect(store.box<Payment>().count(), 1);
+      expect(store.box<Installment>().count(), 1);
       store.close();
       store = Store(
         getObjectBoxModel(),
@@ -166,7 +188,7 @@ void main() {
         sales: [sale(1, id: 1).toMap()],
         payments: [payment(1, id: 1).toMap()],
       );
-      expect(store.box<Payment>().count(), 1);
+      expect(store.box<Installment>().count(), 1);
     },
   );
 
@@ -223,7 +245,7 @@ void main() {
         file,
         factory: sqlite.databaseFactoryFfi,
       );
-      expect(store.box<Customer>().get(7)!.adressNumber, '20');
+      expect(store.box<Customer>().get(7)!.addressNumber, '20');
       expect(store.box<Customer>().get(7)!.score, isNull);
       expect(File(file).readAsBytesSync(), before);
     },
