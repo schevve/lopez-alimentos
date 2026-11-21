@@ -202,10 +202,14 @@ class _DashboardListsCarouselState extends State<DashboardListsCarousel> {
         customerId == null ? null : widget.customersById[customerId];
     final due = installment.dueDate;
     final dueLabel = due == null ? 'data não definida' : _formatDate(due);
+    final indicated = installment.indicatedPaymentDate;
+    final subtitle = indicated == null
+        ? 'Previsto para $dueLabel'
+        : 'Previsto para $dueLabel · Visita indicada em ${_formatDate(indicated)}';
 
     return PaymentSummaryCard(
       title: customer?.name ?? 'Cliente #${customerId ?? installment.saleId}',
-      subtitle: 'Previsto para $dueLabel',
+      subtitle: subtitle,
       amount: formatCurrency(installment.expectedAmount),
       amountLabel: 'Valor previsto',
       badge: badgeForUnpaidDueDate(due),

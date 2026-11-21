@@ -61,7 +61,7 @@ class _PaymentSuccessState extends State<PaymentSuccess> {
               ),
             ),
             if (widget.dueDate.isNotEmpty)
-              Text("Vencimento: ${widget.dueDate}"),
+              Text("Próxima visita: ${widget.dueDate}"),
             FilledButton(
               onPressed: () {
                 Navigator.pop(context);
