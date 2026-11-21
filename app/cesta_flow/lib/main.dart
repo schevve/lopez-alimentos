@@ -16,6 +16,7 @@ import 'package:cesta_flow/features/auth/presentation/login_screen.dart';
 import 'package:cesta_flow/features/customer/presentation/tela_clientes.dart';
 import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
 import 'package:cesta_flow/features/export/presentation/data_exportation.dart';
+import 'package:cesta_flow/features/basket/presentation/basket_list.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_list.dart';
 import 'package:cesta_flow/features/shared/app_navigation.dart';
 import 'package:cesta_flow/features/shared/bottom_bar.dart';
@@ -140,6 +141,7 @@ class _MainScreenState extends State<MainScreen> {
     'home': Dashboard(),
     'sales': SalesList(),
     'customers': ClientesScreen(),
+    'baskets': BasketList(),
     'export': DataExportation(),
   };
 
@@ -280,6 +282,10 @@ class _MainScreenState extends State<MainScreen> {
           const NavigationDrawerDestination(
             icon: Icon(Icons.people_rounded, color: AppColors.white),
             label: Text('Clientes', style: TextStyle(color: AppColors.white)),
+          ),
+          const NavigationDrawerDestination(
+            icon: Icon(Icons.shopping_basket_outlined, color: AppColors.white),
+            label: Text('Cestas', style: TextStyle(color: AppColors.white)),
           ),
           const NavigationDrawerDestination(
             icon: Icon(Icons.upload_rounded, color: AppColors.white),
