@@ -1,5 +1,6 @@
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/constants/util/format_currency.dart';
+import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/installment_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
@@ -248,6 +249,7 @@ class _DashboardListsCarouselState extends State<DashboardListsCarousel> {
       address: address,
       product: widget.basketLabels[sale.id] ?? 'Cesta',
       amount: formatCurrency(sale.price),
+      isFullyPaid: SaleRepository.isSaleFullyPaid(sale),
       onAfterReceive: widget.onAfterReceive,
     );
   }

@@ -320,6 +320,7 @@ class _SalesListState extends State<SalesList> {
       address: address,
       product: _basketLabels[sale.id] ?? 'Cesta',
       amount: formatCurrency(sale.price),
+      isFullyPaid: SaleRepository.isSaleFullyPaid(sale),
     );
   }
 
