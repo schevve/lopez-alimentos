@@ -31,66 +31,62 @@ class ClienteCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // NULL significa que o score ainda não foi informado, nunca score zero.
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final nome = Text(
-                cliente.name,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -.45,
-                  color: Color(0xFF18251F),
-                ),
-              );
-              final badge = Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0F3F1),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Text(
-                      formatCustomerScore(cliente.score),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF46524B),
-                      ),
-                    ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  cliente.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -.45,
+                    color: Color(0xFF18251F),
                   ),
-                  if (cliente.isBlocked) ...[
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Bloqueado',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFFB42318),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0F3F1),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Text(
+                        formatCustomerScore(cliente.score),
+                        textAlign: TextAlign.end,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF46524B),
+                        ),
                       ),
                     ),
+                    if (cliente.isBlocked) ...[
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Bloqueado',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFB42318),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
-              );
-              if (constraints.maxWidth < 380 ||
-                  MediaQuery.textScalerOf(context).scale(14) > 18) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [nome, const SizedBox(height: 8), badge],
-                );
-              }
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: nome),
-                  const SizedBox(width: 12),
-                  badge,
-                ],
-              );
-            },
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           Text(

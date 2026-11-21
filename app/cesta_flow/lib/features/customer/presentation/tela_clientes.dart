@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/constants/util/launch_phone_call.dart';
 import 'package:cesta_flow/features/customer/presentation/customer_details.dart';
 import 'package:flutter/material.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
@@ -18,26 +19,10 @@ class ClientesScreen extends StatefulWidget {
   State<ClientesScreen> createState() => _ClientesScreenState();
 }
 
-enum _FiltroScore {
-  todos('Todos'),
-  comScore('Com score'),
-  semScore('Sem score');
-
-  const _FiltroScore(this.label);
-  final String label;
-
-  bool inclui(Customer cliente) => switch (this) {
-    _FiltroScore.todos => true,
-    _FiltroScore.comScore => cliente.score != null,
-    _FiltroScore.semScore => cliente.score == null,
-  };
-}
-
 class _ClientesScreenState extends State<ClientesScreen> {
   static const _verde = Color(0xFF1B4D31);
   static const _menta = Color(0xFFEEFDF4);
   final _buscaController = TextEditingController();
-  _FiltroScore _filtro = _FiltroScore.todos;
   late final CustomerRepository _repository;
   late Future<List<Customer>> _clientes;
 
@@ -81,7 +66,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
     }
   }
 
-  // Busca local por nome (sem acentos) ou CPF, combinada com o filtro de score.
+  // Busca local por nome (sem acentos) ou CPF.
   String _normalizar(String texto) {
     var resultado = texto.toLowerCase();
     const grupos = {
@@ -105,12 +90,11 @@ class _ClientesScreenState extends State<ClientesScreen> {
     return clientes
         .where(
           (cliente) =>
-              _filtro.inclui(cliente) &&
-              (_normalizar(cliente.name).contains(busca) ||
-                  (cpf.isNotEmpty &&
-                      cliente.documentCPF
-                          .replaceAll(RegExp(r'[^0-9]'), '')
-                          .contains(cpf))),
+              _normalizar(cliente.name).contains(busca) ||
+              (cpf.isNotEmpty &&
+                  cliente.documentCPF
+                      .replaceAll(RegExp(r'[^0-9]'), '')
+                      .contains(cpf)),
         )
         .toList();
   }
@@ -151,93 +135,23 @@ class _ClientesScreenState extends State<ClientesScreen> {
       return;
     }
 
+    if (acao == 'Ligar') {
+      final abriu = await launchPhoneCall(cliente.phone);
+      if (!mounted) return;
+      if (!abriu) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Não foi possível abrir o aplicativo de chamadas.'),
+            ),
+          );
+      }
+      return;
+    }
+
     debugPrint('$acao: ${cliente.name}');
   }
-
-  Future<void> _abrirFiltros() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Text(
-                  'Filtrar clientes',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-              ),
-              for (final valor in _FiltroScore.values)
-                ListTile(
-                  title: Text(valor.label),
-                  trailing: _filtro == valor
-                      ? const Icon(Icons.check, color: _verde)
-                      : null,
-                  onTap: () {
-                    setState(() => _filtro = valor);
-                    Navigator.pop(sheetContext);
-                  },
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _filtros(double margem, List<Customer> clientes) =>
-      SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.symmetric(horizontal: margem),
-        child: Row(
-          children: [
-            for (final valor in _FiltroScore.values)
-              Padding(
-                padding: const EdgeInsets.only(right: 10),
-                child: ChoiceChip(
-                  selected: _filtro == valor,
-                  onSelected: (_) => setState(() => _filtro = valor),
-                  showCheckmark: false,
-                  selectedColor: _verde,
-                  backgroundColor: Colors.white,
-                  side: BorderSide.none,
-                  shape: const StadiumBorder(),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 10,
-                  ),
-                  label: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        valor.label,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                          color: _filtro == valor
-                              ? Colors.white
-                              : const Color(0xFF18251F),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '(${clientes.where(valor.inclui).length})',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: _filtro == valor ? Colors.white : _verde,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        ),
-      );
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -371,14 +285,6 @@ class _ClientesScreenState extends State<ClientesScreen> {
                             color: _verde,
                             size: 26,
                           ),
-                          suffixIcon: IconButton(
-                            tooltip: 'Filtrar clientes',
-                            onPressed: _abrirFiltros,
-                            icon: const Icon(
-                              Icons.tune,
-                              color: Color(0xFF46524B),
-                            ),
-                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide.none,
@@ -387,7 +293,6 @@ class _ClientesScreenState extends State<ClientesScreen> {
                       ),
                     ),
                   ),
-                  SliverToBoxAdapter(child: _filtros(margem, todos)),
                   if (clientes.isEmpty)
                     const SliverFillRemaining(
                       hasScrollBody: false,
