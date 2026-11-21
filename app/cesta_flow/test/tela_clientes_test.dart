@@ -17,7 +17,6 @@ Customer cliente(String nome, String cpf, {double? score}) => Customer(
   phone: '(45) 99999-0000',
   addressNumber: '10',
   address: 'Rua das Flores, 10',
-  adress_number: '10',
   city: 'São Paulo',
   state: 'SP',
   documentCPF: cpf,
@@ -85,7 +84,7 @@ void main() {
       await tester.tap(find.text('Com score'));
       await tester.pumpAndSettle();
       expect(find.text('Ângelo Pereira'), findsOneWidget);
-      expect(find.text('Score: 0'), findsOneWidget);
+      expect(find.text('Score: 0 · Ruim'), findsOneWidget);
       await tester.tap(find.byTooltip('Filtrar clientes'));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ListTile, 'Sem score'));
@@ -99,7 +98,7 @@ void main() {
       await tester.tap(find.text('Todos'));
       await tester.enterText(find.byType(TextField), 'janaina');
       await tester.pumpAndSettle();
-      expect(find.text('Score: 940'), findsOneWidget);
+      expect(find.text('Score: 940 · Bom'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

@@ -201,7 +201,12 @@ class _CustomerSelectionState extends State<CustomerSelection> {
                   child: CustomerSelectionCard(
                     name: customer.name,
                     cpf: customer.documentCPF,
-                    onTap: () => Navigator.pop(context, customer),
+                    notice: customer.isBlocked
+                        ? 'Cliente bloqueado. Não pode comprar.'
+                        : null,
+                    onTap: customer.isBlocked
+                        ? null
+                        : () => Navigator.pop(context, customer),
                   ),
                 );
               }, childCount: _filteredCustomers.length),
@@ -365,6 +370,7 @@ class CustomerSelectionCard extends StatelessWidget {
     super.key,
     required this.name,
     this.cpf,
+    this.notice,
     this.showInitials = true,
     this.borderColor,
     this.onTap,
@@ -372,6 +378,7 @@ class CustomerSelectionCard extends StatelessWidget {
 
   final String name;
   final String? cpf;
+  final String? notice;
   final bool showInitials;
   final Color? borderColor;
   final VoidCallback? onTap;
@@ -433,6 +440,18 @@ class CustomerSelectionCard extends StatelessWidget {
                     style: const TextStyle(
                       color: Color(0xFF59665E),
                       fontSize: 13,
+                    ),
+                  ),
+                ],
+                if (notice != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    notice!,
+                    style: const TextStyle(
+                      color: Color(0xFFB42318),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      height: 1.3,
                     ),
                   ),
                 ],

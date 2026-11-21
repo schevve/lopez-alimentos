@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
-
-String _formatScore(double score) => score == score.roundToDouble()
-    ? score.toInt().toString()
-    : score.toString();
+import 'package:cesta_flow/core/domain/score_band.dart';
 
 class ClienteCard extends StatelessWidget {
   const ClienteCard({super.key, required this.cliente, required this.onAcao});
@@ -45,24 +42,38 @@ class ClienteCard extends StatelessWidget {
                   color: Color(0xFF18251F),
                 ),
               );
-              final badge = Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0F3F1),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Text(
-                  cliente.score == null
-                      ? 'Score não informado'
-                      : 'Score: ${_formatScore(cliente.score!)}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF46524B),
+              final badge = Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F3F1),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Text(
+                      formatCustomerScore(cliente.score),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF46524B),
+                      ),
+                    ),
                   ),
-                ),
+                  if (cliente.isBlocked) ...[
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Bloqueado',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFB42318),
+                      ),
+                    ),
+                  ],
+                ],
               );
               if (constraints.maxWidth < 380 ||
                   MediaQuery.textScalerOf(context).scale(14) > 18) {
