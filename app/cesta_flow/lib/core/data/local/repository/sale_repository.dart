@@ -14,6 +14,7 @@ import '../model/sale_model.dart';
 import '../remote_deletion.dart';
 import '../sync_timestamps.dart';
 import '../sync_entity_lookup.dart';
+import 'customer_score_service.dart';
 
 class SaleBasketLine {
   const SaleBasketLine({
@@ -71,6 +72,9 @@ class SaleRepository {
     if (customer == null || customer.isDeleted) {
       throw StateError('Cliente não encontrado.');
     }
+    if (customer.isBlocked) {
+      throw StateError('Cliente bloqueado não pode realizar compras.');
+    }
     final identified = value.customerUuid.isEmpty
         ? value.copyWith(customerUuid: customer.uuid)
         : value;
@@ -107,6 +111,9 @@ class SaleRepository {
       final currentCustomer = db.box<Customer>().get(pendingSale.customerId);
       if (currentCustomer == null || currentCustomer.isDeleted) {
         throw StateError('Cliente não encontrado.');
+      }
+      if (currentCustomer.isBlocked) {
+        throw StateError('Cliente bloqueado não pode realizar compras.');
       }
       final saleId = db.box<Sale>().put(pendingSale);
       for (final resolved in resolvedLines) {
@@ -380,10 +387,30 @@ class SaleRepository {
     });
     if (marked == 0) return 0;
     final client = activeSupabaseClient();
-    if (client == null) return 1;
+    if (client != null) {
+      await _syncSaleDeletion(
+        saleId: id,
+        sale: sale,
+        links: links,
+        baskets: baskets,
+        installments: installments,
+      );
+    }
+    await CustomerScoreService(dbHelper: _dbHelper).recalculate(sale.customerId);
+    return 1;
+  }
+
+  Future<void> _syncSaleDeletion({
+    required int saleId,
+    required Sale sale,
+    required List<SaleBasket> links,
+    required List<Basket> baskets,
+    required List<Installment> installments,
+  }) async {
+    final db = await _dbHelper.store;
     if (sale.uuid.isNotEmpty) {
       await _markRemoteDeleted('sales', sale.uuid);
-      final current = db.box<Sale>().get(id);
+      final current = db.box<Sale>().get(saleId);
       if (current != null) {
         db.box<Sale>().put(current.copyWith(isSynced: true), mode: PutMode.update);
       }
@@ -417,7 +444,6 @@ class SaleRepository {
         mode: PutMode.update,
       );
     }
-    return 1;
   }
 
   List<SaleBasket> _activeLinks(Store db, List<int> saleIds) {

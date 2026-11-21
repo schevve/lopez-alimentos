@@ -16,6 +16,9 @@ class Installment {
   final DateTime? dueDate;
   @Property(type: PropertyType.dateNano)
   final DateTime? paymentDate;
+  /// Visita combinada no pagamento. Não entra no score e não altera [dueDate].
+  @Property(type: PropertyType.dateNano)
+  final DateTime? indicatedPaymentDate;
   final String? paymentMethod;
   @Property(type: PropertyType.dateNano)
   final DateTime createdAt;
@@ -33,6 +36,7 @@ class Installment {
     this.paidAmount = 0,
     this.dueDate,
     this.paymentDate,
+    this.indicatedPaymentDate,
     this.paymentMethod,
     DateTime? createdAt,
     this.updatedAt,
@@ -51,6 +55,7 @@ class Installment {
       'paid_amount': paidAmount,
       'due_date': dueDate?.toIso8601String(),
       'payment_date': paymentDate?.toIso8601String(),
+      'indicated_payment_date': indicatedPaymentDate?.toIso8601String(),
       'payment_method': paymentMethod,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
@@ -72,6 +77,7 @@ class Installment {
       'paid_amount': paidAmount,
       'due_date': dueDate?.toIso8601String(),
       'payment_date': paymentDate?.toIso8601String(),
+      'indicated_payment_date': indicatedPaymentDate?.toIso8601String(),
       'payment_method': paymentMethod,
       'created_at': createdAt.toUtc().toIso8601String(),
       'updated_at': (updatedAt ?? createdAt).toUtc().toIso8601String(),
@@ -92,6 +98,7 @@ class Installment {
       paidAmount: _readPaidAmount(map),
       dueDate: _readDate(map['due_date']),
       paymentDate: _readDate(map['payment_date'] ?? map['date']),
+      indicatedPaymentDate: _readDate(map['indicated_payment_date']),
       paymentMethod: (map['payment_method'] ?? map['method']) as String?,
       createdAt: _readDate(map['created_at']) ?? DateTime.now(),
       updatedAt: _readDate(map['updated_at']),
@@ -111,6 +118,8 @@ class Installment {
     bool clearDueDate = false,
     DateTime? paymentDate,
     bool clearPaymentDate = false,
+    DateTime? indicatedPaymentDate,
+    bool clearIndicatedPaymentDate = false,
     String? paymentMethod,
     bool clearPaymentMethod = false,
     DateTime? createdAt,
@@ -127,6 +136,9 @@ class Installment {
       paidAmount: paidAmount ?? this.paidAmount,
       dueDate: clearDueDate ? null : dueDate ?? this.dueDate,
       paymentDate: clearPaymentDate ? null : paymentDate ?? this.paymentDate,
+      indicatedPaymentDate: clearIndicatedPaymentDate
+          ? null
+          : indicatedPaymentDate ?? this.indicatedPaymentDate,
       paymentMethod: clearPaymentMethod
           ? null
           : paymentMethod ?? this.paymentMethod,
@@ -139,7 +151,7 @@ class Installment {
 
   @override
   String toString() {
-    return 'Installment{id: $id, uuid: $uuid, saleId: $saleId, expectedAmount: $expectedAmount, dueDate: $dueDate, paymentDate: $paymentDate}';
+    return 'Installment{id: $id, uuid: $uuid, saleId: $saleId, expectedAmount: $expectedAmount, dueDate: $dueDate, paymentDate: $paymentDate, indicatedPaymentDate: $indicatedPaymentDate}';
   }
 }
 

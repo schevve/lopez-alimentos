@@ -347,9 +347,12 @@ class _InstallmentCard extends StatelessWidget {
     final badge = isPaid
         ? PaymentSummaryBadge.paid
         : badgeForUnpaidDueDate(due);
+    final indicated = installment.indicatedPaymentDate;
     final subtitle = isPaid
         ? 'Pago em ${paymentDate == null ? '—' : _formatDate(paymentDate)}'
-        : 'Previsto para $dueLabel';
+        : indicated == null
+        ? 'Previsto para $dueLabel'
+        : 'Previsto para $dueLabel · Visita indicada em ${_formatDate(indicated)}';
     final amount = formatCurrency(
       isPaid ? installment.paidAmount : installment.expectedAmount,
     );

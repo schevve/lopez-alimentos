@@ -44,6 +44,7 @@ abstract final class ExportColumnLabels {
     'paid_amount': 'Valor pago',
     'due_date': 'Vencimento',
     'payment_date': 'Data de pagamento',
+    'indicated_payment_date': 'Data de pagamento indicado',
     'payment_method': 'Forma de pagamento',
   };
 

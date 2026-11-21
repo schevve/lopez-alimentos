@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../domain/installment_due_date.dart';
 import '../../../../objectbox.g.dart';
 import '../../remote/active_supabase_client.dart';
 import '../db_helper.dart';
@@ -10,6 +11,7 @@ import '../model/sale_model.dart';
 import '../remote_deletion.dart';
 import '../sync_timestamps.dart';
 import '../sync_entity_lookup.dart';
+import 'customer_score_service.dart';
 import 'sale_repository.dart';
 
 class InstallmentRepository {
@@ -69,12 +71,13 @@ class InstallmentRepository {
       throw ArgumentError('Valor total inválido para parcelas.');
     }
     final expectedAmounts = _splitExpectedAmounts(totalPrice, count);
+    DateTime? lastDueDate;
     for (var index = 0; index < count; index++) {
-      final dueDate = DateTime(
-        firstDueDate.year,
-        firstDueDate.month + index,
-        firstDueDate.day,
+      final dueDate = nextInstallmentDueDate(
+        saleDate: firstDueDate,
+        lastDueDate: lastDueDate,
       );
+      lastDueDate = dueDate;
       await createInstallment(
         Installment(
           uuid: const Uuid().v4(),
@@ -84,6 +87,13 @@ class InstallmentRepository {
         ),
       );
     }
+    await _recalculateCustomerScore(saleId);
+  }
+
+  Future<void> _recalculateCustomerScore(int saleId) async {
+    final sale = (await _dbHelper.store).box<Sale>().get(saleId);
+    if (sale == null || sale.isDeleted) return;
+    await CustomerScoreService(dbHelper: _dbHelper).recalculate(sale.customerId);
   }
 
   List<double> _splitExpectedAmounts(double total, int count) {
@@ -114,11 +124,18 @@ class InstallmentRepository {
         throw StateError('Venda já está quitada.');
       }
       final planUuid = const Uuid().v4();
+      final existing = await getInstallmentsBySaleId(saleId);
       await createInstallment(
         Installment(
           uuid: planUuid,
           saleId: saleId,
           expectedAmount: remaining,
+          dueDate: nextInstallmentDueDate(
+            saleDate: sale.createdAt,
+            lastDueDate: latestInstallmentDueDate(
+              existing.map((item) => item.dueDate),
+            ),
+          ),
         ),
       );
       installment = await _nextUnpaidInstallment(saleId);
@@ -178,8 +195,35 @@ class InstallmentRepository {
     if (saleAfterPayment != null &&
         SaleRepository.isSaleFullyPaid(saleAfterPayment)) {
       await _cancelRemainingUnpaidInstallments(saleId);
+    } else if (saleAfterPayment != null) {
+      await _ensureOpenInstallment(saleAfterPayment);
     }
+    await _recalculateCustomerScore(saleId);
     return installmentId;
+  }
+
+  /// Cria a parcela seguinte quando a venda continua em aberto e não há parcela
+  /// pendente. O vencimento fica fixo: um mês após a última parcela.
+  Future<void> _ensureOpenInstallment(Sale sale) async {
+    final saleId = sale.id;
+    if (saleId == null) return;
+    if (await _nextUnpaidInstallment(saleId) != null) return;
+    final remaining = SaleRepository.remainingBalance(sale);
+    if (remaining <= 0) return;
+    final existing = await getInstallmentsBySaleId(saleId);
+    await createInstallment(
+      Installment(
+        uuid: const Uuid().v4(),
+        saleId: saleId,
+        expectedAmount: remaining,
+        dueDate: nextInstallmentDueDate(
+          saleDate: sale.createdAt,
+          lastDueDate: latestInstallmentDueDate(
+            existing.map((item) => item.dueDate),
+          ),
+        ),
+      ),
+    );
   }
 
   bool _isPaid(Installment installment) => installment.paymentDate != null;
@@ -201,26 +245,19 @@ class InstallmentRepository {
     return pending;
   }
 
-  /// Atualiza [dueDate] das parcelas ainda não pagas após um registro de pagamento.
-  Future<void> rescheduleRemainingUnpaidInstallments({
+  /// Grava a visita indicada na próxima parcela em aberto, sem alterar o vencimento.
+  Future<void> indicateNextPaymentDate({
     required int saleId,
-    required DateTime firstDueDate,
+    required DateTime indicatedDate,
   }) async {
-    final pending = _sortedUnpaidInstallments(
-      await getInstallmentsBySaleId(saleId),
+    final next = await _nextUnpaidInstallment(saleId);
+    if (next == null) return;
+    await updateInstallment(
+      next.copyWith(
+        indicatedPaymentDate: indicatedDate,
+        updatedAt: DateTime.now(),
+      ),
     );
-    if (pending.isEmpty) return;
-    final now = DateTime.now();
-    for (var index = 0; index < pending.length; index++) {
-      final dueDate = DateTime(
-        firstDueDate.year,
-        firstDueDate.month + index,
-        firstDueDate.day,
-      );
-      await updateInstallment(
-        pending[index].copyWith(dueDate: dueDate, updatedAt: now),
-      );
-    }
   }
 
   Future<Installment?> _nextUnpaidInstallment(int saleId) async {
@@ -278,7 +315,11 @@ class InstallmentRepository {
       throw ArgumentError('ID obrigatório para atualizar.');
     }
     final db = await _dbHelper.store;
+    final current = db.box<Installment>().get(value.id!);
+    if (current == null || current.isDeleted) return 0;
     final pending = value.copyWith(
+      dueDate: current.dueDate ?? value.dueDate,
+      paymentDate: current.paymentDate ?? value.paymentDate,
       updatedAt: SyncTimestamps.forUpdate(),
       isSynced: false,
     );

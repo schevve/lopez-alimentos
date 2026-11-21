@@ -1,4 +1,5 @@
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
+import 'package:cesta_flow/core/data/remote/sync_on_user_refresh.dart';
 import 'package:cesta_flow/core/constants/util/format_cpf.dart';
 import 'package:cesta_flow/core/constants/util/format_currency.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
@@ -134,7 +135,15 @@ class _SalesListState extends State<SalesList> {
       backgroundColor: const Color(0xFFF0FDF4),
       appBar: const TopBar(pagTitle: 'Vendas', showDrawer: true),
       body: RefreshIndicator(
-        onRefresh: _loadSalesList,
+        onRefresh: () => refreshWithRemoteSync(
+          _loadSalesList,
+          onSyncFailed: (message) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(SnackBar(content: Text(message)));
+          },
+        ),
         child: SingleChildScrollView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           physics: const AlwaysScrollableScrollPhysics(),

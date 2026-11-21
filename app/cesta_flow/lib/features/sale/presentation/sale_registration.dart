@@ -26,7 +26,9 @@ class SelectedBasketLine {
 }
 
 class SaleRegistration extends StatefulWidget {
-  const SaleRegistration({super.key});
+  const SaleRegistration({super.key, this.initialCustomer});
+
+  final Customer? initialCustomer;
 
   @override
   State<SaleRegistration> createState() => _SaleRegistrationState();
@@ -45,6 +47,7 @@ class _SaleRegistrationState extends State<SaleRegistration> {
   @override
   void initState() {
     super.initState();
+    _selectedCustomer = widget.initialCustomer;
     _dateController.text = getCurrentFormattedDate();
     _totalController.addListener(_onTotalFieldChanged);
   }

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:cesta_flow/core/constants/util/format_currency.dart';
+import 'package:cesta_flow/core/domain/score_band.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
@@ -280,11 +281,14 @@ class _CustomerDetailsState extends State<CustomerDetails> {
                   ? 'Não informada'
                   : _formatDate(customer.dateOfBirth!),
             ),
-            if (customer.score != null)
-              _InfoLine(
-                label: 'Score',
-                value: _formatScore(customer.score!),
-              ),
+            _InfoLine(
+              label: 'Score',
+              value: customer.score == null
+                  ? 'Não informado'
+                  : '${_formatScore(customer.score!)} · ${ScoreBand.fromScore(customer.score)!.label}',
+            ),
+            if (customer.isBlocked)
+              const _InfoLine(label: 'Situação', value: 'Bloqueado'),
             if (customer.id != null)
               _InfoLine(label: 'Código do cliente', value: '#${customer.id}'),
           ],
