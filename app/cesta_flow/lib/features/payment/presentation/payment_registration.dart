@@ -487,9 +487,9 @@ class _PaymentRegistration extends State<PaymentRegistration> {
         paymentMethod: _paymentMethod,
       );
       if (nextDueDate != null) {
-        await _installmentRepository.rescheduleRemainingUnpaidInstallments(
+        await _installmentRepository.indicateNextPaymentDate(
           saleId: widget.saleId,
-          firstDueDate: nextDueDate,
+          indicatedDate: nextDueDate,
         );
       }
       if (!mounted) return;
