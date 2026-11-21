@@ -20,16 +20,41 @@ class BottomBar extends StatefulWidget {
 class _BottomBarState extends State<BottomBar> {
   @override
   Widget build(BuildContext context) {
-    return BottomAppBar(
-      padding: EdgeInsets.symmetric(horizontal: 40.0),
-      color: AppColors.primary,
-      child: Row(
-        spacing: 5,
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          for (var entry in widget.buttonsIcons.entries)
-            _buildTabItem(entry.key, entry.value.$1, entry.value.$2, context),
-        ],
+    return ClipRRect(
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(15),
+        topRight: Radius.circular(15),
+      ),
+      child: BottomAppBar(
+        padding: EdgeInsets.zero,
+        color: Colors.transparent,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        child: Container(
+          width: double.infinity,
+          decoration: const BoxDecoration(
+            color: AppColors.primary,
+            image: DecorationImage(
+              image: AssetImage('assets/images/FundoComidas.png'),
+              fit: BoxFit.cover,
+              alignment: Alignment.bottomCenter,
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Row(
+              spacing: 5,
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                for (var entry in widget.buttonsIcons.entries)
+                  _buildTabItem(
+                    entry.key,
+                    entry.value.$1,
+                    entry.value.$2,
+                    context,
+                  ),
+              ],
+            ),
+        ),
       ),
     );
   }
@@ -44,7 +69,15 @@ class _BottomBarState extends State<BottomBar> {
 
     return Expanded(
       child: Container(
-        color: isSelected ? AppColors.black.withAlpha(50) : Colors.transparent,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(10),
+            topRight: Radius.circular(10),
+          ),
+          color: isSelected
+              ? AppColors.black.withAlpha(50)
+              : Colors.transparent,
+        ),
         child: IconButton(
           hoverColor: Colors.transparent,
           style: IconButton.styleFrom(

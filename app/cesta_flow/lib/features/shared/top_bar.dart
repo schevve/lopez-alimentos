@@ -9,40 +9,43 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
   /// Nas demais telas (rotas empilhadas) o leading é uma seta de voltar.
   final bool showDrawer;
 
-  const TopBar({
-    super.key,
-    required this.pagTitle,
-    this.showDrawer = false,
-  });
+  const TopBar({super.key, required this.pagTitle, this.showDrawer = false});
 
   @override
   Size get preferredSize => const Size.fromHeight(70.0);
 
   @override
   Widget build(BuildContext context) {
-    return AppBar(
-      backgroundColor: AppColors.primary,
-      iconTheme: const IconThemeData(color: Colors.white),
-      scrolledUnderElevation: 0,
-      leading: showDrawer
-          ? const LeadingOpenDrawerButton()
-          : const LeadingBackButton(),
-      flexibleSpace: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/FundoComidas.png'),
-            fit: BoxFit.cover,
+    return ClipRRect(
+      borderRadius: BorderRadius.only(
+        bottomLeft: Radius.circular(15),
+        bottomRight: Radius.circular(15),
+      ),
+      child: AppBar(
+        backgroundColor: AppColors.primary,
+        iconTheme: const IconThemeData(color: Colors.white),
+        scrolledUnderElevation: 0,
+        leading: showDrawer
+            ? const LeadingOpenDrawerButton()
+            : const LeadingBackButton(),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/images/FundoComidas.png'),
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
+            ),
           ),
         ),
-      ),
 
-      toolbarHeight: 70,
-      title: Text(
-        pagTitle,
-        style: TextStyle(
-          fontSize: 24,
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
+        toolbarHeight: 70,
+        title: Text(
+          pagTitle,
+          style: TextStyle(
+            fontSize: 24,
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );

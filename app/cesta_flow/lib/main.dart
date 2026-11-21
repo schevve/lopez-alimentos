@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
+import 'package:cesta_flow/core/constants/theme/app_theme.dart';
 import 'package:cesta_flow/core/data/remote/model/profile_model.dart';
 import 'package:cesta_flow/core/data/remote/repository/profile_repository.dart';
 import 'package:cesta_flow/features/auth/data/auth_service.dart';
@@ -28,6 +29,7 @@ Future<void> main() async {
   } catch (error) {
     runApp(
       MaterialApp(
+        theme: buildAppTheme(),
         home: Scaffold(
           body: SafeArea(
             child: Padding(
@@ -94,9 +96,10 @@ class _MainAppState extends State<MainApp> {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: AuthGate(),
+      theme: buildAppTheme(),
+      home: const AuthGate(),
     );
   }
 }

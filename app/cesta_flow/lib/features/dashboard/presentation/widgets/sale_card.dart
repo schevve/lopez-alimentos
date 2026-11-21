@@ -11,6 +11,7 @@ class SaleCard extends StatelessWidget {
   final String? distance;
   final String product;
   final String amount;
+  final bool isFullyPaid;
   final Future<void> Function()? onAfterReceive;
   const SaleCard({
     required this.saleId,
@@ -21,6 +22,7 @@ class SaleCard extends StatelessWidget {
     this.distance,
     required this.product,
     required this.amount,
+    this.isFullyPaid = false,
     this.onAfterReceive,
     super.key,
   });
@@ -187,11 +189,18 @@ class SaleCard extends StatelessWidget {
                   SizedBox(
                     width: largura,
                     child: _AcaoButton(
-                      label: 'Receber',
-                      icon: Icons.payments_outlined,
-                      background: const Color(0xFFFF7816),
-                      foreground: Colors.white,
-                      onTap: saleId == null
+                      label: isFullyPaid ? 'Quitada' : 'Receber',
+                      icon: isFullyPaid
+                          ? Icons.check_circle_outline
+                          : Icons.payments_outlined,
+                      background: isFullyPaid
+                          ? const Color(0xFFE8ECE9)
+                          : const Color(0xFFFF7816),
+                      foreground: isFullyPaid
+                          ? const Color(0xFF707070)
+                          : Colors.white,
+                      inactive: isFullyPaid,
+                      onTap: isFullyPaid || saleId == null
                           ? null
                           : () async {
                               await Navigator.push(
@@ -221,12 +230,14 @@ class _AcaoButton extends StatelessWidget {
     required this.icon,
     required this.background,
     required this.foreground,
+    this.inactive = false,
     required this.onTap,
   });
   final String label;
   final IconData icon;
   final Color background;
   final Color foreground;
+  final bool inactive;
   final VoidCallback? onTap;
 
   @override
@@ -235,8 +246,12 @@ class _AcaoButton extends StatelessWidget {
     style: FilledButton.styleFrom(
       backgroundColor: background,
       foregroundColor: foreground,
-      disabledBackgroundColor: background.withValues(alpha: .5),
-      disabledForegroundColor: foreground.withValues(alpha: .5),
+      disabledBackgroundColor: inactive
+          ? background
+          : background.withValues(alpha: .5),
+      disabledForegroundColor: inactive
+          ? foreground
+          : foreground.withValues(alpha: .5),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
       minimumSize: const Size(0, 54),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
