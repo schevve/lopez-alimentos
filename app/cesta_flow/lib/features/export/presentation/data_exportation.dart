@@ -134,21 +134,60 @@ class _DataExportationState extends State<DataExportation> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: _isExporting ? null : _exportData,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 10,
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: _isExporting ? null : _exportData,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.secondary,
+                      foregroundColor: AppColors.white,
+                      disabledBackgroundColor: AppColors.secondary.withValues(
+                        alpha: .5,
+                      ),
+                      disabledForegroundColor: AppColors.white.withValues(
+                        alpha: .5,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 12,
+                      ),
+                      minimumSize: const Size(0, 54),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
+                    child: _isExporting
+                        ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: AppColors.white,
+                            ),
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.upload_rounded,
+                                size: 21,
+                                color: AppColors.white,
+                              ),
+                              SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'Exportar dados',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                   ),
-                  child: _isExporting
-                      ? const SizedBox(
-                          height: 30,
-                          width: 30,
-                          child: CircularProgressIndicator(strokeWidth: 3),
-                        )
-                      : const Icon(Icons.upload_rounded, size: 30),
                 ),
               ],
             ),
