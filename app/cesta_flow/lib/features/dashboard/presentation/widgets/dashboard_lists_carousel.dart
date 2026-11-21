@@ -92,26 +92,28 @@ class _DashboardListsCarouselState extends State<DashboardListsCarousel> {
               final isIncoming = child.key == ValueKey(_selectedTab);
               final Animation<Offset> offsetAnimation;
               if (isIncoming) {
-                offsetAnimation = Tween<Offset>(
-                  begin: Offset(_enterFromRight ? 1.0 : -1.0, 0),
-                  end: Offset.zero,
-                ).animate(
-                  CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutCubic,
-                  ),
-                );
+                offsetAnimation =
+                    Tween<Offset>(
+                      begin: Offset(_enterFromRight ? 1.0 : -1.0, 0),
+                      end: Offset.zero,
+                    ).animate(
+                      CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeOutCubic,
+                      ),
+                    );
               } else {
                 // Com ReverseAnimation do AnimatedSwitcher: centro → lado oposto.
-                offsetAnimation = Tween<Offset>(
-                  begin: Offset(_enterFromRight ? -1.0 : 1.0, 0),
-                  end: Offset.zero,
-                ).animate(
-                  CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeInCubic,
-                  ),
-                );
+                offsetAnimation =
+                    Tween<Offset>(
+                      begin: Offset(_enterFromRight ? -1.0 : 1.0, 0),
+                      end: Offset.zero,
+                    ).animate(
+                      CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeInCubic,
+                      ),
+                    );
               }
               return SlideTransition(position: offsetAnimation, child: child);
             },
@@ -155,7 +157,11 @@ class _DashboardListsCarouselState extends State<DashboardListsCarousel> {
 
     return Column(
       children: [
-        for (var index = 0; index < widget.pendingInstallments.length; index++) ...[
+        for (
+          var index = 0;
+          index < widget.pendingInstallments.length;
+          index++
+        ) ...[
           if (index > 0) const SizedBox(height: 14),
           _buildPaymentCard(widget.pendingInstallments[index]),
         ],
@@ -198,14 +204,15 @@ class _DashboardListsCarouselState extends State<DashboardListsCarousel> {
 
   Widget _buildPaymentCard(Installment installment) {
     final customerId = widget.saleCustomerIds[installment.saleId];
-    final customer =
-        customerId == null ? null : widget.customersById[customerId];
+    final customer = customerId == null
+        ? null
+        : widget.customersById[customerId];
     final due = installment.dueDate;
     final dueLabel = due == null ? 'data não definida' : _formatDate(due);
     final indicated = installment.indicatedPaymentDate;
     final subtitle = indicated == null
-        ? 'Previsto para $dueLabel'
-        : 'Previsto para $dueLabel · Visita indicada em ${_formatDate(indicated)}';
+        ? 'Vencimento em $dueLabel'
+        : 'Pagamento previsto para ${_formatDate(indicated)} · Vencimento em $dueLabel';
 
     return PaymentSummaryCard(
       title: customer?.name ?? 'Cliente #${customerId ?? installment.saleId}',
