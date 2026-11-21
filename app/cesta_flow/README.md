@@ -1,4 +1,4 @@
-# cesta_flow
+# Cesta Flow
 
 Aplicativo Flutter com armazenamento local ObjectBox e Supabase configurado.
 

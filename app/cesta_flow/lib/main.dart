@@ -29,6 +29,7 @@ Future<void> main() async {
   } catch (error) {
     runApp(
       MaterialApp(
+        title: 'Cesta Flow',
         theme: buildAppTheme(),
         home: Scaffold(
           body: SafeArea(
@@ -97,6 +98,7 @@ class _MainAppState extends State<MainApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Cesta Flow',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       home: const AuthGate(),
