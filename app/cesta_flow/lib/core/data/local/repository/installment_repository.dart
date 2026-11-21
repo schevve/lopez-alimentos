@@ -342,6 +342,49 @@ class InstallmentRepository {
     return [...unpaid, ...paid];
   }
 
+  /// Totais para os cards de métricas da tela inicial.
+  Future<({double estimatedReceiptsToday, int overdueCount})>
+      getPaymentMetricsForDashboard() async {
+    final db = await _dbHelper.store;
+    final saleBox = db.box<Sale>();
+    final installments = await getAllInstallments();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    var estimatedReceiptsToday = 0.0;
+    var overdueCount = 0;
+
+    for (final installment in installments) {
+      if (_isPaid(installment)) continue;
+      final sale = saleBox.get(installment.saleId);
+      if (sale == null || sale.isDeleted) continue;
+
+      final indicated = installment.indicatedPaymentDate;
+      if (indicated != null) {
+        final indicatedDay = DateTime(
+          indicated.year,
+          indicated.month,
+          indicated.day,
+        );
+        if (indicatedDay == today) {
+          estimatedReceiptsToday += installment.expectedAmount;
+        }
+      }
+
+      final due = installment.dueDate;
+      if (due == null) continue;
+      final dueDay = DateTime(due.year, due.month, due.day);
+      if (dueDay.isBefore(today)) {
+        overdueCount++;
+      }
+    }
+
+    return (
+      estimatedReceiptsToday: estimatedReceiptsToday,
+      overdueCount: overdueCount,
+    );
+  }
+
   Future<int> updateInstallment(Installment value) async {
     if (value.id == null || value.id == 0) {
       throw ArgumentError('ID obrigatório para atualizar.');

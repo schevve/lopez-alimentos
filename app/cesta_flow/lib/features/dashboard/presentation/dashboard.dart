@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/constants/util/format_currency.dart';
 import 'package:cesta_flow/core/data/remote/sync_on_user_refresh.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
@@ -35,8 +36,8 @@ class _DashboardState extends State<Dashboard> {
   Map<int, int> _saleCustomerIds = const {};
   Map<int, String> _basketLabels = const {};
   double _salesAmountLast7Days = 0;
-  int _customersCount = 0;
-  int _pendingCustomersCount = 0;
+  double _estimatedReceiptsToday = 0;
+  int _overduePaymentsCount = 0;
 
   @override
   void initState() {
@@ -61,7 +62,8 @@ class _DashboardState extends State<Dashboard> {
       final salesAmount = await _saleRepository.getTotalSalesAmountSince(
         DateTime.now().subtract(const Duration(days: 7)),
       );
-      final pendingCustomers = await _saleRepository.getPendingCustomersCount();
+      final paymentMetrics = await _installmentRepository
+          .getPaymentMetricsForDashboard();
       final customers = await _customerRepository.getAllCustomers();
       final basketLabels = await _saleRepository.basketLabelsFor(
         latestSales.map((sale) => sale.id).whereType<int>().toList(),
@@ -86,8 +88,8 @@ class _DashboardState extends State<Dashboard> {
         _saleCustomerIds = saleCustomerIds;
         _basketLabels = basketLabels;
         _salesAmountLast7Days = salesAmount;
-        _pendingCustomersCount = pendingCustomers;
-        _customersCount = customers.length;
+        _estimatedReceiptsToday = paymentMetrics.estimatedReceiptsToday;
+        _overduePaymentsCount = paymentMetrics.overdueCount;
         _customersById = {
           for (final customer in customers)
             if (customer.id != null) customer.id!: customer,
@@ -135,21 +137,23 @@ class _DashboardState extends State<Dashboard> {
                     value: _metricValue(formatCurrency(_salesAmountLast7Days)),
                     subtitle: 'Últimos 7 dias',
                     icon: Icons.shopping_cart,
-                    iconColor: const Color(0xFF1D5335),
+                    iconColor: AppColors.primary,
                   ),
                   MetricCard(
-                    title: 'Clientes',
-                    value: _metricValue(_customersCount.toString()),
-                    subtitle: 'Cadastrados',
-                    icon: Icons.people,
-                    iconColor: const Color(0xFF1D5335),
+                    title: 'Pagamentos',
+                    value: _metricValue(
+                      formatCurrency(_estimatedReceiptsToday),
+                    ),
+                    subtitle: 'Estimados para o dia',
+                    icon: Icons.payments_outlined,
+                    iconColor: AppColors.primary,
                   ),
                   MetricCard(
                     title: 'Pendências',
-                    value: _metricValue(_pendingCustomersCount.toString()),
-                    subtitle: 'Sem pagamento',
+                    value: _metricValue(_overduePaymentsCount.toString()),
+                    subtitle: 'Pagamentos atrasados',
                     icon: Icons.warning,
-                    iconColor: const Color(0xFFC62828),
+                    iconColor: AppColors.primary,
                   ),
                 ],
               ),
