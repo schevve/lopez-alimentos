@@ -133,9 +133,21 @@ class _ClientesScreenState extends State<ClientesScreen> {
     }
 
     if (acao == 'Nova Venda') {
-      await Navigator.of(
-        context,
-      ).push<void>(MaterialPageRoute(builder: (_) => const SaleRegistration()));
+      if (cliente.isBlocked) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Cliente bloqueado. Não pode realizar compras.'),
+            ),
+          );
+        return;
+      }
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => SaleRegistration(initialCustomer: cliente),
+        ),
+      );
       return;
     }
 
