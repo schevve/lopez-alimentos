@@ -238,7 +238,7 @@
     },
     {
       "id": "6:8727988763342085890",
-      "lastPropertyId": "14:5650795077311920629",
+      "lastPropertyId": "15:3905403735959278164",
       "name": "Installment",
       "properties": [
         {
@@ -308,6 +308,11 @@
           "id": "14:5650795077311920629",
           "name": "expectedAmount",
           "type": 8
+        },
+        {
+          "id": "15:3905403735959278164",
+          "name": "indicatedPaymentDate",
+          "type": 12
         }
       ],
       "relations": []

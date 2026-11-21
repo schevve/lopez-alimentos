@@ -299,7 +299,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(6, 8727988763342085890),
     name: 'Installment',
-    lastPropertyId: const obx_int.IdUid(14, 5650795077311920629),
+    lastPropertyId: const obx_int.IdUid(15, 3905403735959278164),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -379,6 +379,12 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(14, 5650795077311920629),
         name: 'expectedAmount',
         type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(15, 3905403735959278164),
+        name: 'indicatedPaymentDate',
+        type: 12,
         flags: 0,
       ),
     ],
@@ -938,7 +944,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final paymentMethodOffset = object.paymentMethod == null
             ? null
             : fbb.writeString(object.paymentMethod!);
-        fbb.startTable(15);
+        fbb.startTable(16);
         fbb.addInt64(0, object.id ?? 0);
         fbb.addOffset(1, uuidOffset);
         fbb.addInt64(2, object.saleId);
@@ -967,6 +973,12 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.addOffset(11, paymentMethodOffset);
         fbb.addFloat64(12, object.paidAmount);
         fbb.addFloat64(13, object.expectedAmount);
+        fbb.addInt64(
+          14,
+          object.indicatedPaymentDate == null
+              ? null
+              : object.indicatedPaymentDate!.microsecondsSinceEpoch * 1000,
+        );
         fbb.finish(fbb.endTable());
         return object.id ?? 0;
       },
@@ -988,6 +1000,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
           rootOffset,
           20,
         );
+        final indicatedPaymentDateValue = const fb.Int64Reader()
+            .vTableGetNullable(buffer, rootOffset, 32);
         final idParam = const fb.Int64Reader().vTableGetNullable(
           buffer,
           rootOffset,
@@ -1027,6 +1041,11 @@ obx_int.ModelDefinition getObjectBoxModel() {
             : DateTime.fromMicrosecondsSinceEpoch(
                 (paymentDateValue / 1000).round(),
               );
+        final indicatedPaymentDateParam = indicatedPaymentDateValue == null
+            ? null
+            : DateTime.fromMicrosecondsSinceEpoch(
+                (indicatedPaymentDateValue / 1000).round(),
+              );
         final paymentMethodParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGetNullable(buffer, rootOffset, 26);
@@ -1060,6 +1079,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           paidAmount: paidAmountParam,
           dueDate: dueDateParam,
           paymentDate: paymentDateParam,
+          indicatedPaymentDate: indicatedPaymentDateParam,
           paymentMethod: paymentMethodParam,
           createdAt: createdAtParam,
           updatedAt: updatedAtParam,
@@ -1449,6 +1469,11 @@ class Installment_ {
   /// See [Installment.expectedAmount].
   static final expectedAmount = obx.QueryDoubleProperty<Installment>(
     _entities[3].properties[12],
+  );
+
+  /// See [Installment.indicatedPaymentDate].
+  static final indicatedPaymentDate = obx.QueryDateNanoProperty<Installment>(
+    _entities[3].properties[13],
   );
 }
 
