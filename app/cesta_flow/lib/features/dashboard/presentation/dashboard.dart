@@ -1,4 +1,5 @@
 import 'package:cesta_flow/core/constants/util/format_currency.dart';
+import 'package:cesta_flow/core/data/remote/sync_on_user_refresh.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/model/installment_model.dart';
@@ -55,8 +56,8 @@ class _DashboardState extends State<Dashboard> {
       final latestSales = await _saleRepository.getLatestSales(
         limit: _latestSalesLimit,
       );
-      final pendingInstallments =
-          await _installmentRepository.getUnpaidInstallments();
+      final pendingInstallments = await _installmentRepository
+          .getUnpaidInstallments();
       final salesAmount = await _saleRepository.getTotalSalesAmountSince(
         DateTime.now().subtract(const Duration(days: 7)),
       );
@@ -111,7 +112,15 @@ class _DashboardState extends State<Dashboard> {
       backgroundColor: const Color(0xFFF0FDF4),
       appBar: const TopBar(pagTitle: 'Início', showDrawer: true),
       body: RefreshIndicator(
-        onRefresh: () => _loadDashboardData(),
+        onRefresh: () => refreshWithRemoteSync(
+          () => _loadDashboardData(),
+          onSyncFailed: (message) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(SnackBar(content: Text(message)));
+          },
+        ),
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -220,5 +229,4 @@ class _DashboardState extends State<Dashboard> {
     }
     return value;
   }
-
 }

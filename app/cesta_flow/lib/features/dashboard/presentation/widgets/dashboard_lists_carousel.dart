@@ -211,8 +211,8 @@ class _DashboardListsCarouselState extends State<DashboardListsCarousel> {
     final dueLabel = due == null ? 'data não definida' : _formatDate(due);
     final indicated = installment.indicatedPaymentDate;
     final subtitle = indicated == null
-        ? 'Vencimento em $dueLabel'
-        : 'Pagamento previsto para ${_formatDate(indicated)} · Vencimento em $dueLabel';
+        ? 'Vence em $dueLabel'
+        : 'Pagamento previsto para ${_formatDate(indicated)} · Vence em $dueLabel';
 
     return PaymentSummaryCard(
       title: customer?.name ?? 'Cliente #${customerId ?? installment.saleId}',

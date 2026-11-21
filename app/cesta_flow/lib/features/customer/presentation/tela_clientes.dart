@@ -3,6 +3,7 @@ import 'package:cesta_flow/features/customer/presentation/customer_details.dart'
 import 'package:flutter/material.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
+import 'package:cesta_flow/core/data/remote/sync_on_user_refresh.dart';
 
 import '../../shared/top_bar.dart';
 import 'customer_registration.dart';
@@ -24,28 +25,41 @@ class _ClientesScreenState extends State<ClientesScreen> {
   static const _menta = Color(0xFFEEFDF4);
   final _buscaController = TextEditingController();
   late final CustomerRepository _repository;
-  late Future<List<Customer>> _clientes;
+  List<Customer> _todosClientes = [];
+  bool _carregando = true;
+  Object? _erro;
+  int _listaVersao = 0;
 
   @override
   void initState() {
     super.initState();
     _repository = widget.repository ?? CustomerRepository();
-    _clientes = _repository.getAllCustomers();
+    _recarregar();
   }
 
   Future<void> _recarregar({bool mostrarCarregamento = true}) async {
-    final future = _repository.getAllCustomers();
-    if (mostrarCarregamento) {
-      setState(() => _clientes = future);
+    if (mostrarCarregamento && mounted) {
+      setState(() {
+        _carregando = true;
+        _erro = null;
+      });
     }
 
     try {
-      final clientes = await future;
-      if (mostrarCarregamento || !mounted) return;
-      setState(() => _clientes = Future.value(clientes));
+      final clientes = await _repository.getAllCustomers();
+      if (!mounted) return;
+      setState(() {
+        _todosClientes = clientes;
+        _carregando = false;
+        _erro = null;
+        _listaVersao++;
+      });
     } catch (error, stackTrace) {
-      if (mostrarCarregamento || !mounted) return;
-      setState(() => _clientes = Future.error(error, stackTrace));
+      if (!mounted) return;
+      setState(() {
+        _carregando = false;
+        _erro = stackTrace;
+      });
     }
   }
 
@@ -205,34 +219,44 @@ class _ClientesScreenState extends State<ClientesScreen> {
           ),
     floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     body: RefreshIndicator(
-      onRefresh: () => _recarregar(mostrarCarregamento: false),
-      child: FutureBuilder<List<Customer>>(
-        future: _clientes,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const _PaginaRolavel(
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-          if (snapshot.hasError) {
-            return _PaginaRolavel(
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('Não foi possível carregar os clientes.'),
-                    TextButton(
-                      onPressed: _recarregar,
-                      child: const Text('Tentar novamente'),
-                    ),
-                  ],
-                ),
+      onRefresh: () => refreshWithRemoteSync(
+        () => _recarregar(mostrarCarregamento: false),
+        onSyncFailed: (message) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(content: Text(message)));
+        },
+      ),
+      child: _buildCorpo(),
+    ),
+  );
+
+  Widget _buildCorpo() {
+    if (_carregando && _todosClientes.isEmpty) {
+      return const _PaginaRolavel(
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_erro != null && _todosClientes.isEmpty) {
+      return _PaginaRolavel(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Não foi possível carregar os clientes.'),
+              TextButton(
+                onPressed: _recarregar,
+                child: const Text('Tentar novamente'),
               ),
-            );
-          }
-          final todos = snapshot.data ?? [];
-          final clientes = _clientesFiltrados(todos);
-          return LayoutBuilder(
+            ],
+          ),
+        ),
+      );
+    }
+
+    final clientes = _clientesFiltrados(_todosClientes);
+    return LayoutBuilder(
             builder: (context, constraints) {
               final largura = constraints.maxWidth;
               final compacto = largura < 600;
@@ -250,6 +274,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
                   : 1;
               final linhas = (clientes.length / colunas).ceil();
               return CustomScrollView(
+                key: ValueKey(_listaVersao),
                 keyboardDismissBehavior:
                     ScrollViewKeyboardDismissBehavior.onDrag,
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -319,6 +344,12 @@ class _ClientesScreenState extends State<ClientesScreen> {
                                   child:
                                       linha * colunas + coluna < clientes.length
                                       ? ClienteCard(
+                                          key: ValueKey(
+                                            '${clientes[linha * colunas + coluna].uuid}-'
+                                            '${clientes[linha * colunas + coluna].name}-'
+                                            '${clientes[linha * colunas + coluna].isBlocked}-'
+                                            '${clientes[linha * colunas + coluna].score}',
+                                          ),
                                           cliente:
                                               clientes[linha * colunas +
                                                   coluna],
@@ -339,10 +370,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
               );
             },
           );
-        },
-      ),
-    ),
-  );
+  }
 }
 
 class _PaginaRolavel extends StatelessWidget {
