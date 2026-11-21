@@ -48,43 +48,41 @@ class ClienteCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Flexible(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0F3F1),
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: Text(
-                        formatCustomerScore(cliente.score),
-                        textAlign: TextAlign.end,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF46524B),
-                        ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F3F1),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Text(
+                      formatCustomerScore(cliente.score),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF46524B),
                       ),
                     ),
-                    if (cliente.isBlocked) ...[
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Bloqueado',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFFB42318),
-                        ),
+                  ),
+                  if (cliente.isBlocked) ...[
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Bloqueado',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFB42318),
                       ),
-                    ],
+                    ),
                   ],
-                ),
+                ],
               ),
             ],
           ),
