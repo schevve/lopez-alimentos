@@ -13,7 +13,7 @@ class DashboardListsCarousel extends StatefulWidget {
   const DashboardListsCarousel({
     required this.isLoading,
     this.errorMessage,
-    required this.pendingInstallments,
+    required this.paymentInstallments,
     required this.latestSales,
     required this.customersById,
     required this.saleCustomerIds,
@@ -24,7 +24,7 @@ class DashboardListsCarousel extends StatefulWidget {
 
   final bool isLoading;
   final String? errorMessage;
-  final List<Installment> pendingInstallments;
+  final List<Installment> paymentInstallments;
   final List<Sale> latestSales;
   final Map<int, Customer> customersById;
   final Map<int, int> saleCustomerIds;
@@ -145,10 +145,10 @@ class _DashboardListsCarouselState extends State<DashboardListsCarousel> {
         ),
       );
     }
-    if (widget.pendingInstallments.isEmpty) {
+    if (widget.paymentInstallments.isEmpty) {
       return const _CenteredMessage(
         child: Text(
-          'Nenhum pagamento pendente.',
+          'Nenhum pagamento registrado.',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 14, color: Color(0xFF707070)),
         ),
@@ -159,11 +159,11 @@ class _DashboardListsCarouselState extends State<DashboardListsCarousel> {
       children: [
         for (
           var index = 0;
-          index < widget.pendingInstallments.length;
+          index < widget.paymentInstallments.length;
           index++
         ) ...[
           if (index > 0) const SizedBox(height: 14),
-          _buildPaymentCard(widget.pendingInstallments[index]),
+          _buildPaymentCard(widget.paymentInstallments[index]),
         ],
       ],
     );
@@ -207,20 +207,30 @@ class _DashboardListsCarouselState extends State<DashboardListsCarousel> {
     final customer = customerId == null
         ? null
         : widget.customersById[customerId];
+    final isPaid = installment.isPaid;
     final due = installment.dueDate;
     final dueLabel = due == null ? 'data não definida' : _formatDate(due);
+    final paymentDate = installment.paymentDate;
     final indicated = installment.indicatedPaymentDate;
-    final subtitle = indicated == null
+    final subtitle = isPaid
+        ? 'Pago em ${paymentDate == null ? '—' : _formatDate(paymentDate)}'
+        : indicated == null
         ? 'Vence em $dueLabel'
         : 'Pagamento previsto para ${_formatDate(indicated)} · Vence em $dueLabel';
+    final badge = isPaid
+        ? PaymentSummaryBadge.paid
+        : badgeForUnpaidDueDate(due);
 
     return PaymentSummaryCard(
       title: customer?.name ?? 'Cliente #${customerId ?? installment.saleId}',
       subtitle: subtitle,
-      amount: formatCurrency(installment.expectedAmount),
-      amountLabel: 'Valor previsto',
-      badge: badgeForUnpaidDueDate(due),
+      amount: formatCurrency(
+        isPaid ? installment.paidAmount : installment.expectedAmount,
+      ),
+      amountLabel: isPaid ? 'Valor pago' : 'Valor previsto',
+      badge: badge,
       saleId: installment.saleId,
+      isPaid: isPaid,
       onAfterReceive: widget.onAfterReceive,
     );
   }

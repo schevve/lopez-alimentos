@@ -245,6 +245,23 @@ class InstallmentRepository {
     return pending;
   }
 
+  List<Installment> _sortedPaidInstallments(List<Installment> installments) {
+    final paid = installments.where(_isPaid).toList()
+      ..sort((a, b) {
+        final payA = a.paymentDate;
+        final payB = b.paymentDate;
+        if (payA == null && payB == null) {
+          return b.createdAt.compareTo(a.createdAt);
+        }
+        if (payA == null) return 1;
+        if (payB == null) return -1;
+        final payCompare = payB.compareTo(payA);
+        if (payCompare != 0) return payCompare;
+        return b.createdAt.compareTo(a.createdAt);
+      });
+    return paid;
+  }
+
   /// Grava a visita indicada na próxima parcela em aberto, sem alterar o vencimento.
   Future<void> indicateNextPaymentDate({
     required int saleId,
@@ -308,6 +325,21 @@ class InstallmentRepository {
       return sale != null && !sale.isDeleted;
     });
     return _sortedUnpaidInstallments(activeUnpaid.toList());
+  }
+
+  /// Parcelas em aberto primeiro, depois quitadas (mais recentes primeiro),
+  /// excluindo vendas excluídas — para a lista da tela inicial.
+  Future<List<Installment>> getInstallmentsForDashboard() async {
+    final db = await _dbHelper.store;
+    final saleBox = db.box<Sale>();
+    final installments = await getAllInstallments();
+    final active = installments.where((installment) {
+      final sale = saleBox.get(installment.saleId);
+      return sale != null && !sale.isDeleted;
+    }).toList();
+    final unpaid = _sortedUnpaidInstallments(active);
+    final paid = _sortedPaidInstallments(active);
+    return [...unpaid, ...paid];
   }
 
   Future<int> updateInstallment(Installment value) async {

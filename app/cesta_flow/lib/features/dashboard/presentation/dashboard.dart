@@ -30,7 +30,7 @@ class _DashboardState extends State<Dashboard> {
   bool _isLoading = true;
   String? _errorMessage;
   List<Sale> _latestSales = const [];
-  List<Installment> _pendingInstallments = const [];
+  List<Installment> _paymentInstallments = const [];
   Map<int, Customer> _customersById = const {};
   Map<int, int> _saleCustomerIds = const {};
   Map<int, String> _basketLabels = const {};
@@ -56,8 +56,8 @@ class _DashboardState extends State<Dashboard> {
       final latestSales = await _saleRepository.getLatestSales(
         limit: _latestSalesLimit,
       );
-      final pendingInstallments = await _installmentRepository
-          .getUnpaidInstallments();
+      final paymentInstallments = await _installmentRepository
+          .getInstallmentsForDashboard();
       final salesAmount = await _saleRepository.getTotalSalesAmountSince(
         DateTime.now().subtract(const Duration(days: 7)),
       );
@@ -67,7 +67,7 @@ class _DashboardState extends State<Dashboard> {
         latestSales.map((sale) => sale.id).whereType<int>().toList(),
       );
       final saleCustomerIds = <int, int>{};
-      for (final installment in pendingInstallments) {
+      for (final installment in paymentInstallments) {
         final saleId = installment.saleId;
         if (saleCustomerIds.containsKey(saleId)) continue;
         final sale = await _saleRepository.getSaleById(saleId);
@@ -82,7 +82,7 @@ class _DashboardState extends State<Dashboard> {
 
       setState(() {
         _latestSales = latestSales;
-        _pendingInstallments = pendingInstallments;
+        _paymentInstallments = paymentInstallments;
         _saleCustomerIds = saleCustomerIds;
         _basketLabels = basketLabels;
         _salesAmountLast7Days = salesAmount;
@@ -157,7 +157,7 @@ class _DashboardState extends State<Dashboard> {
               DashboardListsCarousel(
                 isLoading: _isLoading,
                 errorMessage: _errorMessage,
-                pendingInstallments: _pendingInstallments,
+                paymentInstallments: _paymentInstallments,
                 latestSales: _latestSales,
                 customersById: _customersById,
                 saleCustomerIds: _saleCustomerIds,
