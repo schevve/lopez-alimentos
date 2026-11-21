@@ -33,6 +33,7 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
             image: DecorationImage(
               image: AssetImage('assets/images/FundoComidas.png'),
               fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
             ),
           ),
         ),

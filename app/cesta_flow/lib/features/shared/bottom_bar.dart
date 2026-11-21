@@ -21,20 +21,39 @@ class _BottomBarState extends State<BottomBar> {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.only(
+      borderRadius: const BorderRadius.only(
         topLeft: Radius.circular(15),
         topRight: Radius.circular(15),
       ),
       child: BottomAppBar(
-        padding: EdgeInsets.symmetric(horizontal: 40.0),
-        color: AppColors.primary,
-        child: Row(
-          spacing: 5,
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            for (var entry in widget.buttonsIcons.entries)
-              _buildTabItem(entry.key, entry.value.$1, entry.value.$2, context),
-          ],
+        padding: EdgeInsets.zero,
+        color: Colors.transparent,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        child: Container(
+          width: double.infinity,
+          decoration: const BoxDecoration(
+            color: AppColors.primary,
+            image: DecorationImage(
+              image: AssetImage('assets/images/FundoComidas.png'),
+              fit: BoxFit.cover,
+              alignment: Alignment.bottomCenter,
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Row(
+              spacing: 5,
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                for (var entry in widget.buttonsIcons.entries)
+                  _buildTabItem(
+                    entry.key,
+                    entry.value.$1,
+                    entry.value.$2,
+                    context,
+                  ),
+              ],
+            ),
         ),
       ),
     );
