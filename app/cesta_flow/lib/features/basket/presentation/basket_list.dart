@@ -2,6 +2,7 @@ import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/data/local/model/basket_model.dart';
 import 'package:cesta_flow/core/data/local/repository/basket_repository.dart';
 import 'package:cesta_flow/core/data/remote/sync_on_user_refresh.dart';
+import 'package:cesta_flow/features/basket/presentation/basket_edit.dart';
 import 'package:cesta_flow/features/basket/presentation/widgets/basket_card.dart';
 import 'package:cesta_flow/features/sale/presentation/basket_registration.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
@@ -225,6 +226,21 @@ class _BasketListState extends State<BasketList> {
     );
   }
 
+  Future<void> _openEdit(Basket basket) async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BasketEdit(
+          basket: basket,
+          repository: _basketRepository,
+        ),
+      ),
+    );
+    if (changed == true && mounted) {
+      await _loadBaskets(showLoadingIndicator: true);
+    }
+  }
+
   List<Widget> _buildBasketsSection(List<Basket> baskets) {
     if (_isLoading) {
       return const [
@@ -268,9 +284,7 @@ class _BasketListState extends State<BasketList> {
         if (index > 0) const SizedBox(height: 14),
         BasketCard(
           basket: baskets[index],
-          onEdit: () {
-            // Edição de cestas: implementar na página de edição.
-          },
+          onEdit: () => _openEdit(baskets[index]),
         ),
       ],
     ];
