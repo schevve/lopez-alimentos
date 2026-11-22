@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/app_shell_refresh_observer.dart';
 import 'package:cesta_flow/core/data/remote/sync_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:cesta_flow/core/data/local/db_helper.dart';
@@ -16,6 +17,8 @@ import 'package:cesta_flow/features/auth/presentation/login_screen.dart';
 import 'package:cesta_flow/features/customer/presentation/tela_clientes.dart';
 import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
 import 'package:cesta_flow/features/export/presentation/data_exportation.dart';
+import 'package:cesta_flow/features/basket/presentation/basket_list.dart';
+import 'package:cesta_flow/features/payment/presentation/payment_list.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_list.dart';
 import 'package:cesta_flow/features/shared/app_navigation.dart';
 import 'package:cesta_flow/features/shared/bottom_bar.dart';
@@ -101,6 +104,7 @@ class _MainAppState extends State<MainApp> {
       title: 'Cesta Flow',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
+      navigatorObservers: [appShellRefreshObserver],
       home: const AuthGate(),
     );
   }
@@ -139,15 +143,31 @@ class _MainScreenState extends State<MainScreen> {
   final Map<String, Widget> _pages = const {
     'home': Dashboard(),
     'sales': SalesList(),
+    'payments': PaymentList(),
     'customers': ClientesScreen(),
+    'baskets': BasketList(),
     'export': DataExportation(),
   };
 
   @override
   void initState() {
     super.initState();
+    selectMainShellTab = _selecionarAba;
     synchronizeWhenLoggedIn();
     _carregarPerfil();
+  }
+
+  @override
+  void dispose() {
+    if (selectMainShellTab == _selecionarAba) {
+      selectMainShellTab = null;
+    }
+    super.dispose();
+  }
+
+  void _selecionarAba(String key) {
+    if (!_pages.containsKey(key) || !mounted) return;
+    setState(() => _selectedKey = key);
   }
 
   /// Após o login (ou ao reabrir com sessão salva), busca `profiles` do usuário.
@@ -278,8 +298,19 @@ class _MainScreenState extends State<MainScreen> {
             label: Text('Vendas', style: TextStyle(color: AppColors.white)),
           ),
           const NavigationDrawerDestination(
+            icon: Icon(Icons.payments_outlined, color: AppColors.white),
+            label: Text(
+              'Pagamentos',
+              style: TextStyle(color: AppColors.white),
+            ),
+          ),
+          const NavigationDrawerDestination(
             icon: Icon(Icons.people_rounded, color: AppColors.white),
             label: Text('Clientes', style: TextStyle(color: AppColors.white)),
+          ),
+          const NavigationDrawerDestination(
+            icon: Icon(Icons.shopping_basket_outlined, color: AppColors.white),
+            label: Text('Cestas', style: TextStyle(color: AppColors.white)),
           ),
           const NavigationDrawerDestination(
             icon: Icon(Icons.upload_rounded, color: AppColors.white),

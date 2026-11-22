@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/app_data_refresh.dart';
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/constants/util/format_currency.dart';
 import 'package:cesta_flow/core/data/remote/sync_on_user_refresh.dart';
@@ -11,6 +12,7 @@ import 'package:cesta_flow/features/dashboard/presentation/widgets/dashboard_lis
 import 'package:cesta_flow/features/dashboard/presentation/widgets/metric_card.dart';
 import 'package:cesta_flow/features/dashboard/presentation/widgets/metrics_row.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_registration.dart';
+import 'package:cesta_flow/features/shared/app_navigation.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 
@@ -21,8 +23,8 @@ class Dashboard extends StatefulWidget {
   State<Dashboard> createState() => _DashboardState();
 }
 
-class _DashboardState extends State<Dashboard> {
-  static const int _latestSalesLimit = 5;
+class _DashboardState extends State<Dashboard> with AppDataRefreshListener {
+  static const int _dashboardListLimit = 5;
 
   final SaleRepository _saleRepository = SaleRepository();
   final CustomerRepository _customerRepository = CustomerRepository();
@@ -32,6 +34,8 @@ class _DashboardState extends State<Dashboard> {
   String? _errorMessage;
   List<Sale> _latestSales = const [];
   List<Installment> _paymentInstallments = const [];
+  bool _hasMoreSales = false;
+  bool _hasMorePayments = false;
   Map<int, Customer> _customersById = const {};
   Map<int, int> _saleCustomerIds = const {};
   Map<int, String> _basketLabels = const {};
@@ -42,6 +46,18 @@ class _DashboardState extends State<Dashboard> {
   @override
   void initState() {
     super.initState();
+    registerAppDataRefreshListener();
+    _loadDashboardData();
+  }
+
+  @override
+  void dispose() {
+    unregisterAppDataRefreshListener();
+    super.dispose();
+  }
+
+  @override
+  void onAppDataChanged() {
     _loadDashboardData();
   }
 
@@ -54,11 +70,18 @@ class _DashboardState extends State<Dashboard> {
     }
 
     try {
-      final latestSales = await _saleRepository.getLatestSales(
-        limit: _latestSalesLimit,
+      final salesBatch = await _saleRepository.getLatestSales(
+        limit: _dashboardListLimit + 1,
       );
-      final paymentInstallments = await _installmentRepository
+      final hasMoreSales = salesBatch.length > _dashboardListLimit;
+      final latestSales = salesBatch.take(_dashboardListLimit).toList();
+
+      final allPaymentInstallments = await _installmentRepository
           .getInstallmentsForDashboard();
+      final hasMorePayments =
+          allPaymentInstallments.length > _dashboardListLimit;
+      final paymentInstallments =
+          allPaymentInstallments.take(_dashboardListLimit).toList();
       final salesAmount = await _saleRepository.getTotalSalesAmountSince(
         DateTime.now().subtract(const Duration(days: 7)),
       );
@@ -85,6 +108,8 @@ class _DashboardState extends State<Dashboard> {
       setState(() {
         _latestSales = latestSales;
         _paymentInstallments = paymentInstallments;
+        _hasMoreSales = hasMoreSales;
+        _hasMorePayments = hasMorePayments;
         _saleCustomerIds = saleCustomerIds;
         _basketLabels = basketLabels;
         _salesAmountLast7Days = salesAmount;
@@ -163,10 +188,14 @@ class _DashboardState extends State<Dashboard> {
                 errorMessage: _errorMessage,
                 paymentInstallments: _paymentInstallments,
                 latestSales: _latestSales,
+                hasMoreSales: _hasMoreSales,
+                hasMorePayments: _hasMorePayments,
                 customersById: _customersById,
                 saleCustomerIds: _saleCustomerIds,
                 basketLabels: _basketLabels,
                 onAfterReceive: () => _loadDashboardData(),
+                onViewAllSales: () => navigateToMainShellTab('sales'),
+                onViewAllPayments: () => navigateToMainShellTab('payments'),
               ),
               const SizedBox(height: 100), // space for FAB
             ],

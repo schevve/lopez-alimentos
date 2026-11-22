@@ -45,6 +45,82 @@ class BasketRepository {
     }
   }
 
+  Future<Basket?> getBasketById(int id) async {
+    final basket = (await _dbHelper.store).box<Basket>().get(id);
+    if (basket == null || basket.isDeleted) return null;
+    return basket;
+  }
+
+  Future<int> updateBasket(Basket value) async {
+    if (value.id == null || value.id == 0) {
+      throw ArgumentError('ID obrigatório para atualizar.');
+    }
+    final db = await _dbHelper.store;
+    final pending = value.copyWith(
+      updatedAt: SyncTimestamps.forUpdate(),
+      isSynced: false,
+    );
+    final updated = db.runInTransaction(TxMode.write, () {
+      if (db.box<Basket>().get(pending.id!) == null) return 0;
+      db.box<Basket>().put(pending, mode: PutMode.update);
+      return 1;
+    });
+    if (updated == 0) return 0;
+    final client = activeSupabaseClient();
+    if (client == null) return 1;
+    await client.from('baskets').upsert(pending.toRemote());
+    db.box<Basket>().put(
+      pending.copyWith(isSynced: true),
+      mode: PutMode.update,
+    );
+    return 1;
+  }
+
+  /// `1` removida, `0` não encontrada, `-1` vinculada a vendas.
+  Future<int> deleteBasket(int id) async {
+    final db = await _dbHelper.store;
+    final basket = db.box<Basket>().get(id);
+    if (basket == null || basket.isDeleted) return 0;
+
+    final links = db
+        .box<SaleBasket>()
+        .query(
+          SaleBasket_.basketId
+              .equals(id)
+              .and(SaleBasket_.isDeleted.equals(false)),
+        )
+        .build();
+    try {
+      if (links.find().isNotEmpty) return -1;
+    } finally {
+      links.close();
+    }
+
+    final now = DateTime.now();
+    final marked = db.runInTransaction(TxMode.write, () {
+      final current = db.box<Basket>().get(id);
+      if (current == null || current.isDeleted) return 0;
+      db.box<Basket>().put(
+        current.copyWith(isDeleted: true, isSynced: false, updatedAt: now),
+        mode: PutMode.update,
+      );
+      return 1;
+    });
+    if (marked == 0) return 0;
+    final client = activeSupabaseClient();
+    final deleted = db.box<Basket>().get(id);
+    if (client == null || deleted == null || deleted.uuid.isEmpty) return 1;
+    await client
+        .from('baskets')
+        .update(remoteDeletionStamp(now))
+        .eq('id', deleted.uuid);
+    db.box<Basket>().put(
+      deleted.copyWith(isSynced: true),
+      mode: PutMode.update,
+    );
+    return 1;
+  }
+
   Future<void> pushUnsyncedBaskets() async {
     await _pushBaskets(await _dbHelper.store);
   }

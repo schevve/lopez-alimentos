@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/app_data_refresh.dart';
 import 'package:cesta_flow/core/constants/util/launch_phone_call.dart';
 import 'package:cesta_flow/features/customer/presentation/customer_details.dart';
 import 'package:flutter/material.dart';
@@ -20,7 +21,8 @@ class ClientesScreen extends StatefulWidget {
   State<ClientesScreen> createState() => _ClientesScreenState();
 }
 
-class _ClientesScreenState extends State<ClientesScreen> {
+class _ClientesScreenState extends State<ClientesScreen>
+    with AppDataRefreshListener {
   static const _verde = Color(0xFF1B4D31);
   static const _menta = Color(0xFFEEFDF4);
   final _buscaController = TextEditingController();
@@ -33,6 +35,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
   @override
   void initState() {
     super.initState();
+    registerAppDataRefreshListener();
     _repository = widget.repository ?? CustomerRepository();
     _recarregar();
   }
@@ -115,8 +118,14 @@ class _ClientesScreenState extends State<ClientesScreen> {
 
   @override
   void dispose() {
+    unregisterAppDataRefreshListener();
     _buscaController.dispose();
     super.dispose();
+  }
+
+  @override
+  void onAppDataChanged() {
+    _recarregar(mostrarCarregamento: false);
   }
 
   Future<void> _acao(Customer cliente, String acao) async {

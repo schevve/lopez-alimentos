@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/app_data_refresh.dart';
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:flutter/material.dart';
 
@@ -46,7 +47,10 @@ class RegistrationSuccessScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 54,
                 child: FilledButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    notifyAppDataChanged();
+                    Navigator.pop(context);
+                  },
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.white,
