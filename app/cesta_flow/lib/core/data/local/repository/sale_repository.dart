@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../objectbox.g.dart';
 import '../../remote/active_supabase_client.dart';
+import '../../remote/sync_remote_if_available.dart';
 import '../db_helper.dart';
 import '../model/basket_model.dart';
 import '../model/customer_model.dart';
@@ -141,38 +142,48 @@ class SaleRepository {
       }
       return saleId;
     });
-    final client = activeSupabaseClient();
-    if (client == null) return saleId;
-    await client.from('sales').insert(pendingSale.toRemote());
-    db.box<Sale>().put(
-      pendingSale.copyWith(id: saleId, isSynced: true),
-      mode: PutMode.update,
-    );
-    for (final resolved in resolvedLines) {
-      if (!resolved.isNew) continue;
-      await client.from('baskets').insert(resolved.basket.toRemote());
-    }
-    for (final basketId in createdBasketIds) {
-      final basket = db.box<Basket>().get(basketId);
-      if (basket == null) continue;
-      db.box<Basket>().put(basket.copyWith(isSynced: true), mode: PutMode.update);
-    }
-    for (var index = 0; index < resolvedLines.length; index++) {
-      final resolved = resolvedLines[index];
-      await client.from('sale_baskets').insert(
-        SaleBasket(
-          saleId: saleId,
-          basketId: 0,
-          saleUuid: pendingSale.uuid,
-          basketUuid: resolved.basket.uuid,
-          quantity: resolved.line.quantity,
-          createdAt: pendingSale.createdAt,
-          updatedAt: saleStamp,
-        ).toRemote(),
+    final synced = await syncRemoteIfAvailable((client) async {
+      await client.from('sales').insert(pendingSale.toRemote());
+      for (final resolved in resolvedLines) {
+        if (!resolved.isNew) continue;
+        await client.from('baskets').insert(resolved.basket.toRemote());
+      }
+      for (var index = 0; index < resolvedLines.length; index++) {
+        final resolved = resolvedLines[index];
+        await client.from('sale_baskets').insert(
+          SaleBasket(
+            saleId: saleId,
+            basketId: 0,
+            saleUuid: pendingSale.uuid,
+            basketUuid: resolved.basket.uuid,
+            quantity: resolved.line.quantity,
+            createdAt: pendingSale.createdAt,
+            updatedAt: saleStamp,
+          ).toRemote(),
+        );
+      }
+    }, debugLabel: 'sales.register');
+    if (synced) {
+      db.box<Sale>().put(
+        pendingSale.copyWith(id: saleId, isSynced: true),
+        mode: PutMode.update,
       );
-      final link = db.box<SaleBasket>().get(linkIds[index]);
-      if (link == null) continue;
-      db.box<SaleBasket>().put(link.copyWith(isSynced: true), mode: PutMode.update);
+      for (final basketId in createdBasketIds) {
+        final basket = db.box<Basket>().get(basketId);
+        if (basket == null) continue;
+        db.box<Basket>().put(
+          basket.copyWith(isSynced: true),
+          mode: PutMode.update,
+        );
+      }
+      for (var index = 0; index < linkIds.length; index++) {
+        final link = db.box<SaleBasket>().get(linkIds[index]);
+        if (link == null) continue;
+        db.box<SaleBasket>().put(
+          link.copyWith(isSynced: true),
+          mode: PutMode.update,
+        );
+      }
     }
     return saleId;
   }
@@ -218,10 +229,19 @@ class SaleRepository {
       return 1;
     });
     if (updated == 0) return 0;
-    final client = activeSupabaseClient();
-    if (client == null) return 1;
-    await client.from('sales').update(pending.toRemote()).eq('id', pending.uuid);
-    db.box<Sale>().put(pending.copyWith(isSynced: true), mode: PutMode.update);
+    final synced = await syncRemoteIfAvailable(
+      (client) => client
+          .from('sales')
+          .update(pending.toRemote())
+          .eq('id', pending.uuid),
+      debugLabel: 'sales.update',
+    );
+    if (synced) {
+      db.box<Sale>().put(
+        pending.copyWith(isSynced: true),
+        mode: PutMode.update,
+      );
+    }
     return 1;
   }
 
@@ -386,16 +406,13 @@ class SaleRepository {
       return 1;
     });
     if (marked == 0) return 0;
-    final client = activeSupabaseClient();
-    if (client != null) {
-      await _syncSaleDeletion(
-        saleId: id,
-        sale: sale,
-        links: links,
-        baskets: baskets,
-        installments: installments,
-      );
-    }
+    await _syncSaleDeletion(
+      saleId: id,
+      sale: sale,
+      links: links,
+      baskets: baskets,
+      installments: installments,
+    );
     await CustomerScoreService(dbHelper: _dbHelper).recalculate(sale.customerId);
     return 1;
   }
@@ -409,15 +426,23 @@ class SaleRepository {
   }) async {
     final db = await _dbHelper.store;
     if (sale.uuid.isNotEmpty) {
-      await _markRemoteDeleted('sales', sale.uuid);
-      final current = db.box<Sale>().get(saleId);
-      if (current != null) {
-        db.box<Sale>().put(current.copyWith(isSynced: true), mode: PutMode.update);
+      final synced = await _markRemoteDeleted('sales', sale.uuid);
+      if (synced) {
+        final current = db.box<Sale>().get(saleId);
+        if (current != null) {
+          db.box<Sale>().put(
+            current.copyWith(isSynced: true),
+            mode: PutMode.update,
+          );
+        }
       }
     }
     for (final link in links) {
-      await _markRemoteSaleBasketDeleted(link.saleUuid, link.basketUuid);
-      if (link.id == null) continue;
+      final synced = await _markRemoteSaleBasketDeleted(
+        link.saleUuid,
+        link.basketUuid,
+      );
+      if (!synced || link.id == null) continue;
       final current = db.box<SaleBasket>().get(link.id!);
       if (current == null) continue;
       db.box<SaleBasket>().put(
@@ -427,16 +452,19 @@ class SaleRepository {
     }
     for (final basket in baskets) {
       if (basket.uuid.isEmpty) continue;
-      await _markRemoteDeleted('baskets', basket.uuid);
-      if (basket.id == null) continue;
+      final synced = await _markRemoteDeleted('baskets', basket.uuid);
+      if (!synced || basket.id == null) continue;
       final current = db.box<Basket>().get(basket.id!);
       if (current == null) continue;
-      db.box<Basket>().put(current.copyWith(isSynced: true), mode: PutMode.update);
+      db.box<Basket>().put(
+        current.copyWith(isSynced: true),
+        mode: PutMode.update,
+      );
     }
     for (final installment in installments) {
       if (installment.uuid.isEmpty) continue;
-      await _markRemoteDeleted('installments', installment.uuid);
-      if (installment.id == null) continue;
+      final synced = await _markRemoteDeleted('installments', installment.uuid);
+      if (!synced || installment.id == null) continue;
       final current = db.box<Installment>().get(installment.id!);
       if (current == null) continue;
       db.box<Installment>().put(
@@ -509,13 +537,13 @@ class SaleRepository {
 
   Future<bool> _markRemoteDeleted(String table, String id) async {
     if (id.isEmpty) return false;
-    final client = activeSupabaseClient();
-    if (client == null) return false;
-    await client
-        .from(table)
-        .update(remoteDeletionStamp(DateTime.now()))
-        .eq('id', id);
-    return true;
+    return syncRemoteIfAvailable(
+      (client) => client
+          .from(table)
+          .update(remoteDeletionStamp(DateTime.now()))
+          .eq('id', id),
+      debugLabel: '$table.delete',
+    );
   }
 
   Future<bool> _markRemoteSaleBasketDeleted(
@@ -523,14 +551,14 @@ class SaleRepository {
     String basketUuid,
   ) async {
     if (saleUuid.isEmpty || basketUuid.isEmpty) return false;
-    final client = activeSupabaseClient();
-    if (client == null) return false;
-    await client
-        .from('sale_baskets')
-        .update(remoteDeletionStamp(DateTime.now()))
-        .eq('sale_id', saleUuid)
-        .eq('basket_id', basketUuid);
-    return true;
+    return syncRemoteIfAvailable(
+      (client) => client
+          .from('sale_baskets')
+          .update(remoteDeletionStamp(DateTime.now()))
+          .eq('sale_id', saleUuid)
+          .eq('basket_id', basketUuid),
+      debugLabel: 'sale_baskets.delete',
+    );
   }
 
   Future<void> pushUnsynced() async {

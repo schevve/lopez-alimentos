@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../objectbox.g.dart';
-import '../../remote/active_supabase_client.dart';
+import '../../remote/sync_remote_if_available.dart';
 import '../db_helper.dart';
 import '../model/customer_model.dart';
 import '../model/sale_model.dart';
@@ -26,13 +26,16 @@ class CustomerRepository {
       return db.box<Customer>().put(pending);
     });
     final saved = pending.copyWith(id: id);
-    final client = activeSupabaseClient();
-    if (client == null) return id;
-    await client.from('customers').insert(saved.toRemote());
-    db.box<Customer>().put(
-      saved.copyWith(isSynced: true),
-      mode: PutMode.update,
+    final synced = await syncRemoteIfAvailable(
+      (client) => client.from('customers').insert(saved.toRemote()),
+      debugLabel: 'customers.insert',
     );
+    if (synced) {
+      db.box<Customer>().put(
+        saved.copyWith(isSynced: true),
+        mode: PutMode.update,
+      );
+    }
     return id;
   }
 
@@ -69,16 +72,19 @@ class CustomerRepository {
       return 1;
     });
     if (updated == 0) return 0;
-    final client = activeSupabaseClient();
-    if (client == null) return 1;
-    await client
-        .from('customers')
-        .update(pending.toRemote())
-        .eq('id', pending.uuid);
-    db.box<Customer>().put(
-      pending.copyWith(isSynced: true),
-      mode: PutMode.update,
+    final synced = await syncRemoteIfAvailable(
+      (client) => client
+          .from('customers')
+          .update(pending.toRemote())
+          .eq('id', pending.uuid),
+      debugLabel: 'customers.update',
     );
+    if (synced) {
+      db.box<Customer>().put(
+        pending.copyWith(isSynced: true),
+        mode: PutMode.update,
+      );
+    }
     return 1;
   }
 
@@ -110,17 +116,21 @@ class CustomerRepository {
       return 1;
     });
     if (marked == 0) return 0;
-    final client = activeSupabaseClient();
     final deleted = db.box<Customer>().get(id);
-    if (client == null || deleted == null || deleted.uuid.isEmpty) return 1;
-    await client
-        .from('customers')
-        .update(remoteDeletionStamp(now))
-        .eq('id', deleted.uuid);
-    db.box<Customer>().put(
-      deleted.copyWith(isSynced: true),
-      mode: PutMode.update,
+    if (deleted == null || deleted.uuid.isEmpty) return 1;
+    final synced = await syncRemoteIfAvailable(
+      (client) => client
+          .from('customers')
+          .update(remoteDeletionStamp(now))
+          .eq('id', deleted.uuid),
+      debugLabel: 'customers.delete',
     );
+    if (synced) {
+      db.box<Customer>().put(
+        deleted.copyWith(isSynced: true),
+        mode: PutMode.update,
+      );
+    }
     return 1;
   }
 
