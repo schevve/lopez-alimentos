@@ -195,6 +195,7 @@ class _DashboardState extends State<Dashboard> with AppDataRefreshListener {
                 basketLabels: _basketLabels,
                 onAfterReceive: () => _loadDashboardData(),
                 onViewAllSales: () => navigateToMainShellTab('sales'),
+                onViewAllPayments: () => navigateToMainShellTab('payments'),
               ),
               const SizedBox(height: 100), // space for FAB
             ],

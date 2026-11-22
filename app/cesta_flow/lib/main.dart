@@ -18,6 +18,7 @@ import 'package:cesta_flow/features/customer/presentation/tela_clientes.dart';
 import 'package:cesta_flow/features/dashboard/presentation/dashboard.dart';
 import 'package:cesta_flow/features/export/presentation/data_exportation.dart';
 import 'package:cesta_flow/features/basket/presentation/basket_list.dart';
+import 'package:cesta_flow/features/payment/presentation/payment_list.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_list.dart';
 import 'package:cesta_flow/features/shared/app_navigation.dart';
 import 'package:cesta_flow/features/shared/bottom_bar.dart';
@@ -142,6 +143,7 @@ class _MainScreenState extends State<MainScreen> {
   final Map<String, Widget> _pages = const {
     'home': Dashboard(),
     'sales': SalesList(),
+    'payments': PaymentList(),
     'customers': ClientesScreen(),
     'baskets': BasketList(),
     'export': DataExportation(),
@@ -294,6 +296,13 @@ class _MainScreenState extends State<MainScreen> {
           const NavigationDrawerDestination(
             icon: Icon(Icons.shopping_cart_rounded, color: AppColors.white),
             label: Text('Vendas', style: TextStyle(color: AppColors.white)),
+          ),
+          const NavigationDrawerDestination(
+            icon: Icon(Icons.payments_outlined, color: AppColors.white),
+            label: Text(
+              'Pagamentos',
+              style: TextStyle(color: AppColors.white),
+            ),
           ),
           const NavigationDrawerDestination(
             icon: Icon(Icons.people_rounded, color: AppColors.white),
