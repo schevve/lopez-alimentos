@@ -19,7 +19,10 @@ class DashboardListsCarousel extends StatefulWidget {
     required this.customersById,
     required this.saleCustomerIds,
     required this.basketLabels,
+    this.hasMoreSales = false,
+    this.hasMorePayments = false,
     this.onAfterReceive,
+    this.onViewAllSales,
     super.key,
   });
 
@@ -30,7 +33,10 @@ class DashboardListsCarousel extends StatefulWidget {
   final Map<int, Customer> customersById;
   final Map<int, int> saleCustomerIds;
   final Map<int, String> basketLabels;
+  final bool hasMoreSales;
+  final bool hasMorePayments;
   final Future<void> Function()? onAfterReceive;
+  final VoidCallback? onViewAllSales;
 
   @override
   State<DashboardListsCarousel> createState() => _DashboardListsCarouselState();
@@ -166,6 +172,13 @@ class _DashboardListsCarouselState extends State<DashboardListsCarousel> {
           if (index > 0) const SizedBox(height: 14),
           _buildPaymentCard(widget.paymentInstallments[index]),
         ],
+        if (widget.hasMorePayments) ...[
+          const SizedBox(height: 14),
+          const _ViewAllListButton(
+            label: 'Ver todos',
+            enabled: false,
+          ),
+        ],
       ],
     );
   }
@@ -198,6 +211,13 @@ class _DashboardListsCarouselState extends State<DashboardListsCarousel> {
         for (var index = 0; index < widget.latestSales.length; index++) ...[
           if (index > 0) const SizedBox(height: 14),
           _buildSaleCard(widget.latestSales[index]),
+        ],
+        if (widget.hasMoreSales) ...[
+          const SizedBox(height: 14),
+          _ViewAllListButton(
+            label: 'Ver todas',
+            onPressed: widget.onViewAllSales,
+          ),
         ],
       ],
     );
@@ -292,6 +312,39 @@ class _ListTabButton extends StatelessWidget {
           fontSize: 15,
           fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
           color: AppColors.greenText,
+        ),
+      ),
+    );
+  }
+}
+
+class _ViewAllListButton extends StatelessWidget {
+  const _ViewAllListButton({
+    required this.label,
+    this.onPressed,
+    this.enabled = true,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: enabled ? onPressed : null,
+        style: OutlinedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: const Color(0xFF1D5335),
+          side: const BorderSide(color: Color(0xFF1D5335)),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
     );

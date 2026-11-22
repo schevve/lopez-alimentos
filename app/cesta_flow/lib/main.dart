@@ -150,8 +150,22 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    selectMainShellTab = _selecionarAba;
     synchronizeWhenLoggedIn();
     _carregarPerfil();
+  }
+
+  @override
+  void dispose() {
+    if (selectMainShellTab == _selecionarAba) {
+      selectMainShellTab = null;
+    }
+    super.dispose();
+  }
+
+  void _selecionarAba(String key) {
+    if (!_pages.containsKey(key) || !mounted) return;
+    setState(() => _selectedKey = key);
   }
 
   /// Após o login (ou ao reabrir com sessão salva), busca `profiles` do usuário.
