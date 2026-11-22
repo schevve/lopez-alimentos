@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/app_data_refresh.dart';
 import 'package:cesta_flow/core/constants/util/format_cpf.dart';
 import 'package:cesta_flow/core/constants/util/format_date.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
@@ -55,6 +56,7 @@ class CustomerEdit extends StatelessWidget {
     );
     await customerRepository.updateCustomer(updatedCustomer);
     if (context.mounted) {
+      notifyAppDataChanged();
       Navigator.of(context).pop(true);
     }
   }

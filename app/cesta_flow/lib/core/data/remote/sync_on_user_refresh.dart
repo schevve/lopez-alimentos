@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/app_data_refresh.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -24,5 +25,6 @@ Future<void> refreshWithRemoteSync(
       'Não foi possível sincronizar. Mostrando dados locais.',
     );
   }
+  notifyAppDataChanged();
   await reloadLocal();
 }

@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/app_data_refresh.dart';
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/data/local/model/basket_model.dart';
 import 'package:cesta_flow/core/data/local/repository/basket_repository.dart';
@@ -15,7 +16,7 @@ class BasketList extends StatefulWidget {
   State<BasketList> createState() => _BasketListState();
 }
 
-class _BasketListState extends State<BasketList> {
+class _BasketListState extends State<BasketList> with AppDataRefreshListener {
   static const _verde = Color(0xFF1B4D31);
 
   final BasketRepository _basketRepository = BasketRepository();
@@ -28,13 +29,20 @@ class _BasketListState extends State<BasketList> {
   @override
   void initState() {
     super.initState();
+    registerAppDataRefreshListener();
     _loadBaskets();
   }
 
   @override
   void dispose() {
+    unregisterAppDataRefreshListener();
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void onAppDataChanged() {
+    _loadBaskets();
   }
 
   Future<void> _loadBaskets({bool showLoadingIndicator = false}) async {

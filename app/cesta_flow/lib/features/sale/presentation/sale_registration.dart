@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/app_data_refresh.dart';
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/constants/util/format_currency.dart';
 import 'package:cesta_flow/core/constants/util/input_formatters.dart';
@@ -420,6 +421,7 @@ class _SaleRegistrationState extends State<SaleRegistration> {
       );
 
       if (!mounted) return;
+      notifyAppDataChanged();
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

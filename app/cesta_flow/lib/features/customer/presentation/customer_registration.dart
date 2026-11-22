@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/app_data_refresh.dart';
 import 'package:cesta_flow/core/constants/util/format_cpf.dart';
 import 'package:cesta_flow/core/constants/util/format_date.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
@@ -170,6 +171,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
       customer.id = await _customerRepository.registerCustomer(customer);
 
       if (!mounted) return;
+      notifyAppDataChanged();
       _avisar('Cliente registrado com sucesso!');
       Navigator.of(context).pop(customer);
     } on UniqueViolationException {
@@ -216,6 +218,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
       await _customerRepository.updateCustomer(updated);
 
       if (!mounted) return;
+      notifyAppDataChanged();
       _avisar('Cliente atualizado com sucesso!');
       Navigator.of(context).pop(true);
     } on UniqueViolationException {

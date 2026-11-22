@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/app_data_refresh.dart';
 import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/basket_model.dart';
 import 'package:cesta_flow/core/data/local/repository/basket_repository.dart';
@@ -18,6 +19,7 @@ class BasketRegistration extends StatelessWidget {
     final repository = BasketRepository(dbHelper: DatabaseHelper());
     final basketId = await repository.registerBasket(basket);
     if (!context.mounted) return;
+    notifyAppDataChanged();
     Navigator.pop(context, basket.copyWith(id: basketId));
   }
 

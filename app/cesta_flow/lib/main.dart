@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/app_shell_refresh_observer.dart';
 import 'package:cesta_flow/core/data/remote/sync_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:cesta_flow/core/data/local/db_helper.dart';
@@ -102,6 +103,7 @@ class _MainAppState extends State<MainApp> {
       title: 'Cesta Flow',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
+      navigatorObservers: [appShellRefreshObserver],
       home: const AuthGate(),
     );
   }

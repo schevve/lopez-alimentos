@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/app_data_refresh.dart';
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/constants/util/format_currency.dart';
 import 'package:cesta_flow/core/data/remote/sync_on_user_refresh.dart';
@@ -21,7 +22,7 @@ class Dashboard extends StatefulWidget {
   State<Dashboard> createState() => _DashboardState();
 }
 
-class _DashboardState extends State<Dashboard> {
+class _DashboardState extends State<Dashboard> with AppDataRefreshListener {
   static const int _latestSalesLimit = 5;
 
   final SaleRepository _saleRepository = SaleRepository();
@@ -42,6 +43,18 @@ class _DashboardState extends State<Dashboard> {
   @override
   void initState() {
     super.initState();
+    registerAppDataRefreshListener();
+    _loadDashboardData();
+  }
+
+  @override
+  void dispose() {
+    unregisterAppDataRefreshListener();
+    super.dispose();
+  }
+
+  @override
+  void onAppDataChanged() {
     _loadDashboardData();
   }
 

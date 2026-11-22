@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/app_data_refresh.dart';
 import 'package:cesta_flow/core/data/local/model/basket_model.dart';
 import 'package:cesta_flow/core/data/local/repository/basket_repository.dart';
 import 'package:cesta_flow/features/shared/basket_form.dart';
@@ -38,6 +39,7 @@ class _BasketEditState extends State<BasketEdit> {
       );
       return;
     }
+    notifyAppDataChanged();
     Navigator.of(context).pop(true);
   }
 
@@ -83,6 +85,7 @@ class _BasketEditState extends State<BasketEdit> {
 
       switch (result) {
         case 1:
+          notifyAppDataChanged();
           Navigator.of(context).pop(true);
         case -1:
           ScaffoldMessenger.of(context).showSnackBar(

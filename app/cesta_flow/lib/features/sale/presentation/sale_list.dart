@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/app_data_refresh.dart';
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/data/remote/sync_on_user_refresh.dart';
 import 'package:cesta_flow/core/constants/util/format_cpf.dart';
@@ -18,7 +19,7 @@ class SalesList extends StatefulWidget {
   State<SalesList> createState() => _SalesListState();
 }
 
-class _SalesListState extends State<SalesList> {
+class _SalesListState extends State<SalesList> with AppDataRefreshListener {
   static const _verde = Color(0xFF1B4D31);
 
   final SaleRepository _saleRepository = SaleRepository();
@@ -34,13 +35,20 @@ class _SalesListState extends State<SalesList> {
   @override
   void initState() {
     super.initState();
+    registerAppDataRefreshListener();
     _loadSalesList();
   }
 
   @override
   void dispose() {
+    unregisterAppDataRefreshListener();
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void onAppDataChanged() {
+    _loadSalesList();
   }
 
   Future<void> _loadSalesList({bool showLoadingIndicator = false}) async {
