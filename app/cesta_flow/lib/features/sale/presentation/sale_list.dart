@@ -1,5 +1,4 @@
 import 'package:cesta_flow/core/app_data_refresh.dart';
-import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/data/remote/sync_on_user_refresh.dart';
 import 'package:cesta_flow/core/constants/util/format_cpf.dart';
 import 'package:cesta_flow/core/constants/util/format_currency.dart';
@@ -160,16 +159,8 @@ class _SalesListState extends State<SalesList> with AppDataRefreshListener {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 14),
-              Text(
-                'Lista de vendas',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.black,
-                ),
-              ),
               Container(
-                margin: const EdgeInsets.fromLTRB(0, 16, 0, 12),
+                margin: const EdgeInsets.fromLTRB(0, 0, 0, 12),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 10,
