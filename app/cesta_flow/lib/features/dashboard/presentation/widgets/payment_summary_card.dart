@@ -1,3 +1,4 @@
+import 'package:cesta_flow/features/payment/presentation/payment_details.dart';
 import 'package:cesta_flow/features/payment/presentation/payment_registration.dart';
 import 'package:flutter/material.dart';
 
@@ -11,6 +12,7 @@ class PaymentSummaryCard extends StatelessWidget {
     required this.amountLabel,
     required this.badge,
     this.saleId,
+    this.installmentId,
     this.isPaid = false,
     this.onAfterReceive,
     super.key,
@@ -22,6 +24,7 @@ class PaymentSummaryCard extends StatelessWidget {
   final String amountLabel;
   final PaymentSummaryBadge badge;
   final int? saleId;
+  final int? installmentId;
   final bool isPaid;
   final Future<void> Function()? onAfterReceive;
 
@@ -105,18 +108,106 @@ class PaymentSummaryCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: _ReceiveButton(
-              isPaid: isPaid,
-              saleId: saleId,
-              onAfterReceive: onAfterReceive,
+          if (installmentId == null)
+            SizedBox(
+              width: double.infinity,
+              child: _ReceiveButton(
+                isPaid: isPaid,
+                saleId: saleId,
+                onAfterReceive: onAfterReceive,
+              ),
+            )
+          else
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final empilhar =
+                    constraints.maxWidth < 330 ||
+                    MediaQuery.textScalerOf(context).scale(16) > 21;
+                final largura = empilhar
+                    ? constraints.maxWidth
+                    : (constraints.maxWidth - 10) / 2;
+                return Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    SizedBox(
+                      width: largura,
+                      child: _AcaoButton(
+                        label: 'Ver pagamento',
+                        icon: Icons.receipt_long_outlined,
+                        background: const Color(0xFFE3F2E9),
+                        foreground: const Color(0xFF46524B),
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PaymentDetails(
+                                installmentId: installmentId!,
+                              ),
+                            ),
+                          );
+                          await onAfterReceive?.call();
+                        },
+                      ),
+                    ),
+                    SizedBox(
+                      width: largura,
+                      child: _ReceiveButton(
+                        isPaid: isPaid,
+                        saleId: saleId,
+                        onAfterReceive: onAfterReceive,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
-          ),
         ],
       ),
     );
   }
+}
+
+class _AcaoButton extends StatelessWidget {
+  const _AcaoButton({
+    required this.label,
+    required this.icon,
+    required this.background,
+    required this.foreground,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color background;
+  final Color foreground;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => FilledButton(
+    onPressed: onTap,
+    style: FilledButton.styleFrom(
+      backgroundColor: background,
+      foregroundColor: foreground,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+      minimumSize: const Size(0, 54),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 21),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _StatusBadge extends StatelessWidget {
