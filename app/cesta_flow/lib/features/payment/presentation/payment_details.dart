@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/constants/util/format_currency.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/installment_model.dart';
@@ -5,6 +6,8 @@ import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
+import 'package:cesta_flow/features/dashboard/presentation/widgets/metric_card.dart';
+import 'package:cesta_flow/features/dashboard/presentation/widgets/metrics_row.dart';
 import 'package:cesta_flow/features/dashboard/presentation/widgets/payment_summary_card.dart';
 import 'package:cesta_flow/features/payment/presentation/payment_registration.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
@@ -137,43 +140,62 @@ class _PaymentDetailsState extends State<PaymentDetails> {
               const SizedBox(height: 20),
               const _SectionTitle(title: 'Resumo do pagamento'),
               const SizedBox(height: 12),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final cardWidth = (constraints.maxWidth - 12) / 2;
-                  return Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _MetricCard(
-                        width: cardWidth,
-                        title: 'Valor previsto',
-                        value: formatCurrency(installment.expectedAmount),
-                        icon: Icons.account_balance_wallet_outlined,
-                      ),
-                      _MetricCard(
-                        width: cardWidth,
-                        title: 'Valor pago',
-                        value: formatCurrency(
-                          isPaid ? installment.paidAmount : 0,
-                        ),
-                        icon: Icons.payments_outlined,
-                      ),
-                      _MetricCard(
-                        width: cardWidth,
-                        title: 'Situação',
-                        value: statusLabel,
-                        icon: Icons.flag_outlined,
-                      ),
-                      if (data.sale != null)
-                        _MetricCard(
+              MetricsPanel(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final cardWidth = (constraints.maxWidth - 12) / 2;
+                    return Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        SizedBox(
                           width: cardWidth,
-                          title: 'Venda',
-                          value: 'Venda #${data.sale!.id ?? installment.saleId}',
-                          icon: Icons.receipt_long_outlined,
+                          child: MetricCard(
+                            title: 'Valor previsto',
+                            value: formatCurrency(installment.expectedAmount),
+                            subtitle: '',
+                            icon: Icons.account_balance_wallet_outlined,
+                            iconColor: AppColors.primary,
+                          ),
                         ),
-                    ],
-                  );
-                },
+                        SizedBox(
+                          width: cardWidth,
+                          child: MetricCard(
+                            title: 'Valor pago',
+                            value: formatCurrency(
+                              isPaid ? installment.paidAmount : 0,
+                            ),
+                            subtitle: '',
+                            icon: Icons.payments_outlined,
+                            iconColor: AppColors.primary,
+                          ),
+                        ),
+                        SizedBox(
+                          width: cardWidth,
+                          child: MetricCard(
+                            title: 'Situação',
+                            value: statusLabel,
+                            subtitle: '',
+                            icon: Icons.flag_outlined,
+                            iconColor: AppColors.primary,
+                          ),
+                        ),
+                        if (data.sale != null)
+                          SizedBox(
+                            width: cardWidth,
+                            child: MetricCard(
+                              title: 'Venda',
+                              value:
+                                  'Venda #${data.sale!.id ?? installment.saleId}',
+                              subtitle: '',
+                              icon: Icons.receipt_long_outlined,
+                              iconColor: AppColors.primary,
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
               ),
               const SizedBox(height: 24),
               const _SectionTitle(title: 'Datas e forma de pagamento'),
@@ -371,51 +393,6 @@ class _PaymentDetailsData {
   final Customer? customer;
   final int installmentNumber;
   final int installmentsCount;
-}
-
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({
-    required this.width,
-    required this.title,
-    required this.value,
-    required this.icon,
-  });
-
-  final double width;
-  final String title;
-  final String value;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: width,
-    child: Card(
-      color: Colors.white,
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: const Color(0xFF1B4D31)),
-            const SizedBox(height: 8),
-            Text(title, style: const TextStyle(color: Color(0xFF59665E))),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF18251F),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 }
 
 class _InfoLine extends StatelessWidget {
