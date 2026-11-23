@@ -97,8 +97,7 @@ void main() {
           .any((button) => button.onPressed == null),
       isTrue,
     );
-    await tester.scrollUntilVisible(find.text('Receber pagamento'), 400);
-    expect(find.text('Receber'), findsOneWidget);
+    expect(find.text('Receber pagamento'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

@@ -6,6 +6,7 @@ import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/dashboard/presentation/widgets/payment_summary_card.dart';
+import 'package:cesta_flow/features/payment/presentation/payment_registration.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 
@@ -92,41 +93,46 @@ class _PaymentDetailsState extends State<PaymentDetails> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFFF0FDF4),
-    appBar: const TopBar(pagTitle: 'Detalhes do pagamento'),
-    body: FutureBuilder<_PaymentDetailsData>(
-      future: _details,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return _MessageState(
-            message: 'Não foi possível carregar os dados do pagamento.',
-            actionLabel: 'Tentar novamente',
-            onAction: _reload,
-          );
-        }
+  Widget build(BuildContext context) => FutureBuilder<_PaymentDetailsData>(
+    future: _details,
+    builder: (context, snapshot) {
+      Widget body;
+      int? openPaymentSaleId;
 
+      if (snapshot.connectionState != ConnectionState.done) {
+        body = const Center(child: CircularProgressIndicator());
+      } else if (snapshot.hasError) {
+        body = _MessageState(
+          message: 'Não foi possível carregar os dados do pagamento.',
+          actionLabel: 'Tentar novamente',
+          onAction: _reload,
+        );
+      } else {
         final data = snapshot.data!;
         final installment = data.installment;
         if (installment == null) {
-          return const _MessageState(message: 'Pagamento não encontrado.');
-        }
+          body = const _MessageState(message: 'Pagamento não encontrado.');
+        } else {
+          final isPaid = installment.isPaid;
+          if (!isPaid) {
+            openPaymentSaleId = installment.saleId;
+          }
+          final badge = isPaid
+              ? PaymentSummaryBadge.paid
+              : badgeForUnpaidDueDate(installment.dueDate);
+          final statusLabel = _statusLabel(badge);
 
-        final isPaid = installment.isPaid;
-        final badge = isPaid
-            ? PaymentSummaryBadge.paid
-            : badgeForUnpaidDueDate(installment.dueDate);
-        final statusLabel = _statusLabel(badge);
-
-        return RefreshIndicator(
-          onRefresh: _refresh,
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-            children: [
+          body = RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                openPaymentSaleId != null ? 100 : 32,
+              ),
+              children: [
               _paymentHeader(data),
               const SizedBox(height: 20),
               const _SectionTitle(title: 'Resumo do pagamento'),
@@ -209,24 +215,70 @@ class _PaymentDetailsState extends State<PaymentDetails> {
                   ),
                 ),
               ),
-              if (!isPaid) ...[
-                const SizedBox(height: 24),
-                PaymentSummaryCard(
-                  title: 'Receber pagamento',
-                  subtitle: _unpaidSubtitle(installment),
-                  amount: formatCurrency(installment.expectedAmount),
-                  amountLabel: 'Valor previsto',
-                  badge: badge,
-                  saleId: installment.saleId,
-                  isPaid: false,
-                  onAfterReceive: _refresh,
-                ),
               ],
-            ],
-          ),
-        );
-      },
-    ),
+            ),
+          );
+        }
+      }
+
+      return Scaffold(
+        backgroundColor: const Color(0xFFF0FDF4),
+        appBar: const TopBar(pagTitle: 'Detalhes do pagamento'),
+        body: body,
+        floatingActionButton: openPaymentSaleId == null
+            ? null
+            : FilledButton(
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          PaymentRegistration(saleId: openPaymentSaleId!),
+                    ),
+                  );
+                  await _refresh();
+                },
+                style: FilledButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.black,
+                  elevation: 6,
+                ),
+                child: Container(
+                  height: 58,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF7A16),
+                    borderRadius: BorderRadius.circular(999),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color.fromRGBO(255, 122, 22, 0.28),
+                        spreadRadius: 0,
+                        blurRadius: 24,
+                        offset: Offset(0, 12),
+                      ),
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.payments_outlined, color: Colors.white, size: 26),
+                      SizedBox(width: 8),
+                      Text(
+                        'Receber pagamento',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      );
+    },
   );
 
   Widget _paymentHeader(_PaymentDetailsData data) {
@@ -290,16 +342,6 @@ class _PaymentDetailsState extends State<PaymentDetails> {
         ),
       ),
     );
-  }
-
-  String _unpaidSubtitle(Installment installment) {
-    final due = installment.dueDate;
-    final dueLabel = due == null ? 'data não definida' : _formatDate(due);
-    final indicated = installment.indicatedPaymentDate;
-    if (indicated == null) {
-      return 'Previsto para $dueLabel';
-    }
-    return 'Previsto para $dueLabel · Visita indicada em ${_formatDate(indicated)}';
   }
 
   String _statusLabel(PaymentSummaryBadge badge) {
