@@ -164,7 +164,11 @@ class _SaleDetailsState extends State<SaleDetails> {
                   'Nenhuma parcela registrada.',
                   style: TextStyle(color: Color(0xFF59665E)),
                 ),
-              for (var index = 0; index < data.installments.length; index++) ...[
+              for (
+                var index = 0;
+                index < data.installments.length;
+                index++
+              ) ...[
                 if (index > 0) const SizedBox(height: 14),
                 _InstallmentCard(
                   saleId: widget.saleId,
@@ -339,9 +343,7 @@ class _InstallmentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isPaid = installment.isPaid;
     final due = installment.dueDate;
-    final dueLabel = due == null
-        ? 'data não definida'
-        : _formatDate(due);
+    final dueLabel = due == null ? 'data não definida' : _formatDate(due);
     final paymentDate = installment.paymentDate;
 
     final badge = isPaid
