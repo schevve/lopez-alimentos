@@ -3,17 +3,25 @@ import 'package:flutter/material.dart';
 class MetricCard extends StatelessWidget {
   final String title;
   final String value;
-  final String subtitle;
+  final String? subtitle;
   final IconData icon;
   final Color iconColor;
+
+  /// Destaca o card como alerta (ícone e valor em vermelho).
+  final bool alert;
+
   const MetricCard({
     required this.title,
     required this.value,
-    required this.subtitle,
     required this.icon,
     required this.iconColor,
+    this.subtitle,
+    this.alert = false,
     super.key,
   });
+
+  static const Color _alertColor = Color(0xFFC62828);
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -33,7 +41,7 @@ class MetricCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: iconColor, size: 20),
+          Icon(icon, color: alert ? _alertColor : iconColor, size: 20),
           const SizedBox(height: 8),
           Text(
             title,
@@ -42,18 +50,20 @@ class MetricCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
               letterSpacing: -.45,
-              color: Color(0xFF18251F),
+              color: alert ? _alertColor : const Color(0xFF18251F),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF46524B)),
-          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle!,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF46524B)),
+            ),
+          ],
         ],
       ),
     );

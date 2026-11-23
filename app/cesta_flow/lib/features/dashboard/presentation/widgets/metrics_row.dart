@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 
 class MetricsRow extends StatelessWidget {
   final List<MetricCard> cards;
-  const MetricsRow({required this.cards, super.key});
+
+  /// Quantos cards por linha. Se omitido, todos ficam na mesma linha (Home).
+  final int? columns;
+  const MetricsRow({required this.cards, this.columns, super.key});
 
   static const double _spacing = 12;
 
   @override
   Widget build(BuildContext context) {
+    final perRow = (columns ?? cards.length).clamp(1, 99);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: const BoxDecoration(
@@ -22,16 +26,42 @@ class MetricsRow extends StatelessWidget {
           alignment: Alignment.center,
         ),
       ),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (var index = 0; index < cards.length; index++) ...[
-              if (index > 0) const SizedBox(width: _spacing),
-              Expanded(child: cards[index]),
-            ],
+      child: perRow >= cards.length
+          ? _linha(cards)
+          : Column(
+              children: [
+                for (var start = 0; start < cards.length; start += perRow) ...[
+                  if (start > 0) const SizedBox(height: _spacing),
+                  _linha(
+                    cards.sublist(
+                      start,
+                      start + perRow > cards.length
+                          ? cards.length
+                          : start + perRow,
+                    ),
+                    vazios: start + perRow - cards.length,
+                  ),
+                ],
+              ],
+            ),
+    );
+  }
+
+  // Uma linha de cards com a mesma altura (igual à da Home original).
+  Widget _linha(List<MetricCard> linha, {int vazios = 0}) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < linha.length; i++) ...[
+            if (i > 0) const SizedBox(width: _spacing),
+            Expanded(child: linha[i]),
           ],
-        ),
+          for (var i = 0; i < vazios; i++) ...[
+            const SizedBox(width: _spacing),
+            const Expanded(child: SizedBox.shrink()),
+          ],
+        ],
       ),
     );
   }
