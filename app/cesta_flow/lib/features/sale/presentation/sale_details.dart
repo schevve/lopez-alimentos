@@ -366,6 +366,7 @@ class _InstallmentCard extends StatelessWidget {
       amountLabel: isPaid ? 'Valor pago' : 'Valor previsto',
       badge: badge,
       saleId: saleId,
+      installmentId: installment.id,
       isPaid: isPaid,
       onAfterReceive: onAfterReceive,
     );

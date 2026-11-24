@@ -276,6 +276,7 @@ class _PaymentListState extends State<PaymentList> with AppDataRefreshListener {
       amountLabel: isPaid ? 'Valor pago' : 'Valor previsto',
       badge: badge,
       saleId: installment.saleId,
+      installmentId: installment.id,
       isPaid: isPaid,
       onAfterReceive: () => _loadPaymentsList(showLoadingIndicator: true),
     );

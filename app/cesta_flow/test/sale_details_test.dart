@@ -34,6 +34,7 @@ class _InstallmentRepository extends InstallmentRepository {
   @override
   Future<List<Installment>> getInstallmentsBySaleId(int saleId) async => [
     Installment(
+      id: 1,
       uuid: 'installment-1',
       saleId: saleId,
       expectedAmount: 40,
@@ -41,6 +42,7 @@ class _InstallmentRepository extends InstallmentRepository {
       paymentDate: DateTime(2026, 10, 2),
     ),
     Installment(
+      id: 2,
       uuid: 'installment-2',
       saleId: saleId,
       expectedAmount: 60,
@@ -98,6 +100,7 @@ void main() {
     await tester.scrollUntilVisible(find.text('Parcela 2'), 400);
     expect(find.text('Parcela 1'), findsOneWidget);
     expect(find.text('Parcela 2'), findsOneWidget);
+    expect(find.text('Ver pagamento'), findsNWidgets(2));
     expect(find.text('Pago'), findsNWidgets(2));
     expect(find.text('Atrasado'), findsOneWidget);
     expect(find.text('Pagamento em 02/10/2026'), findsOneWidget);

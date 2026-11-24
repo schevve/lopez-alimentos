@@ -87,8 +87,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
       );
       final remaining = SaleRepository.remainingBalance(sale);
       final nextInstallment = _nextInstallmentAmountFor(sale, installments);
-      final unpaidCount =
-          installments.where((item) => !item.isPaid).length;
+      final unpaidCount = installments.where((item) => !item.isPaid).length;
       if (!mounted) return;
       setState(() {
         _sale = sale;
@@ -288,33 +287,35 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                       return null;
                     },
                   ),
-                ],
-              ),
-            ),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 8,
-                children: [
-                  OutlinedButton(
-                    onPressed: () =>
-                        _applySuggestedAmount(_nextInstallmentAmount),
-                    style: _suggestedAmountButtonStyle,
-                    child: Text(
-                      formatCurrency(_nextInstallmentAmount),
-                      style: const TextStyle(fontSize: 16),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: 8,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () =>
+                              _applySuggestedAmount(_nextInstallmentAmount),
+                          style: _suggestedAmountButtonStyle,
+                          child: Text(
+                            formatCurrency(_nextInstallmentAmount),
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                        if (!_sameMoney(
+                            _nextInstallmentAmount, _remainingBalance))
+                          OutlinedButton(
+                            onPressed: () =>
+                                _applySuggestedAmount(_remainingBalance),
+                            style: _suggestedAmountButtonStyle,
+                            child: Text(
+                              formatCurrency(_remainingBalance),
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                  if (!_sameMoney(_nextInstallmentAmount, _remainingBalance))
-                    OutlinedButton(
-                      onPressed: () => _applySuggestedAmount(_remainingBalance),
-                      style: _suggestedAmountButtonStyle,
-                      child: Text(
-                        formatCurrency(_remainingBalance),
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -497,9 +498,8 @@ class _PaymentRegistration extends State<PaymentRegistration> {
       notifyAppDataChanged();
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => const RegistrationSuccessScreen(
-            message: 'Pagamento registrado!',
-          ),
+          builder: (context) =>
+              const RegistrationSuccessScreen(message: 'Pagamento registrado!'),
         ),
       );
     } catch (error) {
