@@ -87,8 +87,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
       );
       final remaining = SaleRepository.remainingBalance(sale);
       final nextInstallment = _nextInstallmentAmountFor(sale, installments);
-      final unpaidCount =
-          installments.where((item) => !item.isPaid).length;
+      final unpaidCount = installments.where((item) => !item.isPaid).length;
       if (!mounted) return;
       setState(() {
         _sale = sale;
@@ -497,9 +496,8 @@ class _PaymentRegistration extends State<PaymentRegistration> {
       notifyAppDataChanged();
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => const RegistrationSuccessScreen(
-            message: 'Pagamento registrado!',
-          ),
+          builder: (context) =>
+              const RegistrationSuccessScreen(message: 'Pagamento registrado!'),
         ),
       );
     } catch (error) {
