@@ -287,33 +287,35 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                       return null;
                     },
                   ),
-                ],
-              ),
-            ),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 8,
-                children: [
-                  OutlinedButton(
-                    onPressed: () =>
-                        _applySuggestedAmount(_nextInstallmentAmount),
-                    style: _suggestedAmountButtonStyle,
-                    child: Text(
-                      formatCurrency(_nextInstallmentAmount),
-                      style: const TextStyle(fontSize: 16),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: 8,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () =>
+                              _applySuggestedAmount(_nextInstallmentAmount),
+                          style: _suggestedAmountButtonStyle,
+                          child: Text(
+                            formatCurrency(_nextInstallmentAmount),
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                        if (!_sameMoney(
+                            _nextInstallmentAmount, _remainingBalance))
+                          OutlinedButton(
+                            onPressed: () =>
+                                _applySuggestedAmount(_remainingBalance),
+                            style: _suggestedAmountButtonStyle,
+                            child: Text(
+                              formatCurrency(_remainingBalance),
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                  if (!_sameMoney(_nextInstallmentAmount, _remainingBalance))
-                    OutlinedButton(
-                      onPressed: () => _applySuggestedAmount(_remainingBalance),
-                      style: _suggestedAmountButtonStyle,
-                      child: Text(
-                        formatCurrency(_remainingBalance),
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ),
                 ],
               ),
             ),
