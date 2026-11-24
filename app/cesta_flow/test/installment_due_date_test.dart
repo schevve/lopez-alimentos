@@ -44,4 +44,11 @@ void main() {
       DateTime(2026, 4, 5),
     );
   });
+
+  test('Parcelas planejadas usam a data escolhida e vencem mês a mês', () {
+    expect(
+      plannedInstallmentDueDates(firstDueDate: DateTime(2026, 4, 15), count: 3),
+      [DateTime(2026, 4, 15), DateTime(2026, 5, 15), DateTime(2026, 6, 15)],
+    );
+  });
 }
