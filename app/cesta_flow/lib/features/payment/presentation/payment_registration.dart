@@ -349,7 +349,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                       mainAxisSpacing: 10,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      childAspectRatio: 3.5,
+                      mainAxisExtent: 56,
                       children: _paymentMethods.map((method) {
                         final isSelected = selected == method;
 
@@ -367,12 +367,13 @@ class _PaymentRegistration extends State<PaymentRegistration> {
                             foregroundColor: isSelected
                                 ? Colors.white
                                 : const Color(0xff1C5631),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
                             side: const BorderSide(color: Color(0xff1C5631)),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          child: Text(method),
+                          child: Text(method, textAlign: TextAlign.center),
                         );
                       }).toList(),
                     ),

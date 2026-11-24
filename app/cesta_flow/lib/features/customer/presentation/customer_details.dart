@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/constants/util/format_currency.dart';
 import 'package:cesta_flow/core/domain/score_band.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
@@ -8,6 +9,8 @@ import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/customer/presentation/customer_edit.dart';
+import 'package:cesta_flow/features/dashboard/presentation/widgets/metric_card.dart';
+import 'package:cesta_flow/features/dashboard/presentation/widgets/metrics_row.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 
@@ -154,41 +157,35 @@ class _CustomerDetailsState extends State<CustomerDetails> {
               const SizedBox(height: 20),
               const _SectionTitle(title: 'Resumo financeiro'),
               const SizedBox(height: 12),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final cardWidth = (constraints.maxWidth - 12) / 2;
-                  return Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _MetricCard(
-                        width: cardWidth,
-                        title: 'Total de compras',
-                        value: formatCurrency(totalSales),
-                        icon: Icons.shopping_bag_outlined,
-                      ),
-                      _MetricCard(
-                        width: cardWidth,
-                        title: 'Total pago',
-                        value: formatCurrency(totalPaid),
-                        icon: Icons.payments_outlined,
-                      ),
-                      _MetricCard(
-                        width: cardWidth,
-                        title: 'Saldo em aberto',
-                        value: formatCurrency(totalPending),
-                        icon: Icons.pending_actions_outlined,
-                        highlighted: totalPending > 0,
-                      ),
-                      _MetricCard(
-                        width: cardWidth,
-                        title: 'Vendas registradas',
-                        value: '${data.sales.length}',
-                        icon: Icons.receipt_long_outlined,
-                      ),
-                    ],
-                  );
-                },
+              MetricsRow(
+                columns: 2,
+                cards: [
+                  MetricCard(
+                    title: 'Total de compras',
+                    value: formatCurrency(totalSales),
+                    icon: Icons.shopping_bag_outlined,
+                    iconColor: AppColors.primary,
+                  ),
+                  MetricCard(
+                    title: 'Total pago',
+                    value: formatCurrency(totalPaid),
+                    icon: Icons.payments_outlined,
+                    iconColor: AppColors.primary,
+                  ),
+                  MetricCard(
+                    title: 'Saldo em aberto',
+                    value: formatCurrency(totalPending),
+                    icon: Icons.pending_actions_outlined,
+                    iconColor: AppColors.primary,
+                    alert: totalPending > 0,
+                  ),
+                  MetricCard(
+                    title: 'Vendas registradas',
+                    value: '${data.sales.length}',
+                    icon: Icons.receipt_long_outlined,
+                    iconColor: AppColors.primary,
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
               const _SectionTitle(title: 'Vendas com saldo pendente'),
@@ -287,7 +284,7 @@ class _CustomerDetailsState extends State<CustomerDetails> {
                   ? 'Não informado'
                   : '${_formatScore(customer.score!)} · ${ScoreBand.fromScore(customer.score)!.label}',
             ),
-            if (customer.isBlocked)
+            if (customer.isBlockedForSales)
               const _InfoLine(label: 'Situação', value: 'Bloqueado'),
             if (customer.id != null)
               _InfoLine(label: 'Código do cliente', value: '#${customer.id}'),
@@ -334,60 +331,6 @@ class _SaleSummary {
   final double paid;
 
   double get balance => math.max(0, total - paid).toDouble();
-}
-
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({
-    required this.width,
-    required this.title,
-    required this.value,
-    required this.icon,
-    this.highlighted = false,
-  });
-
-  final double width;
-  final String title;
-  final String value;
-  final IconData icon;
-  final bool highlighted;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: width,
-    child: Card(
-      color: Colors.white,
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              icon,
-              color: highlighted
-                  ? const Color(0xFFC62828)
-                  : const Color(0xFF1B4D31),
-            ),
-            const SizedBox(height: 8),
-            Text(title, style: const TextStyle(color: Color(0xFF59665E))),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: highlighted
-                    ? const Color(0xFFC62828)
-                    : const Color(0xFF18251F),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 }
 
 class _SaleCard extends StatelessWidget {

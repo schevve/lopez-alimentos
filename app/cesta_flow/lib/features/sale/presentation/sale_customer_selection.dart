@@ -201,10 +201,10 @@ class _CustomerSelectionState extends State<CustomerSelection> {
                   child: CustomerSelectionCard(
                     name: customer.name,
                     cpf: customer.documentCPF,
-                    notice: customer.isBlocked
+                    notice: customer.isBlockedForSales
                         ? 'Cliente bloqueado. Não pode comprar.'
                         : null,
-                    onTap: customer.isBlocked
+                    onTap: customer.isBlockedForSales
                         ? null
                         : () => Navigator.pop(context, customer),
                   ),
