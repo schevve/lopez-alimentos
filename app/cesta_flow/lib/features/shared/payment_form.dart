@@ -11,11 +11,15 @@ class PaymentSubmitData {
   const PaymentSubmitData({
     required this.amount,
     this.paymentMethod,
+    this.suggestedPaymentDate,
+    this.dueDate,
     this.nextVisitDate,
   });
 
   final double amount;
   final String? paymentMethod;
+  final DateTime? suggestedPaymentDate;
+  final DateTime? dueDate;
   final DateTime? nextVisitDate;
 }
 
@@ -30,8 +34,12 @@ class PaymentForm extends StatefulWidget {
     required this.remainingBalance,
     required this.showNextVisitField,
     required this.onSubmit,
+    this.showDueDateField = true,
+    this.showSuggestedPaymentDateField = true,
     this.initialPaymentMethod,
     this.initialAmountText,
+    this.initialSuggestedPaymentDateText,
+    this.initialDueDateText,
     this.initialNextVisitText,
     this.showPaymentMethod = true,
     this.amountSectionTitle = 'Valor do pagamento (R\$)',
@@ -46,8 +54,12 @@ class PaymentForm extends StatefulWidget {
   final double remainingBalance;
   final bool showNextVisitField;
   final Future<void> Function(PaymentSubmitData data) onSubmit;
+  final bool showDueDateField;
+  final bool showSuggestedPaymentDateField;
   final String? initialPaymentMethod;
   final String? initialAmountText;
+  final String? initialSuggestedPaymentDateText;
+  final String? initialDueDateText;
   final String? initialNextVisitText;
   final bool showPaymentMethod;
   final String amountSectionTitle;
@@ -67,6 +79,8 @@ class _PaymentFormState extends State<PaymentForm> {
 
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
+  final _suggestedPaymentDateController = TextEditingController();
+  final _dueDateController = TextEditingController();
   final _nextVisitController = TextEditingController();
 
   String? _paymentMethod;
@@ -88,6 +102,10 @@ class _PaymentFormState extends State<PaymentForm> {
     _paymentMethod = widget.initialPaymentMethod;
     _amountController.text =
         widget.initialAmountText ?? formatMoneyField(widget.suggestedAmount);
+    _suggestedPaymentDateController.text =
+        widget.initialSuggestedPaymentDateText ?? _formatDate(DateTime.now());
+    _dueDateController.text =
+        widget.initialDueDateText ?? _formatDate(_oneMonthFromNow());
     _nextVisitController.text =
         widget.initialNextVisitText ?? _formatDate(_oneMonthFromNow());
   }
@@ -95,6 +113,8 @@ class _PaymentFormState extends State<PaymentForm> {
   @override
   void dispose() {
     _amountController.dispose();
+    _suggestedPaymentDateController.dispose();
+    _dueDateController.dispose();
     _nextVisitController.dispose();
     super.dispose();
   }
@@ -102,6 +122,21 @@ class _PaymentFormState extends State<PaymentForm> {
   DateTime _oneMonthFromNow() {
     final now = DateTime.now();
     return DateTime(now.year, now.month + 1, now.day);
+  }
+
+  DateTime _todayDate() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  List<({String label, DateTime date})> get _suggestedPaymentDateOptions {
+    final today = _todayDate();
+    return [
+      (label: 'Hoje', date: today),
+      (label: '1 semana', date: today.add(const Duration(days: 7))),
+      (label: '2 semanas', date: today.add(const Duration(days: 14))),
+      (label: '1 mês', date: _oneMonthFromNow()),
+    ];
   }
 
   List<({String label, DateTime date})> get _suggestedVisitOptions {
@@ -131,10 +166,94 @@ class _PaymentFormState extends State<PaymentForm> {
     });
   }
 
+  void _applySuggestedDueDate(DateTime date) {
+    setState(() {
+      _dueDateController.text = _formatDate(date);
+    });
+  }
+
+  void _applySuggestedPaymentDate(DateTime date) {
+    setState(() {
+      _suggestedPaymentDateController.text = _formatDate(date);
+    });
+  }
+
+  Widget _dateFieldSection({
+    required String title,
+    required TextEditingController controller,
+    required String labelText,
+    required void Function(DateTime date) onShortcut,
+    required List<({String label, DateTime date})> shortcuts,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 4,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: AppColors.greenText,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        AppTextFormField(
+          controller: controller,
+          labelText: labelText,
+          keyboardType: TextInputType.datetime,
+          inputFormatters: [FormatDate()],
+          validator: (value) {
+            final text = value?.trim() ?? '';
+            if (text.isEmpty) {
+              return 'Informe a data completa';
+            }
+            if (text.length < 10) return 'Informe a data completa';
+            if (parseDateField(text) == null) {
+              return 'Data inválida';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 2),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final option in shortcuts)
+                OutlinedButton(
+                  onPressed: () => onShortcut(option.date),
+                  style: _suggestedAmountButtonStyle,
+                  child: Text(
+                    option.label,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
     final amount = parseMoneyField(_amountController.text);
+
+    DateTime? suggestedPaymentDate;
+    if (widget.showSuggestedPaymentDateField) {
+      suggestedPaymentDate =
+          parseDateField(_suggestedPaymentDateController.text.trim());
+      if (suggestedPaymentDate == null) return;
+    }
+
+    DateTime? dueDate;
+    if (widget.showDueDateField) {
+      dueDate = parseDateField(_dueDateController.text.trim());
+      if (dueDate == null) return;
+    }
+
     final nextVisitText = widget.showNextVisitField
         ? _nextVisitController.text.trim()
         : '';
@@ -155,6 +274,8 @@ class _PaymentFormState extends State<PaymentForm> {
         PaymentSubmitData(
           amount: amount,
           paymentMethod: method,
+          suggestedPaymentDate: suggestedPaymentDate,
+          dueDate: dueDate,
           nextVisitDate: nextDueDate,
         ),
       );
@@ -178,7 +299,6 @@ class _PaymentFormState extends State<PaymentForm> {
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 16,
               children: [
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -187,248 +307,224 @@ class _PaymentFormState extends State<PaymentForm> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: 8,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    spacing: 16,
                     children: [
-                      const Text(
-                        'Dados da venda',
-                        style: TextStyle(
-                          color: AppColors.greenText,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 20,
-                        ),
-                      ),
-                      const Text(
-                        'Cliente',
-                        style: TextStyle(
-                          color: AppColors.greenText,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      CustomerSelectionCard(
-                        name: customer?.name ?? 'Cliente #${sale.customerId}',
-                        cpf: customer?.documentCPF,
-                        showInitials: customer != null,
-                        borderColor: AppColors.primary,
-                      ),
-                      const Text(
-                        'Data da compra',
-                        style: TextStyle(
-                          color: AppColors.greenText,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      AppTextFormField(
-                        labelText: 'Data da compra',
-                        initialValue: _formatDate(sale.createdAt),
-                        readOnly: true,
-                      ),
-                      Text(
-                        widget.amountSectionTitle,
-                        style: const TextStyle(
-                          color: AppColors.greenText,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      AppTextFormField(
-                        controller: _amountController,
-                        labelText: widget.amountFieldLabel,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        inputFormatters: [FormatMoney()],
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Informe o valor recebido';
-                          }
-                          if (parseMoneyField(value) <= 0) {
-                            return 'O valor deve ser maior que zero';
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    spacing: 8,
-                    children: [
-                      OutlinedButton(
-                        onPressed: () =>
-                            _applySuggestedAmount(widget.suggestedAmount),
-                        style: _suggestedAmountButtonStyle,
-                        child: Text(
-                          formatCurrency(widget.suggestedAmount),
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ),
-                      if (!_sameMoney(
-                        widget.suggestedAmount,
-                        widget.remainingBalance,
-                      ))
-                        OutlinedButton(
-                          onPressed: () =>
-                              _applySuggestedAmount(widget.remainingBalance),
-                          style: _suggestedAmountButtonStyle,
-                          child: Text(
-                            formatCurrency(widget.remainingBalance),
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                if (widget.showPaymentMethod)
-                  FormField<String>(
-                    initialValue: _paymentMethod,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Selecione a forma de pagamento';
-                      }
-                      return null;
-                    },
-                    builder: (field) {
-                      final selected = field.value;
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         spacing: 8,
                         children: [
                           const Text(
-                            'Forma de pagamento *',
+                            'Dados da venda',
                             style: TextStyle(
                               color: AppColors.greenText,
                               fontWeight: FontWeight.w900,
                               fontSize: 20,
                             ),
                           ),
-                          GridView.count(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            childAspectRatio: 3.5,
-                            children: _paymentMethods.map((method) {
-                              final isSelected = selected == method;
-
-                              return OutlinedButton(
-                                onPressed: () {
-                                  field.didChange(method);
-                                  setState(() {
-                                    _paymentMethod = method;
-                                  });
-                                },
-                                style: OutlinedButton.styleFrom(
-                                  backgroundColor: isSelected
-                                      ? const Color(0xff1C5631)
-                                      : Colors.white,
-                                  foregroundColor: isSelected
-                                      ? Colors.white
-                                      : const Color(0xff1C5631),
-                                  side: const BorderSide(
-                                    color: Color(0xff1C5631),
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                                child: Text(method),
-                              );
-                            }).toList(),
-                          ),
-                          if (field.hasError)
-                            Text(
-                              field.errorText!,
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.error,
-                                fontSize: 12,
-                              ),
+                          const Text(
+                            'Cliente',
+                            style: TextStyle(
+                              color: AppColors.greenText,
+                              fontWeight: FontWeight.w900,
                             ),
-                        ],
-                      );
-                    },
-                  ),
-                if (widget.showNextVisitField)
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 255, 255, 255),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      spacing: 4,
-                      children: [
-                        const Text(
-                          'Próxima visita',
-                          style: TextStyle(
-                            color: AppColors.greenText,
-                            fontWeight: FontWeight.w900,
                           ),
-                        ),
-                        AppTextFormField(
-                          controller: _nextVisitController,
-                          labelText: 'Próxima visita *',
-                          keyboardType: TextInputType.datetime,
-                          inputFormatters: [FormatDate()],
-                          validator: (value) {
-                            final text = value?.trim() ?? '';
-                            if (text.isEmpty) {
-                              return 'Informe a data da próxima visita';
-                            }
-                            if (text.length < 10) return 'Informe a data completa';
-                            if (parseDateField(text) == null) {
-                              return 'Data inválida';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 2),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
+                          CustomerSelectionCard(
+                            name:
+                                customer?.name ?? 'Cliente #${sale.customerId}',
+                            cpf: customer?.documentCPF,
+                            showInitials: customer != null,
+                            borderColor: AppColors.primary,
+                          ),
+                          const Text(
+                            'Data da compra',
+                            style: TextStyle(
+                              color: AppColors.greenText,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          AppTextFormField(
+                            labelText: 'Data da compra',
+                            initialValue: _formatDate(sale.createdAt),
+                            readOnly: true,
+                          ),
+                          Text(
+                            widget.amountSectionTitle,
+                            style: const TextStyle(
+                              color: AppColors.greenText,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          AppTextFormField(
+                            controller: _amountController,
+                            labelText: widget.amountFieldLabel,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            inputFormatters: [FormatMoney()],
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Informe o valor recebido';
+                              }
+                              if (parseMoneyField(value) <= 0) {
+                                return 'O valor deve ser maior que zero';
+                              }
+                              return null;
+                            },
+                          ),
+                          Wrap(
                             spacing: 8,
+                            runSpacing: 8,
                             children: [
-                              for (final option in _suggestedVisitOptions)
+                              OutlinedButton(
+                                onPressed: () => _applySuggestedAmount(
+                                  widget.suggestedAmount,
+                                ),
+                                style: _suggestedAmountButtonStyle,
+                                child: Text(
+                                  formatCurrency(widget.suggestedAmount),
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                              ),
+                              if (!_sameMoney(
+                                widget.suggestedAmount,
+                                widget.remainingBalance,
+                              ))
                                 OutlinedButton(
-                                  onPressed: () =>
-                                      _applySuggestedVisitDate(option.date),
+                                  onPressed: () => _applySuggestedAmount(
+                                    widget.remainingBalance,
+                                  ),
                                   style: _suggestedAmountButtonStyle,
                                   child: Text(
-                                    option.label,
+                                    formatCurrency(widget.remainingBalance),
                                     style: const TextStyle(fontSize: 16),
                                   ),
                                 ),
                             ],
                           ),
+                        ],
+                      ),
+                      if (widget.showSuggestedPaymentDateField)
+                        _dateFieldSection(
+                          title: 'Data de pagamento sugerida',
+                          controller: _suggestedPaymentDateController,
+                          labelText: 'Data de pagamento sugerida *',
+                          onShortcut: _applySuggestedPaymentDate,
+                          shortcuts: _suggestedPaymentDateOptions,
                         ),
-                      ],
-                    ),
-                  ),
-                FilledButton(
-                  onPressed: _isSubmitting ? null : _submitForm,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.secondary,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 16,
-                      horizontal: 32,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  child: Text(
-                    widget.buttonText,
-                    style: const TextStyle(
-                      color: AppColors.white,
-                      fontSize: 24,
-                    ),
+                      if (widget.showDueDateField)
+                        _dateFieldSection(
+                          title: 'Data de vencimento',
+                          controller: _dueDateController,
+                          labelText: 'Data de vencimento *',
+                          onShortcut: _applySuggestedDueDate,
+                          shortcuts: _suggestedVisitOptions,
+                        ),
+                      if (widget.showPaymentMethod)
+                        FormField<String>(
+                          initialValue: _paymentMethod,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Selecione a forma de pagamento';
+                            }
+                            return null;
+                          },
+                          builder: (field) {
+                            final selected = field.value;
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              spacing: 8,
+                              children: [
+                                const Text(
+                                  'Forma de pagamento *',
+                                  style: TextStyle(
+                                    color: AppColors.greenText,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 20,
+                                  ),
+                                ),
+                                GridView.count(
+                                  crossAxisCount: 2,
+                                  crossAxisSpacing: 10,
+                                  mainAxisSpacing: 10,
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  childAspectRatio: 3.5,
+                                  children: _paymentMethods.map((method) {
+                                    final isSelected = selected == method;
+
+                                    return OutlinedButton(
+                                      onPressed: () {
+                                        field.didChange(method);
+                                        setState(() {
+                                          _paymentMethod = method;
+                                        });
+                                      },
+                                      style: OutlinedButton.styleFrom(
+                                        backgroundColor: isSelected
+                                            ? const Color(0xff1C5631)
+                                            : Colors.white,
+                                        foregroundColor: isSelected
+                                            ? Colors.white
+                                            : const Color(0xff1C5631),
+                                        side: const BorderSide(
+                                          color: Color(0xff1C5631),
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                      ),
+                                      child: Text(method),
+                                    );
+                                  }).toList(),
+                                ),
+                                if (field.hasError)
+                                  Text(
+                                    field.errorText!,
+                                    style: TextStyle(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.error,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
+                      if (widget.showNextVisitField)
+                        _dateFieldSection(
+                          title: 'Próxima visita',
+                          controller: _nextVisitController,
+                          labelText: 'Próxima visita *',
+                          onShortcut: _applySuggestedVisitDate,
+                          shortcuts: _suggestedVisitOptions,
+                        ),
+                      FilledButton(
+                        onPressed: _isSubmitting ? null : _submitForm,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.secondary,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 32,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                        ),
+                        child: Text(
+                          widget.buttonText,
+                          style: const TextStyle(
+                            color: AppColors.white,
+                            fontSize: 24,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

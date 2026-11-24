@@ -169,7 +169,11 @@ class _PaymentEditState extends State<PaymentEdit> {
 
     try {
       await _installmentRepository.updateInstallment(
-        installment.copyWith(expectedAmount: data.amount),
+        installment.copyWith(
+          expectedAmount: data.amount,
+          dueDate: data.dueDate,
+          indicatedPaymentDate: data.suggestedPaymentDate,
+        ),
       );
       if (data.nextVisitDate != null) {
         await _installmentRepository.indicateNextPaymentDate(
@@ -242,6 +246,12 @@ class _PaymentEditState extends State<PaymentEdit> {
       amountSectionTitle: 'Valor previsto (R\$)',
       amountFieldLabel: 'Valor previsto *',
       initialAmountText: formatMoneyField(installment.expectedAmount),
+      initialDueDateText: installment.dueDate == null
+          ? null
+          : _formatDate(installment.dueDate!),
+      initialSuggestedPaymentDateText: installment.indicatedPaymentDate == null
+          ? null
+          : _formatDate(installment.indicatedPaymentDate!),
       initialNextVisitText: _initialNextVisit,
       onSubmit: _handleSubmit,
     );

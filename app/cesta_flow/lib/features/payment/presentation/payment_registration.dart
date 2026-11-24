@@ -32,6 +32,8 @@ class _PaymentRegistration extends State<PaymentRegistration> {
   bool _loading = true;
   String? _loadError;
   int _unpaidInstallmentsCount = 0;
+  String? _initialDueDateText;
+  String? _initialSuggestedPaymentDateText;
 
   bool get _showNextVisitField => _unpaidInstallmentsCount > 1;
 
@@ -63,9 +65,12 @@ class _PaymentRegistration extends State<PaymentRegistration> {
         widget.saleId,
       );
       final remaining = SaleRepository.remainingBalance(sale);
-      final nextInstallment = _nextInstallmentAmountFor(sale, installments);
-      final unpaidCount =
-          installments.where((item) => !item.isPaid).length;
+      final pending = _sortedUnpaidInstallments(installments);
+      final nextInstallment = _nextInstallmentAmountFor(sale, pending, remaining);
+      final unpaidCount = pending.length;
+      final firstPending = pending.isEmpty ? null : pending.first;
+      final firstDue = firstPending?.dueDate;
+      final firstSuggested = firstPending?.indicatedPaymentDate;
       if (!mounted) return;
       setState(() {
         _sale = sale;
@@ -73,6 +78,11 @@ class _PaymentRegistration extends State<PaymentRegistration> {
         _remainingBalance = remaining;
         _nextInstallmentAmount = nextInstallment;
         _unpaidInstallmentsCount = unpaidCount;
+        _initialDueDateText =
+            firstDue == null ? null : _formatDate(firstDue);
+        _initialSuggestedPaymentDateText = firstSuggested == null
+            ? null
+            : _formatDate(firstSuggested);
         _loading = false;
       });
     } catch (error) {
@@ -84,9 +94,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
     }
   }
 
-  double _nextInstallmentAmountFor(Sale sale, List<Installment> installments) {
-    final remaining = SaleRepository.remainingBalance(sale);
-    if (remaining <= 0) return 0;
+  List<Installment> _sortedUnpaidInstallments(List<Installment> installments) {
     final pending = installments.where((item) => !item.isPaid).toList()
       ..sort((a, b) {
         final dueA = a.dueDate;
@@ -98,11 +106,24 @@ class _PaymentRegistration extends State<PaymentRegistration> {
         if (dueB == null) return -1;
         return dueA.compareTo(dueB);
       });
+    return pending;
+  }
+
+  double _nextInstallmentAmountFor(
+    Sale sale,
+    List<Installment> pending,
+    double remaining,
+  ) {
+    if (remaining <= 0) return 0;
     if (pending.isEmpty) return remaining;
     final expected = pending.first.expectedAmount;
     if (expected <= 0 || expected > remaining) return remaining;
     return expected;
   }
+
+  String _formatDate(DateTime date) =>
+      '${date.day.toString().padLeft(2, '0')}/'
+      '${date.month.toString().padLeft(2, '0')}/${date.year}';
 
   Future<void> _handleSubmit(PaymentSubmitData data) async {
     try {
@@ -110,6 +131,8 @@ class _PaymentRegistration extends State<PaymentRegistration> {
         saleId: widget.saleId,
         amount: data.amount,
         paymentMethod: data.paymentMethod!,
+        paymentDate: data.suggestedPaymentDate,
+        dueDate: data.dueDate,
       );
       if (data.nextVisitDate != null) {
         await _installmentRepository.indicateNextPaymentDate(
@@ -176,6 +199,8 @@ class _PaymentRegistration extends State<PaymentRegistration> {
       remainingBalance: _remainingBalance,
       showNextVisitField: _showNextVisitField,
       initialAmountText: formatMoneyField(_nextInstallmentAmount),
+      initialDueDateText: _initialDueDateText,
+      initialSuggestedPaymentDateText: _initialSuggestedPaymentDateText,
       onSubmit: _handleSubmit,
     );
   }
