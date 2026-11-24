@@ -346,14 +346,14 @@ class _InstallmentCard extends StatelessWidget {
         : badgeForUnpaidDueDate(due);
 
     final subtitle = paymentDate != null
-        ? 'Pagamento em ${_formatDate(paymentDate)}'
+        ? 'Pagamento realizado em ${_formatDate(paymentDate)}'
         : [
             due == null
                 ? 'Sem data de vencimento'
                 : badge == PaymentSummaryBadge.overdue
                 ? 'Venceu em ${_formatDate(due)}'
                 : 'Vence em ${_formatDate(due)}',
-            if (indicated != null) 'Próxima visita em ${_formatDate(indicated)}',
+            if (indicated != null) 'Pagamento previsto para ${_formatDate(indicated)}',
           ].join(' · ');
     final amount = formatCurrency(
       isPaid ? installment.paidAmount : installment.expectedAmount,
