@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../objectbox.g.dart';
+import '../../remote/active_supabase_client.dart';
+import '../../remote/model/profile_model.dart';
+import '../../remote/repository/profile_repository.dart';
 import '../../remote/sync_remote_if_available.dart';
 import '../db_helper.dart';
 import '../model/customer_model.dart';
@@ -13,12 +16,27 @@ import 'sale_repository.dart';
 
 class CustomerRepository {
   final DatabaseHelper _dbHelper;
+  final _profiles = ProfileRepository();
   CustomerRepository({DatabaseHelper? dbHelper})
     : _dbHelper = dbHelper ?? DatabaseHelper();
+
+  Future<bool> canManageSalesOverride() async {
+    final userId = currentUserId();
+    try {
+      final profile = await _profiles.getCurrentProfile();
+      return profile != null &&
+          profile.id == currentUserId() &&
+          profile.id == userId &&
+          profile.role == ProfileRole.admin;
+    } catch (_) {
+      return false;
+    }
+  }
 
   Future<int> registerCustomer(Customer value) async {
     final db = await _dbHelper.store;
     final pending = value.copyWith(
+      isAdminUnblocked: false,
       updatedAt: SyncTimestamps.forCreate(value.createdAt, value.updatedAt),
       isSynced: false,
     );
@@ -27,7 +45,9 @@ class CustomerRepository {
     });
     final saved = pending.copyWith(id: id);
     final synced = await syncRemoteIfAvailable(
-      (client) => client.from('customers').insert(saved.toRemote()),
+      (client) => client
+          .from('customers')
+          .insert(saved.toRemote()..remove('is_admin_unblocked')),
       debugLabel: 'customers.insert',
     );
     if (synced) {
@@ -57,35 +77,77 @@ class CustomerRepository {
     }
   }
 
-  Future<int> updateCustomer(Customer value) async {
-    if (value.id == null || value.id == 0) {
+  Future<int> updateCustomer(Customer value) => _updateCustomer(value);
+
+  Future<int> updateCustomerWithSalesOverride(
+    Customer value, {
+    required bool isAdminUnblocked,
+  }) async {
+    final client = activeSupabaseClient();
+    if (client == null || !await canManageSalesOverride()) {
+      throw StateError(
+        'Confirme sua sessão de administrador para alterar a liberação.',
+      );
+    }
+    final uuid = value.uuid;
+    final updatedAt = SyncTimestamps.forUpdate();
+    final saved = await client
+        .from('customers')
+        .update({
+          'is_admin_unblocked': isAdminUnblocked,
+          'updated_at': updatedAt.toUtc().toIso8601String(),
+        })
+        .eq('id', uuid)
+        .select('id')
+        .maybeSingle();
+    if (saved == null) {
+      throw StateError(
+        'Sincronize o cadastro deste cliente antes de alterar a liberação.',
+      );
+    }
+    return _updateCustomer(value, adminOverride: isAdminUnblocked);
+  }
+
+  Future<int> _updateCustomer(Customer value, {bool? adminOverride}) async {
+    final id = value.id;
+    if (id == null || id == 0) {
       throw ArgumentError('ID obrigatório para atualizar.');
     }
     final db = await _dbHelper.store;
-    final pending = value.copyWith(
-      updatedAt: SyncTimestamps.forUpdate(),
-      isSynced: false,
-    );
-    final updated = db.runInTransaction(TxMode.write, () {
-      if (db.box<Customer>().get(pending.id!) == null) return 0;
-      db.box<Customer>().put(pending, mode: PutMode.update);
-      return 1;
+    final box = db.box<Customer>();
+    final pending = db.runInTransaction(TxMode.write, () {
+      final current = box.get(id);
+      if (current == null || current.isDeleted) return null;
+      final updated = value.copyWith(
+        isAdminUnblocked: adminOverride ?? current.isAdminUnblocked,
+        isBlocked: adminOverride == null ? null : current.isBlocked,
+        score: adminOverride == null ? null : current.score,
+        clearScore: adminOverride != null && current.score == null,
+        updatedAt: SyncTimestamps.forUpdate(),
+        isSynced: false,
+      );
+      box.put(updated, mode: PutMode.update);
+      return updated;
     });
-    if (updated == 0) return 0;
+    if (pending == null) return 0;
     final synced = await syncRemoteIfAvailable(
       (client) => client
           .from('customers')
-          .update(pending.toRemote())
+          .update(pending.toRemote()..remove('is_admin_unblocked'))
           .eq('id', pending.uuid),
       debugLabel: 'customers.update',
     );
-    if (synced) {
-      db.box<Customer>().put(
-        pending.copyWith(isSynced: true),
-        mode: PutMode.update,
-      );
-    }
+    if (synced) _markSynced(db, pending);
     return 1;
+  }
+
+  void _markSynced(Store db, Customer sent) {
+    db.runInTransaction(TxMode.write, () {
+      final box = db.box<Customer>();
+      final current = box.get(sent.id!);
+      if (current == null || current.updatedAt != sent.updatedAt) return;
+      box.put(current.copyWith(isSynced: true), mode: PutMode.update);
+    });
   }
 
   Future<int> deleteCustomer(int id) async {
@@ -158,7 +220,7 @@ class CustomerRepository {
           } else {
             await Supabase.instance.client
                 .from('customers')
-                .upsert(customer.toRemote());
+                .upsert(customer.toRemote()..remove('is_admin_unblocked'));
           }
           synced = true;
         } catch (_) {
@@ -166,10 +228,7 @@ class CustomerRepository {
         }
       }
       if (!synced) continue;
-      db.box<Customer>().put(
-        customer.copyWith(isSynced: true),
-        mode: PutMode.update,
-      );
+      _markSynced(db, customer);
     }
   }
 
@@ -187,7 +246,9 @@ class CustomerRepository {
       debugPrint('$stackTrace');
       return;
     }
-    debugPrint('[CustomerRepository.pullSince] ${rows.length} registro(s) remoto(s)');
+    debugPrint(
+      '[CustomerRepository.pullSince] ${rows.length} registro(s) remoto(s)',
+    );
     final db = await _dbHelper.store;
     var merged = 0;
     for (final raw in rows) {

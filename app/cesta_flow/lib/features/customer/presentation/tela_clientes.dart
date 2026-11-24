@@ -140,7 +140,7 @@ class _ClientesScreenState extends State<ClientesScreen>
     }
 
     if (acao == 'Nova Venda') {
-      if (cliente.isBlocked) {
+      if (cliente.isBlockedForSales) {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(
@@ -356,7 +356,7 @@ class _ClientesScreenState extends State<ClientesScreen>
                                           key: ValueKey(
                                             '${clientes[linha * colunas + coluna].uuid}-'
                                             '${clientes[linha * colunas + coluna].name}-'
-                                            '${clientes[linha * colunas + coluna].isBlocked}-'
+                                            '${clientes[linha * colunas + coluna].isBlockedForSales}-'
                                             '${clientes[linha * colunas + coluna].score}',
                                           ),
                                           cliente:

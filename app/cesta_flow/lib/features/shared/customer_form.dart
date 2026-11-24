@@ -14,12 +14,15 @@ class CustomerForm extends StatefulWidget {
 
   final Future<void> Function(Map<String, dynamic> data) onSubmit;
 
+  final Future<bool> Function()? canManageSalesOverride;
+
   final String buttonText;
   final String title;
 
   const CustomerForm({
     super.key,
     this.customer,
+    this.canManageSalesOverride,
     required this.onSubmit,
     required this.buttonText,
     required this.title,
@@ -33,6 +36,15 @@ class _CustomerFormState extends State<CustomerForm> {
   final _formKey = GlobalKey<FormState>();
   final _formData = <String, dynamic>{};
   bool _isSubmitting = false;
+  late final Future<bool>? _canManageSalesOverride;
+
+  @override
+  void initState() {
+    super.initState();
+    _canManageSalesOverride = widget.customer == null
+        ? null
+        : widget.canManageSalesOverride?.call();
+  }
 
   Future<void> _submitForm() async {
     if (_isSubmitting) return;
@@ -44,6 +56,7 @@ class _CustomerFormState extends State<CustomerForm> {
       return;
     }
 
+    _formData.remove('is_admin_unblocked');
     _formKey.currentState!.save();
 
     setState(() => _isSubmitting = true);
@@ -170,6 +183,30 @@ class _CustomerFormState extends State<CustomerForm> {
                   onSaved: (value) => _formData['rg'] = value,
                   validator: validateRg,
                 ),
+                if (customer != null && _canManageSalesOverride != null)
+                  FutureBuilder<bool>(
+                    future: _canManageSalesOverride,
+                    builder: (context, snapshot) {
+                      if (snapshot.data != true) return const SizedBox.shrink();
+                      return FormField<bool>(
+                        initialValue: customer.isAdminUnblocked,
+                        onSaved: (value) {
+                          if (value != customer.isAdminUnblocked) {
+                            _formData['is_admin_unblocked'] = value;
+                          }
+                        },
+                        builder: (field) => SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Liberar vendas para este cliente'),
+                          subtitle: const Text(
+                            'Liberação do bloqueio por score',
+                          ),
+                          value: field.value!,
+                          onChanged: _isSubmitting ? null : field.didChange,
+                        ),
+                      );
+                    },
+                  ),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(

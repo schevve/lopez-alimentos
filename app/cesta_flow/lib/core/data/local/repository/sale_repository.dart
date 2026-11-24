@@ -73,7 +73,7 @@ class SaleRepository {
     if (customer == null || customer.isDeleted) {
       throw StateError('Cliente não encontrado.');
     }
-    if (customer.isBlocked) {
+    if (customer.isBlockedForSales) {
       throw StateError('Cliente bloqueado não pode realizar compras.');
     }
     final identified = value.customerUuid.isEmpty
@@ -113,7 +113,7 @@ class SaleRepository {
       if (currentCustomer == null || currentCustomer.isDeleted) {
         throw StateError('Cliente não encontrado.');
       }
-      if (currentCustomer.isBlocked) {
+      if (currentCustomer.isBlockedForSales) {
         throw StateError('Cliente bloqueado não pode realizar compras.');
       }
       final saleId = db.box<Sale>().put(pendingSale);
