@@ -306,6 +306,18 @@ class _PaymentDetailsState extends State<PaymentDetails> {
     },
   );
 
+  void _onEditPaymentPressed(bool canEditPayment) {
+    if (!canEditPayment) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não é possível editar parcelas pagas'),
+        ),
+      );
+      return;
+    }
+    _editPayment();
+  }
+
   Future<void> _editPayment() async {
     final updated = await Navigator.push<bool>(
       context,
@@ -361,7 +373,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
                   alignment: Alignment.centerRight,
                   child: IconButton(
                     tooltip: 'Editar pagamento',
-                    onPressed: canEditPayment ? _editPayment : null,
+                    onPressed: () => _onEditPaymentPressed(canEditPayment),
                     icon: const Icon(Icons.edit_outlined),
                   ),
                 ),

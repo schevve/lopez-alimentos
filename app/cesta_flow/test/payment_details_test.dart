@@ -99,6 +99,41 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('parcela paga exibe snack ao tocar em editar', (tester) async {
+    final repo = _InstallmentRepository()
+      ..installment = Installment(
+        id: 6,
+        uuid: 'installment-6',
+        saleId: 11,
+        expectedAmount: 40,
+        paidAmount: 40,
+        paymentDate: DateTime(2026, 10, 2),
+        dueDate: DateTime(2026, 10, 2),
+        createdAt: DateTime(2026, 10, 1),
+      );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PaymentDetails(
+          installmentId: 6,
+          installmentRepository: repo,
+          saleRepository: _SaleRepository(),
+          customerRepository: _CustomerRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final editButton = tester
+        .widgetList<IconButton>(find.byType(IconButton))
+        .firstWhere((button) => button.tooltip == 'Editar pagamento');
+    expect(editButton.onPressed, isNotNull);
+
+    await tester.tap(find.byTooltip('Editar pagamento'));
+    await tester.pump();
+    expect(find.text('Não é possível editar parcelas pagas'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('trata ID inexistente sem falhar', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
