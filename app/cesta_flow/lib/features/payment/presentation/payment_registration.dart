@@ -109,7 +109,7 @@ class _PaymentRegistration extends State<PaymentRegistration> {
       await _installmentRepository.registerPayment(
         saleId: widget.saleId,
         amount: data.amount,
-        paymentMethod: data.paymentMethod,
+        paymentMethod: data.paymentMethod!,
       );
       if (data.nextVisitDate != null) {
         await _installmentRepository.indicateNextPaymentDate(

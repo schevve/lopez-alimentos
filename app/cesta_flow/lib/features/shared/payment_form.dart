@@ -10,12 +10,12 @@ import 'package:flutter/material.dart';
 class PaymentSubmitData {
   const PaymentSubmitData({
     required this.amount,
-    required this.paymentMethod,
+    this.paymentMethod,
     this.nextVisitDate,
   });
 
   final double amount;
-  final String paymentMethod;
+  final String? paymentMethod;
   final DateTime? nextVisitDate;
 }
 
@@ -33,6 +33,9 @@ class PaymentForm extends StatefulWidget {
     this.initialPaymentMethod,
     this.initialAmountText,
     this.initialNextVisitText,
+    this.showPaymentMethod = true,
+    this.amountSectionTitle = 'Valor do pagamento (R\$)',
+    this.amountFieldLabel = 'Valor do pagamento *',
   });
 
   final Sale sale;
@@ -46,6 +49,9 @@ class PaymentForm extends StatefulWidget {
   final String? initialPaymentMethod;
   final String? initialAmountText;
   final String? initialNextVisitText;
+  final bool showPaymentMethod;
+  final String amountSectionTitle;
+  final String amountFieldLabel;
 
   @override
   State<PaymentForm> createState() => _PaymentFormState();
@@ -137,8 +143,11 @@ class _PaymentFormState extends State<PaymentForm> {
         : null;
     if (widget.showNextVisitField && nextDueDate == null) return;
 
-    final method = _paymentMethod;
-    if (method == null || method.isEmpty) return;
+    String? method;
+    if (widget.showPaymentMethod) {
+      method = _paymentMethod;
+      if (method == null || method.isEmpty) return;
+    }
 
     setState(() => _isSubmitting = true);
     try {
@@ -214,16 +223,16 @@ class _PaymentFormState extends State<PaymentForm> {
                         initialValue: _formatDate(sale.createdAt),
                         readOnly: true,
                       ),
-                      const Text(
-                        'Valor do pagamento (R\$)',
-                        style: TextStyle(
+                      Text(
+                        widget.amountSectionTitle,
+                        style: const TextStyle(
                           color: AppColors.greenText,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
                       AppTextFormField(
                         controller: _amountController,
-                        labelText: 'Valor do pagamento *',
+                        labelText: widget.amountFieldLabel,
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
@@ -272,77 +281,78 @@ class _PaymentFormState extends State<PaymentForm> {
                     ],
                   ),
                 ),
-                FormField<String>(
-                  initialValue: _paymentMethod,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Selecione a forma de pagamento';
-                    }
-                    return null;
-                  },
-                  builder: (field) {
-                    final selected = field.value;
+                if (widget.showPaymentMethod)
+                  FormField<String>(
+                    initialValue: _paymentMethod,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Selecione a forma de pagamento';
+                      }
+                      return null;
+                    },
+                    builder: (field) {
+                      final selected = field.value;
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      spacing: 8,
-                      children: [
-                        const Text(
-                          'Forma de pagamento *',
-                          style: TextStyle(
-                            color: AppColors.greenText,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 20,
-                          ),
-                        ),
-                        GridView.count(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          childAspectRatio: 3.5,
-                          children: _paymentMethods.map((method) {
-                            final isSelected = selected == method;
-
-                            return OutlinedButton(
-                              onPressed: () {
-                                field.didChange(method);
-                                setState(() {
-                                  _paymentMethod = method;
-                                });
-                              },
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: isSelected
-                                    ? const Color(0xff1C5631)
-                                    : Colors.white,
-                                foregroundColor: isSelected
-                                    ? Colors.white
-                                    : const Color(0xff1C5631),
-                                side: const BorderSide(
-                                  color: Color(0xff1C5631),
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              child: Text(method),
-                            );
-                          }).toList(),
-                        ),
-                        if (field.hasError)
-                          Text(
-                            field.errorText!,
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        spacing: 8,
+                        children: [
+                          const Text(
+                            'Forma de pagamento *',
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                              fontSize: 12,
+                              color: AppColors.greenText,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 20,
                             ),
                           ),
-                      ],
-                    );
-                  },
-                ),
+                          GridView.count(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            childAspectRatio: 3.5,
+                            children: _paymentMethods.map((method) {
+                              final isSelected = selected == method;
+
+                              return OutlinedButton(
+                                onPressed: () {
+                                  field.didChange(method);
+                                  setState(() {
+                                    _paymentMethod = method;
+                                  });
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  backgroundColor: isSelected
+                                      ? const Color(0xff1C5631)
+                                      : Colors.white,
+                                  foregroundColor: isSelected
+                                      ? Colors.white
+                                      : const Color(0xff1C5631),
+                                  side: const BorderSide(
+                                    color: Color(0xff1C5631),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                child: Text(method),
+                              );
+                            }).toList(),
+                          ),
+                          if (field.hasError)
+                            Text(
+                              field.errorText!,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                                fontSize: 12,
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
                 if (widget.showNextVisitField)
                   Container(
                     padding: const EdgeInsets.all(16),

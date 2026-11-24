@@ -45,6 +45,7 @@ class _PaymentEditState extends State<PaymentEdit> {
   String? _initialNextVisit;
   bool _loading = true;
   String? _loadError;
+  bool _isPaidInstallment = false;
 
   @override
   void initState() {
@@ -56,6 +57,7 @@ class _PaymentEditState extends State<PaymentEdit> {
     setState(() {
       _loading = true;
       _loadError = null;
+      _isPaidInstallment = false;
     });
     try {
       final installment = await _installmentRepository.getInstallmentById(
@@ -69,10 +71,11 @@ class _PaymentEditState extends State<PaymentEdit> {
         });
         return;
       }
-      if (!installment.isPaid) {
+      if (installment.isPaid) {
         if (!mounted) return;
         setState(() {
           _installment = installment;
+          _isPaidInstallment = true;
           _loading = false;
         });
         return;
@@ -96,24 +99,10 @@ class _PaymentEditState extends State<PaymentEdit> {
         installment.saleId,
       );
       final unpaidCount = installments.where((item) => !item.isPaid).length;
-      final maxForThisPayment =
-          sale.price - sale.amountPaid + installment.paidAmount;
+      final remaining = SaleRepository.remainingBalance(sale);
       String? nextVisit;
-      if (unpaidCount > 0) {
-        final nextUnpaid = installments
-            .where((item) => !item.isPaid)
-            .toList()
-          ..sort((a, b) {
-            final dueA = a.dueDate;
-            final dueB = b.dueDate;
-            if (dueA == null && dueB == null) {
-              return a.createdAt.compareTo(b.createdAt);
-            }
-            if (dueA == null) return 1;
-            if (dueB == null) return -1;
-            return dueA.compareTo(dueB);
-          });
-        final indicated = nextUnpaid.first.indicatedPaymentDate;
+      if (_showNextVisitForCount(unpaidCount)) {
+        final indicated = _nextUnpaidIndicatedDate(installments);
         if (indicated != null) {
           nextVisit = _formatDate(indicated);
         }
@@ -124,9 +113,9 @@ class _PaymentEditState extends State<PaymentEdit> {
         _installment = installment;
         _sale = sale;
         _customer = customer;
-        _suggestedAmount = installment.paidAmount;
-        _remainingBalance = maxForThisPayment;
-        _showNextVisitField = unpaidCount > 1;
+        _suggestedAmount = installment.expectedAmount;
+        _remainingBalance = remaining;
+        _showNextVisitField = _showNextVisitForCount(unpaidCount);
         _initialNextVisit = nextVisit;
         _loading = false;
       });
@@ -139,6 +128,24 @@ class _PaymentEditState extends State<PaymentEdit> {
     }
   }
 
+  bool _showNextVisitForCount(int unpaidCount) => unpaidCount > 1;
+
+  DateTime? _nextUnpaidIndicatedDate(List<Installment> installments) {
+    final pending = installments.where((item) => !item.isPaid).toList()
+      ..sort((a, b) {
+        final dueA = a.dueDate;
+        final dueB = b.dueDate;
+        if (dueA == null && dueB == null) {
+          return a.createdAt.compareTo(b.createdAt);
+        }
+        if (dueA == null) return 1;
+        if (dueB == null) return -1;
+        return dueA.compareTo(dueB);
+      });
+    if (pending.isEmpty) return null;
+    return pending.first.indicatedPaymentDate;
+  }
+
   String _formatDate(DateTime date) =>
       '${date.day.toString().padLeft(2, '0')}/'
       '${date.month.toString().padLeft(2, '0')}/${date.year}';
@@ -148,11 +155,21 @@ class _PaymentEditState extends State<PaymentEdit> {
     final sale = _sale;
     if (installment == null || sale == null) return;
 
+    if (data.amount > SaleRepository.remainingBalance(sale)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'O valor previsto não pode exceder o saldo restante da venda.',
+          ),
+        ),
+      );
+      return;
+    }
+
     try {
-      await _installmentRepository.updateRegisteredPayment(
-        installmentId: widget.installmentId,
-        paidAmount: data.amount,
-        paymentMethod: data.paymentMethod,
+      await _installmentRepository.updateInstallment(
+        installment.copyWith(expectedAmount: data.amount),
       );
       if (data.nextVisitDate != null) {
         await _installmentRepository.indicateNextPaymentDate(
@@ -198,14 +215,19 @@ class _PaymentEditState extends State<PaymentEdit> {
     if (installment == null) {
       return const PaymentFormMessageState(message: 'Pagamento não encontrado.');
     }
-    if (!installment.isPaid) {
+    if (_isPaidInstallment) {
       return const PaymentFormMessageState(
-        message: 'Este pagamento ainda não foi registrado.',
+        message: 'Pagamentos já registrados não podem ser alterados.',
       );
     }
     final sale = _sale;
     if (sale == null) {
       return const PaymentFormMessageState(message: 'Venda não encontrada.');
+    }
+    if (SaleRepository.isSaleFullyPaid(sale) || _remainingBalance <= 0) {
+      return const PaymentFormMessageState(
+        message: 'Esta venda já está quitada.',
+      );
     }
 
     return PaymentForm(
@@ -216,8 +238,10 @@ class _PaymentEditState extends State<PaymentEdit> {
       suggestedAmount: _suggestedAmount,
       remainingBalance: _remainingBalance,
       showNextVisitField: _showNextVisitField,
-      initialPaymentMethod: installment.paymentMethod,
-      initialAmountText: formatMoneyField(installment.paidAmount),
+      showPaymentMethod: false,
+      amountSectionTitle: 'Valor previsto (R\$)',
+      amountFieldLabel: 'Valor previsto *',
+      initialAmountText: formatMoneyField(installment.expectedAmount),
       initialNextVisitText: _initialNextVisit,
       onSubmit: _handleSubmit,
     );

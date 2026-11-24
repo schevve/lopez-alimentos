@@ -91,12 +91,10 @@ void main() {
     expect(find.text('Parcela 2 de 2'), findsOneWidget);
     expect(find.text('Venda #11'), findsWidgets);
     expect(find.byTooltip('Editar pagamento'), findsOneWidget);
-    expect(
-      tester
-          .widgetList<IconButton>(find.byType(IconButton))
-          .any((button) => button.onPressed == null),
-      isTrue,
-    );
+    final editButton = tester
+        .widgetList<IconButton>(find.byType(IconButton))
+        .firstWhere((button) => button.tooltip == 'Editar pagamento');
+    expect(editButton.onPressed, isNotNull);
     expect(find.text('Receber pagamento'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

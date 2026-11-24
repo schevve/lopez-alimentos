@@ -126,7 +126,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
               : badgeForUnpaidDueDate(installment.dueDate);
           final statusLabel = _statusLabel(badge);
 
-          final canEditPayment = isPaid;
+          final canEditPayment = !isPaid;
           body = RefreshIndicator(
             onRefresh: _refresh,
             child: ListView(
@@ -301,6 +301,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
                 ),
               ),
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        floatingActionButtonAnimator: FloatingActionButtonAnimator.noAnimation,
       );
     },
   );
