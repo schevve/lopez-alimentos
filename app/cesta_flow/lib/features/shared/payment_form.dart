@@ -103,7 +103,7 @@ class _PaymentFormState extends State<PaymentForm> {
     _amountController.text =
         widget.initialAmountText ?? formatMoneyField(widget.suggestedAmount);
     _suggestedPaymentDateController.text =
-        widget.initialSuggestedPaymentDateText ?? _formatDate(DateTime.now());
+        widget.initialSuggestedPaymentDateText ?? '';
     _dueDateController.text =
         widget.initialDueDateText ?? _formatDate(_oneMonthFromNow());
     _nextVisitController.text =
@@ -124,17 +124,11 @@ class _PaymentFormState extends State<PaymentForm> {
     return DateTime(now.year, now.month + 1, now.day);
   }
 
-  DateTime _todayDate() {
-    final now = DateTime.now();
-    return DateTime(now.year, now.month, now.day);
-  }
-
   List<({String label, DateTime date})> get _suggestedPaymentDateOptions {
-    final today = _todayDate();
+    final now = DateTime.now();
     return [
-      (label: 'Hoje', date: today),
-      (label: '1 semana', date: today.add(const Duration(days: 7))),
-      (label: '2 semanas', date: today.add(const Duration(days: 14))),
+      (label: '1 semana', date: now.add(const Duration(days: 7))),
+      (label: '2 semanas', date: now.add(const Duration(days: 14))),
       (label: '1 mês', date: _oneMonthFromNow()),
     ];
   }
@@ -166,12 +160,6 @@ class _PaymentFormState extends State<PaymentForm> {
     });
   }
 
-  void _applySuggestedDueDate(DateTime date) {
-    setState(() {
-      _dueDateController.text = _formatDate(date);
-    });
-  }
-
   void _applySuggestedPaymentDate(DateTime date) {
     setState(() {
       _suggestedPaymentDateController.text = _formatDate(date);
@@ -182,8 +170,8 @@ class _PaymentFormState extends State<PaymentForm> {
     required String title,
     required TextEditingController controller,
     required String labelText,
-    required void Function(DateTime date) onShortcut,
-    required List<({String label, DateTime date})> shortcuts,
+    void Function(DateTime date)? onShortcut,
+    List<({String label, DateTime date})> shortcuts = const [],
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -213,25 +201,27 @@ class _PaymentFormState extends State<PaymentForm> {
             return null;
           },
         ),
-        const SizedBox(height: 2),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final option in shortcuts)
-                OutlinedButton(
-                  onPressed: () => onShortcut(option.date),
-                  style: _suggestedAmountButtonStyle,
-                  child: Text(
-                    option.label,
-                    style: const TextStyle(fontSize: 16),
+        if (shortcuts.isNotEmpty && onShortcut != null) ...[
+          const SizedBox(height: 2),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final option in shortcuts)
+                  OutlinedButton(
+                    onPressed: () => onShortcut(option.date),
+                    style: _suggestedAmountButtonStyle,
+                    child: Text(
+                      option.label,
+                      style: const TextStyle(fontSize: 16),
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -406,9 +396,9 @@ class _PaymentFormState extends State<PaymentForm> {
                       ),
                       if (widget.showSuggestedPaymentDateField)
                         _dateFieldSection(
-                          title: 'Data de pagamento sugerida',
+                          title: 'Data de pagamento prevista',
                           controller: _suggestedPaymentDateController,
-                          labelText: 'Data de pagamento sugerida *',
+                          labelText: 'Data de pagamento prevista *',
                           onShortcut: _applySuggestedPaymentDate,
                           shortcuts: _suggestedPaymentDateOptions,
                         ),
@@ -417,8 +407,6 @@ class _PaymentFormState extends State<PaymentForm> {
                           title: 'Data de vencimento',
                           controller: _dueDateController,
                           labelText: 'Data de vencimento *',
-                          onShortcut: _applySuggestedDueDate,
-                          shortcuts: _suggestedVisitOptions,
                         ),
                       if (widget.showPaymentMethod)
                         FormField<String>(
