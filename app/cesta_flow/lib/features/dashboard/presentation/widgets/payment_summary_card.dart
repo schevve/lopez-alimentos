@@ -133,7 +133,7 @@ class PaymentSummaryCard extends StatelessWidget {
                     SizedBox(
                       width: largura,
                       child: _AcaoButton(
-                        label: 'Ver pagamento',
+                        label: 'Detalhes',
                         icon: Icons.receipt_long_outlined,
                         background: const Color(0xFFE3F2E9),
                         foreground: const Color(0xFF46524B),
