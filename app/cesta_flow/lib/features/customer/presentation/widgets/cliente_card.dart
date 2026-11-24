@@ -151,7 +151,7 @@ class ClienteCard extends StatelessWidget {
                   SizedBox(
                     width: largura,
                     child: _AcaoButton(
-                      label: 'Ver Perfil',
+                      label: 'Detalhes',
                       icon: Icons.badge_outlined,
                       background: const Color(0xFFE3F2E9),
                       foreground: const Color(0xFF46524B),

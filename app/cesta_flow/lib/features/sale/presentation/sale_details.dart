@@ -118,6 +118,8 @@ class _SaleDetailsState extends State<SaleDetails> {
               const _SectionTitle(title: 'Resumo da venda'),
               const SizedBox(height: 12),
               MetricsRow(
+                firstCardFullWidth: true,
+                columns: 2,
                 cards: [
                   MetricCard(
                     title: 'Valor da venda',
@@ -315,6 +317,7 @@ class _InstallmentCard extends StatelessWidget {
       amountLabel: isPaid ? 'Valor pago' : 'Valor previsto',
       badge: badge,
       saleId: saleId,
+      installmentId: installment.id,
       isPaid: isPaid,
       onAfterReceive: onAfterReceive,
     );

@@ -112,6 +112,7 @@ class InstallmentRepository {
     required double amount,
     String? paymentMethod,
     DateTime? paymentDate,
+    DateTime? dueDate,
   }) async {
     final db = await _dbHelper.store;
     final sale = db.box<Sale>().get(saleId);
@@ -133,18 +134,24 @@ class InstallmentRepository {
           uuid: planUuid,
           saleId: saleId,
           expectedAmount: remaining,
-          dueDate: nextInstallmentDueDate(
-            saleDate: sale.createdAt,
-            lastDueDate: latestInstallmentDueDate(
-              existing.map((item) => item.dueDate),
-            ),
-          ),
+          dueDate:
+              dueDate ??
+              nextInstallmentDueDate(
+                saleDate: sale.createdAt,
+                lastDueDate: latestInstallmentDueDate(
+                  existing.map((item) => item.dueDate),
+                ),
+              ),
         ),
       );
       installment = await _nextUnpaidInstallment(saleId);
       if (installment == null) {
         throw StateError('Não foi possível criar parcela para o pagamento.');
       }
+    }
+
+    if (dueDate != null && !_isPaid(installment)) {
+      installment = installment.copyWith(dueDate: dueDate);
     }
 
     final paidAt = paymentDate ?? DateTime.now();
@@ -397,7 +404,9 @@ class InstallmentRepository {
     final current = db.box<Installment>().get(value.id!);
     if (current == null || current.isDeleted) return 0;
     final pending = value.copyWith(
-      dueDate: current.dueDate ?? value.dueDate,
+      dueDate: _isPaid(current)
+          ? current.dueDate
+          : (value.dueDate ?? current.dueDate),
       paymentDate: current.paymentDate ?? value.paymentDate,
       updatedAt: SyncTimestamps.forUpdate(),
       isSynced: false,
