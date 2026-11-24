@@ -9,6 +9,7 @@ import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/dashboard/presentation/widgets/metric_card.dart';
 import 'package:cesta_flow/features/dashboard/presentation/widgets/metrics_row.dart';
 import 'package:cesta_flow/features/dashboard/presentation/widgets/payment_summary_card.dart';
+import 'package:cesta_flow/features/payment/presentation/payment_edit.dart';
 import 'package:cesta_flow/features/payment/presentation/payment_registration.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
@@ -125,6 +126,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
               : badgeForUnpaidDueDate(installment.dueDate);
           final statusLabel = _statusLabel(badge);
 
+          final canEditPayment = isPaid;
           body = RefreshIndicator(
             onRefresh: _refresh,
             child: ListView(
@@ -136,7 +138,7 @@ class _PaymentDetailsState extends State<PaymentDetails> {
                 openPaymentSaleId != null ? 100 : 32,
               ),
               children: [
-              _paymentHeader(data),
+              _paymentHeader(data, canEditPayment: canEditPayment),
               const SizedBox(height: 20),
               const _SectionTitle(title: 'Resumo do pagamento'),
               const SizedBox(height: 12),
@@ -303,7 +305,22 @@ class _PaymentDetailsState extends State<PaymentDetails> {
     },
   );
 
-  Widget _paymentHeader(_PaymentDetailsData data) {
+  Future<void> _editPayment() async {
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaymentEdit(installmentId: widget.installmentId),
+      ),
+    );
+    if (updated == true) {
+      await _refresh();
+    }
+  }
+
+  Widget _paymentHeader(
+    _PaymentDetailsData data, {
+    required bool canEditPayment,
+  }) {
     final installment = data.installment!;
     final displayId = installment.id ?? widget.installmentId;
     final parcelLabel = data.installmentsCount > 0
@@ -319,29 +336,33 @@ class _PaymentDetailsState extends State<PaymentDetails> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Stack(
+              alignment: Alignment.center,
               children: [
-                const CircleAvatar(
-                  backgroundColor: Color(0xFFE3F2E9),
-                  foregroundColor: Color(0xFF1B4D31),
-                  child: Icon(Icons.payments_outlined),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Pagamento #$displayId',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF18251F),
-                    ),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: CircleAvatar(
+                    backgroundColor: Color(0xFFE3F2E9),
+                    foregroundColor: Color(0xFF1B4D31),
+                    child: Icon(Icons.payments_outlined),
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Editar pagamento',
-                  onPressed: null,
-                  icon: const Icon(Icons.edit_outlined),
+                Text(
+                  'Pagamento #$displayId',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF18251F),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    tooltip: 'Editar pagamento',
+                    onPressed: canEditPayment ? _editPayment : null,
+                    icon: const Icon(Icons.edit_outlined),
+                  ),
                 ),
               ],
             ),
