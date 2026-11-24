@@ -5,7 +5,7 @@
   "entities": [
     {
       "id": "1:4701824812835680819",
-      "lastPropertyId": "22:818118996813678361",
+      "lastPropertyId": "23:8691923390406900535",
       "name": "Customer",
       "properties": [
         {
@@ -112,6 +112,11 @@
           "id": "22:818118996813678361",
           "name": "userId",
           "type": 9
+        },
+        {
+          "id": "23:8691923390406900535",
+          "name": "isAdminUnblocked",
+          "type": 1
         }
       ],
       "relations": []

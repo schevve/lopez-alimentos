@@ -20,6 +20,7 @@ class CustomerEdit extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final customerRepository = repository ?? CustomerRepository();
     return Scaffold(
       backgroundColor: const Color(0xffF3FCF3),
       appBar: TopBar(pagTitle: 'Editar cliente'),
@@ -29,7 +30,9 @@ class CustomerEdit extends StatelessWidget {
           customer: customer,
           buttonText: 'Salvar alterações',
           title: 'Editar cliente',
-          onSubmit: (data) => _updateCustomer(context, data),
+          canManageSalesOverride: customerRepository.canManageSalesOverride,
+          onSubmit: (data) =>
+              _updateCustomer(context, customerRepository, data),
         ),
       ),
     );
@@ -37,9 +40,9 @@ class CustomerEdit extends StatelessWidget {
 
   Future<void> _updateCustomer(
     BuildContext context,
+    CustomerRepository customerRepository,
     Map<String, dynamic> data,
   ) async {
-    final customerRepository = repository ?? CustomerRepository();
     final updatedCustomer = customer.copyWith(
       name: data['nome'].toString().trim(),
       dateOfBirth: cleanDate(data['data_nascimento'].toString().trim()),
@@ -54,7 +57,26 @@ class CustomerEdit extends StatelessWidget {
       documentRG: _opcional(data['rg']),
       updatedAt: DateTime.now(),
     );
-    await customerRepository.updateCustomer(updatedCustomer);
+    final override = data['is_admin_unblocked'] as bool?;
+    try {
+      if (override == null) {
+        await customerRepository.updateCustomer(updatedCustomer);
+      } else {
+        await customerRepository.updateCustomerWithSalesOverride(
+          updatedCustomer,
+          isAdminUnblocked: override,
+        );
+      }
+    } catch (error) {
+      if (context.mounted) {
+        final message = error is StateError
+            ? error.message
+            : 'Não foi possível salvar as alterações.';
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
+      }
+      return;
+    }
     if (context.mounted) {
       notifyAppDataChanged();
       Navigator.of(context).pop(true);

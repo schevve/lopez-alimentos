@@ -26,7 +26,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(1, 4701824812835680819),
     name: 'Customer',
-    lastPropertyId: const obx_int.IdUid(22, 818118996813678361),
+    lastPropertyId: const obx_int.IdUid(23, 8691923390406900535),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -149,6 +149,12 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(22, 818118996813678361),
         name: 'userId',
         type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(23, 8691923390406900535),
+        name: 'isAdminUnblocked',
+        type: 1,
         flags: 0,
       ),
     ],
@@ -571,7 +577,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final userIdOffset = object.userId == null
             ? null
             : fbb.writeString(object.userId!);
-        fbb.startTable(23);
+        fbb.startTable(24);
         fbb.addInt64(0, object.id ?? 0);
         fbb.addOffset(1, nameOffset);
         fbb.addInt64(
@@ -602,6 +608,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
               : object.updatedAt!.microsecondsSinceEpoch * 1000,
         );
         fbb.addOffset(21, userIdOffset);
+        fbb.addBool(22, object.isAdminUnblocked);
         fbb.finish(fbb.endTable());
         return object.id ?? 0;
       },
@@ -675,6 +682,12 @@ obx_int.ModelDefinition getObjectBoxModel() {
           34,
           false,
         );
+        final isAdminUnblockedParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          48,
+          false,
+        );
         final isDeletedParam = const fb.BoolReader().vTableGet(
           buffer,
           rootOffset,
@@ -713,6 +726,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           documentRG: documentRGParam,
           score: scoreParam,
           isBlocked: isBlockedParam,
+          isAdminUnblocked: isAdminUnblockedParam,
           isDeleted: isDeletedParam,
           isSynced: isSyncedParam,
           createdAt: createdAtParam,
@@ -1299,6 +1313,11 @@ class Customer_ {
   /// See [Customer.userId].
   static final userId = obx.QueryStringProperty<Customer>(
     _entities[0].properties[19],
+  );
+
+  /// See [Customer.isAdminUnblocked].
+  static final isAdminUnblocked = obx.QueryBooleanProperty<Customer>(
+    _entities[0].properties[20],
   );
 }
 

@@ -25,6 +25,9 @@ class Customer {
   final String? documentRG;
   final double? score;
   final bool isBlocked;
+  final bool isAdminUnblocked;
+
+  bool get isBlockedForSales => isBlocked && !isAdminUnblocked;
   final bool isDeleted;
   final bool isSynced;
   @Property(type: PropertyType.dateNano)
@@ -49,6 +52,7 @@ class Customer {
     this.documentRG,
     this.score,
     this.isBlocked = false,
+    this.isAdminUnblocked = false,
     this.isDeleted = false,
     this.isSynced = false,
     DateTime? createdAt,
@@ -73,6 +77,7 @@ class Customer {
       'rg': documentRG,
       'score': score,
       'is_blocked': isBlocked,
+      'is_admin_unblocked': isAdminUnblocked,
       'is_deleted': isDeleted,
       'is_synced': isSynced,
       'created_at': createdAt.toIso8601String(),
@@ -102,6 +107,7 @@ class Customer {
       'rg': documentRG,
       'score': score,
       'is_blocked': isBlocked,
+      'is_admin_unblocked': isAdminUnblocked,
       'created_at': createdAt.toUtc().toIso8601String(),
       'updated_at': (updatedAt ?? createdAt).toUtc().toIso8601String(),
     };
@@ -131,6 +137,7 @@ class Customer {
       documentRG: (map['rg'] ?? map['document_rg']) as String?,
       score: (map['score'] as num?)?.toDouble(),
       isBlocked: map['is_blocked'] as bool? ?? false,
+      isAdminUnblocked: map['is_admin_unblocked'] as bool? ?? false,
       isDeleted: readRemoteDeleted(map),
       isSynced: map['is_synced'] as bool? ?? false,
       createdAt: _readDate(map['created_at']) ?? DateTime.now(),
@@ -158,6 +165,7 @@ class Customer {
     double? score,
     bool clearScore = false,
     bool? isBlocked,
+    bool? isAdminUnblocked,
     bool? isDeleted,
     bool? isSynced,
     DateTime? createdAt,
@@ -181,6 +189,7 @@ class Customer {
       documentRG: documentRG ?? this.documentRG,
       score: clearScore ? null : score ?? this.score,
       isBlocked: isBlocked ?? this.isBlocked,
+      isAdminUnblocked: isAdminUnblocked ?? this.isAdminUnblocked,
       isDeleted: isDeleted ?? this.isDeleted,
       isSynced: isSynced ?? this.isSynced,
       createdAt: createdAt ?? this.createdAt,

@@ -71,7 +71,7 @@ class ClienteCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (cliente.isBlocked) ...[
+                  if (cliente.isBlockedForSales) ...[
                     const SizedBox(height: 6),
                     const Text(
                       'Bloqueado',

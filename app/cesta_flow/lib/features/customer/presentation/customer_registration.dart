@@ -10,11 +10,7 @@ import 'package:objectbox/objectbox.dart' show UniqueViolationException;
 import 'package:uuid/uuid.dart';
 
 class CustomerRegistration extends StatefulWidget {
-  const CustomerRegistration({
-    super.key,
-    this.customerId,
-    this.repository,
-  });
+  const CustomerRegistration({super.key, this.customerId, this.repository});
 
   final int? customerId;
   final CustomerRepository? repository;
@@ -94,6 +90,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
       ),
       body: CustomerForm(
         customer: _cliente,
+        canManageSalesOverride: _customerRepository.canManageSalesOverride,
         onSubmit: isEditing ? _updateCustomer : _registerCustomer,
         buttonText: isEditing ? 'Salvar alterações' : 'Registrar cliente',
         title: isEditing ? 'Editar cliente' : 'Registrar cliente',
@@ -122,8 +119,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
     final cpfDigitos = _digitos(cpf);
 
     if (existentes.any(
-      (c) =>
-          c.id != ignorarId && _digitos(c.documentCPF) == cpfDigitos,
+      (c) => c.id != ignorarId && _digitos(c.documentCPF) == cpfDigitos,
     )) {
       if (mounted) _avisar('Já existe um cliente cadastrado com este CPF.');
       return true;
@@ -192,11 +188,7 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
     final cpf = formatCpf(_digitos(data['cpf'].toString()));
 
     try {
-      if (await _cpfOuRgDuplicado(
-        cpf: cpf,
-        rg: rg,
-        ignorarId: current.id,
-      )) {
+      if (await _cpfOuRgDuplicado(cpf: cpf, rg: rg, ignorarId: current.id)) {
         return;
       }
 
@@ -215,7 +207,15 @@ class _CustomerRegistrationState extends State<CustomerRegistration> {
         updatedAt: DateTime.now(),
       );
 
-      await _customerRepository.updateCustomer(updated);
+      final override = data['is_admin_unblocked'] as bool?;
+      if (override == null) {
+        await _customerRepository.updateCustomer(updated);
+      } else {
+        await _customerRepository.updateCustomerWithSalesOverride(
+          updated,
+          isAdminUnblocked: override,
+        );
+      }
 
       if (!mounted) return;
       notifyAppDataChanged();

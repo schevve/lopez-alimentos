@@ -287,7 +287,7 @@ class _CustomerDetailsState extends State<CustomerDetails> {
                   ? 'Não informado'
                   : '${_formatScore(customer.score!)} · ${ScoreBand.fromScore(customer.score)!.label}',
             ),
-            if (customer.isBlocked)
+            if (customer.isBlockedForSales)
               const _InfoLine(label: 'Situação', value: 'Bloqueado'),
             if (customer.id != null)
               _InfoLine(label: 'Código do cliente', value: '#${customer.id}'),
