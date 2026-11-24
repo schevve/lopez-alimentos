@@ -7,7 +7,7 @@ class SaleCard extends StatelessWidget {
   final String name;
   final String? scoreLabel;
   final String status;
-  final String address;
+  final String? address;
   final String? distance;
   final String product;
   final String amount;
@@ -18,7 +18,7 @@ class SaleCard extends StatelessWidget {
     required this.name,
     this.scoreLabel,
     required this.status,
-    required this.address,
+    this.address,
     this.distance,
     required this.product,
     required this.amount,
@@ -94,27 +94,29 @@ class SaleCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(status, style: const TextStyle(color: Color(0xFF46524B))),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const Icon(
-                Icons.location_on_outlined,
-                size: 18,
-                color: Color(0xFF46524B),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  address,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    height: 1.3,
-                    color: Color(0xFF46524B),
+          if (address != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(
+                  Icons.location_on_outlined,
+                  size: 18,
+                  color: Color(0xFF46524B),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    address!,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      height: 1.3,
+                      color: Color(0xFF46524B),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
           if (distance != null) ...[
             const SizedBox(height: 8),
             Text(
