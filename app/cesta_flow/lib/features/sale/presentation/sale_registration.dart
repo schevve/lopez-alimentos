@@ -1,6 +1,7 @@
 import 'package:cesta_flow/core/app_data_refresh.dart';
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/constants/util/format_currency.dart';
+import 'package:cesta_flow/core/constants/util/format_date.dart';
 import 'package:cesta_flow/core/constants/util/input_formatters.dart';
 import 'package:cesta_flow/core/data/local/db_helper.dart';
 import 'package:cesta_flow/core/data/local/model/basket_model.dart';
@@ -9,6 +10,7 @@ import 'package:cesta_flow/core/data/local/model/sale_basket_input.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
+import 'package:cesta_flow/core/domain/installment_due_date.dart';
 import 'package:cesta_flow/features/sale/presentation/basket_selection.dart';
 import 'package:cesta_flow/features/sale/presentation/sale_customer_selection.dart';
 import 'package:cesta_flow/features/shared/registration_success_screen.dart';
@@ -39,9 +41,12 @@ class _SaleRegistrationState extends State<SaleRegistration> {
   final _formKey = GlobalKey<FormState>();
   final _totalController = TextEditingController(text: '0,00');
   final _dateController = TextEditingController();
+  final _firstDueDateController = TextEditingController();
   Customer? _selectedCustomer;
   final List<SelectedBasketLine> _basketLines = [];
   bool _totalEditedManually = false;
+  bool _firstDueDateEditedManually = false;
+  bool _updatingFirstDueDateProgrammatically = false;
   bool _isSubmitting = false;
   int _installmentCount = 1;
 
@@ -50,6 +55,8 @@ class _SaleRegistrationState extends State<SaleRegistration> {
     super.initState();
     _selectedCustomer = widget.initialCustomer;
     _dateController.text = getCurrentFormattedDate();
+    _firstDueDateController.addListener(_onFirstDueDateChanged);
+    _syncFirstDueDateWithSaleDate();
     _totalController.addListener(_onTotalFieldChanged);
   }
 
@@ -57,8 +64,33 @@ class _SaleRegistrationState extends State<SaleRegistration> {
   void dispose() {
     _totalController.removeListener(_onTotalFieldChanged);
     _totalController.dispose();
+    _firstDueDateController.removeListener(_onFirstDueDateChanged);
+    _firstDueDateController.dispose();
     _dateController.dispose();
     super.dispose();
+  }
+
+  void _onSaleDateChanged(String value) {
+    if (parseDateField(value) == null) return;
+    _syncFirstDueDateWithSaleDate();
+  }
+
+  /// Mantém a primeira cobrança um mês após a venda enquanto o usuário não
+  /// informar manualmente outra data.
+  void _syncFirstDueDateWithSaleDate() {
+    if (_firstDueDateEditedManually) return;
+    final saleDate = parseDateField(_dateController.text);
+    if (saleDate == null) return;
+    _updatingFirstDueDateProgrammatically = true;
+    _firstDueDateController.text = formatDateFromDateTime(
+      nextInstallmentDueDate(saleDate: saleDate),
+    );
+    _updatingFirstDueDateProgrammatically = false;
+  }
+
+  void _onFirstDueDateChanged() {
+    if (_updatingFirstDueDateProgrammatically) return;
+    _firstDueDateEditedManually = true;
   }
 
   void _onTotalFieldChanged() {
@@ -299,9 +331,44 @@ class _SaleRegistrationState extends State<SaleRegistration> {
                           labelText: 'Data da venda *',
                           keyboardType: TextInputType.datetime,
                           inputFormatters: [FormatDate()],
+                          onChanged: _onSaleDateChanged,
                           validator: (value) {
                             if (value == null || value.trim().length < 10) {
                               return 'Informe a data da venda';
+                            }
+                            if (parseDateField(value) == null) {
+                              return 'Informe uma data válida';
+                            }
+                            return null;
+                          },
+                        ),
+                        const Text(
+                          'Data do vencimento da primeira parcela',
+                          style: TextStyle(
+                            color: AppColors.greenText,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        AppTextFormField(
+                          controller: _firstDueDateController,
+                          labelText: 'Data do vencimento da primeira *',
+                          keyboardType: TextInputType.datetime,
+                          inputFormatters: [FormatDate()],
+                          validator: (value) {
+                            if (value == null || value.trim().length < 10) {
+                              return 'Informe a data da primeira cobrança';
+                            }
+                            final firstDueDate = parseDateField(value);
+                            if (firstDueDate == null) {
+                              return 'Informe uma data válida';
+                            }
+                            final saleDate = parseDateField(
+                              _dateController.text,
+                            );
+                            if (saleDate != null &&
+                                firstDueDate.isBefore(saleDate)) {
+                              return 'A primeira cobrança não pode ser '
+                                  'anterior à data da venda';
                             }
                             return null;
                           },
@@ -388,6 +455,16 @@ class _SaleRegistrationState extends State<SaleRegistration> {
 
     setState(() => _isSubmitting = true);
 
+    final saleDate = parseDateField(_dateController.text);
+    final firstDueDate = parseDateField(_firstDueDateController.text);
+    if (saleDate == null || firstDueDate == null) {
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe datas válidas para a venda')),
+      );
+      return;
+    }
+
     final price = parseMoneyField(_totalController.text);
     final saleData = Sale(
       uuid: const Uuid().v4(),
@@ -396,9 +473,7 @@ class _SaleRegistrationState extends State<SaleRegistration> {
       price: price,
       amountPaid: 0,
       installments: _installmentCount,
-      createdAt: DateTime.parse(
-        _dateController.text.split('/').reversed.join('-'),
-      ),
+      createdAt: saleDate,
     );
     final lines = [
       for (final line in _basketLines)
@@ -417,7 +492,7 @@ class _SaleRegistrationState extends State<SaleRegistration> {
         saleId: saleId,
         count: _installmentCount,
         totalPrice: price,
-        firstDueDate: saleData.createdAt,
+        firstDueDate: firstDueDate,
       );
 
       if (!mounted) return;

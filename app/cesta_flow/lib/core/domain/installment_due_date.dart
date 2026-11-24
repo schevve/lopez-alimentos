@@ -16,3 +16,24 @@ DateTime? latestInstallmentDueDate(Iterable<DateTime?> dueDates) {
   }
   return latest;
 }
+
+/// Vencimentos das parcelas planejadas no registro da venda.
+///
+/// A primeira parcela vence exatamente em [firstDueDate] e as seguintes um mês
+/// após a parcela anterior.
+List<DateTime> plannedInstallmentDueDates({
+  required DateTime firstDueDate,
+  required int count,
+}) {
+  if (count < 1) return const [];
+  final dueDates = <DateTime>[firstDueDate];
+  for (var index = 1; index < count; index++) {
+    dueDates.add(
+      nextInstallmentDueDate(
+        saleDate: firstDueDate,
+        lastDueDate: dueDates.last,
+      ),
+    );
+  }
+  return dueDates;
+}

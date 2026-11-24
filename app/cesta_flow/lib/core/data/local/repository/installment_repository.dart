@@ -74,19 +74,17 @@ class InstallmentRepository {
       throw ArgumentError('Valor total inválido para parcelas.');
     }
     final expectedAmounts = _splitExpectedAmounts(totalPrice, count);
-    DateTime? lastDueDate;
+    final dueDates = plannedInstallmentDueDates(
+      firstDueDate: firstDueDate,
+      count: count,
+    );
     for (var index = 0; index < count; index++) {
-      final dueDate = nextInstallmentDueDate(
-        saleDate: firstDueDate,
-        lastDueDate: lastDueDate,
-      );
-      lastDueDate = dueDate;
       await createInstallment(
         Installment(
           uuid: const Uuid().v4(),
           saleId: saleId,
           expectedAmount: expectedAmounts[index],
-          dueDate: dueDate,
+          dueDate: dueDates[index],
         ),
       );
     }
