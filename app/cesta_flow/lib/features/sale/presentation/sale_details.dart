@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/constants/util/format_currency.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
@@ -5,6 +6,8 @@ import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/core/data/local/model/installment_model.dart';
 import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
+import 'package:cesta_flow/features/dashboard/presentation/widgets/metric_card.dart';
+import 'package:cesta_flow/features/dashboard/presentation/widgets/metrics_row.dart';
 import 'package:cesta_flow/features/dashboard/presentation/widgets/payment_summary_card.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
@@ -114,34 +117,29 @@ class _SaleDetailsState extends State<SaleDetails> {
               const SizedBox(height: 20),
               const _SectionTitle(title: 'Resumo da venda'),
               const SizedBox(height: 12),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final cardWidth = (constraints.maxWidth - 12) / 2;
-                  return Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _MetricCard(
-                        width: cardWidth,
-                        title: 'Valor da venda',
-                        value: formatCurrency(saleValue),
-                        icon: Icons.shopping_bag_outlined,
-                      ),
-                      _MetricCard(
-                        width: cardWidth,
-                        title: 'Valor pago',
-                        value: formatCurrency(data.paid),
-                        icon: Icons.payments_outlined,
-                      ),
-                      _MetricCard(
-                        width: cardWidth,
-                        title: 'Parcelas',
-                        value: '${data.installments.length}',
-                        icon: Icons.calendar_month_outlined,
-                      ),
-                    ],
-                  );
-                },
+              MetricsRow(
+                firstCardFullWidth: true,
+                columns: 2,
+                cards: [
+                  MetricCard(
+                    title: 'Valor da venda',
+                    value: formatCurrency(saleValue),
+                    icon: Icons.shopping_bag_outlined,
+                    iconColor: AppColors.primary,
+                  ),
+                  MetricCard(
+                    title: 'Valor pago',
+                    value: formatCurrency(data.paid),
+                    icon: Icons.payments_outlined,
+                    iconColor: AppColors.primary,
+                  ),
+                  MetricCard(
+                    title: 'Parcelas',
+                    value: '${data.installments.length}',
+                    icon: Icons.calendar_month_outlined,
+                    iconColor: AppColors.primary,
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
               const _SectionTitle(title: 'Produtos'),
@@ -242,51 +240,6 @@ class _SaleDetailsData {
   final Customer? customer;
   final List<SaleBasketLine> baskets;
   final List<Installment> installments;
-}
-
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({
-    required this.width,
-    required this.title,
-    required this.value,
-    required this.icon,
-  });
-
-  final double width;
-  final String title;
-  final String value;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: width,
-    child: Card(
-      color: Colors.white,
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: const Color(0xFF1B4D31)),
-            const SizedBox(height: 8),
-            Text(title, style: const TextStyle(color: Color(0xFF59665E))),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF18251F),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 }
 
 class _ProductCard extends StatelessWidget {
