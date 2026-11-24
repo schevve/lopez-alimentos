@@ -253,6 +253,7 @@ class _DashboardListsCarouselState extends State<DashboardListsCarousel> {
       amountLabel: isPaid ? 'Valor pago' : 'Valor previsto',
       badge: badge,
       saleId: installment.saleId,
+      installmentId: installment.id,
       isPaid: isPaid,
       onAfterReceive: widget.onAfterReceive,
     );
