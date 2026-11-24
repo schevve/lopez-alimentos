@@ -46,7 +46,8 @@ class _InstallmentRepository extends InstallmentRepository {
       uuid: 'installment-2',
       saleId: saleId,
       expectedAmount: 60,
-      dueDate: DateTime(2026, 11, 2),
+      dueDate: DateTime(2020, 11, 2),
+      indicatedPaymentDate: DateTime(2026, 12, 3),
     ),
   ];
 }
@@ -89,7 +90,7 @@ void main() {
     expect(find.text('R\$ 100,00'), findsWidgets);
     expect(find.text('Valor pago'), findsOneWidget);
     expect(find.text('R\$ 40,00'), findsOneWidget);
-    expect(find.text('Parcelas'), findsWidgets);
+    expect(find.text('Parcelas registradas'), findsOneWidget);
     expect(find.text('2'), findsNWidgets(2));
     await tester.scrollUntilVisible(find.text('Cesta básica'), 400);
     expect(find.text('Cesta básica'), findsOneWidget);
@@ -102,6 +103,11 @@ void main() {
     expect(find.text('Ver pagamento'), findsNWidgets(2));
     expect(find.text('Pago'), findsNWidgets(2));
     expect(find.text('Atrasado'), findsOneWidget);
+    expect(find.text('Pagamento em 02/10/2026'), findsOneWidget);
+    expect(
+      find.text('Venceu em 02/11/2020 · Próxima visita em 03/12/2026'),
+      findsOneWidget,
+    );
     expect(find.text('Receber'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

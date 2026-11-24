@@ -134,7 +134,7 @@ class _SaleDetailsState extends State<SaleDetails> {
                     iconColor: AppColors.primary,
                   ),
                   MetricCard(
-                    title: 'Parcelas',
+                    title: 'Parcelas registradas',
                     value: '${data.installments.length}',
                     icon: Icons.calendar_month_outlined,
                     iconColor: AppColors.primary,
@@ -292,20 +292,22 @@ class _InstallmentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isPaid = installment.isPaid;
     final due = installment.dueDate;
-    final dueLabel = due == null
-        ? 'data não definida'
-        : _formatDate(due);
     final paymentDate = installment.paymentDate;
-
+    final indicated = installment.indicatedPaymentDate;
     final badge = isPaid
         ? PaymentSummaryBadge.paid
         : badgeForUnpaidDueDate(due);
-    final indicated = installment.indicatedPaymentDate;
-    final subtitle = isPaid
-        ? 'Pago em ${paymentDate == null ? '—' : _formatDate(paymentDate)}'
-        : indicated == null
-        ? 'Previsto para $dueLabel'
-        : 'Previsto para $dueLabel · Visita indicada em ${_formatDate(indicated)}';
+
+    final subtitle = paymentDate != null
+        ? 'Pagamento realizado em ${_formatDate(paymentDate)}'
+        : [
+            due == null
+                ? 'Sem data de vencimento'
+                : badge == PaymentSummaryBadge.overdue
+                ? 'Venceu em ${_formatDate(due)}'
+                : 'Vence em ${_formatDate(due)}',
+            if (indicated != null) 'Pagamento previsto para ${_formatDate(indicated)}',
+          ].join(' · ');
     final amount = formatCurrency(
       isPaid ? installment.paidAmount : installment.expectedAmount,
     );
