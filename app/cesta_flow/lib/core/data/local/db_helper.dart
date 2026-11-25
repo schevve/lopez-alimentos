@@ -2,6 +2,11 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
 import '../../../objectbox.g.dart';
+import 'model/basket_model.dart';
+import 'model/customer_model.dart';
+import 'model/installment_model.dart';
+import 'model/sale_basket_model.dart';
+import 'model/sale_model.dart';
 
 /// Mantém uma única instância do armazenamento local durante a execução.
 class DatabaseHelper {
