@@ -43,6 +43,7 @@ Future<void> signUpWithEmailAndPassword(String email, String password) async {
 - Tabelas de negócio (`customers`, `sales`, `baskets`, `sale_baskets`, `installments`, …) incluem `tenant_id`.
 - As políticas **RLS** no Postgres filtram leitura e escrita pelo `tenant_id` do perfil autenticado (`auth.uid()`).
 - No app, após o login o `ProfileRepository` carrega o perfil e a sessão guarda o tenant (`TenantSession` / `currentTenantId()`). Writes remotos enviam `tenant_id`; pulls confiam no RLS.
+- O último `tenant_id` fica em `SyncPreferences`; se mudar no mesmo aparelho, o ObjectBox é esvaziado e o sync refaz pull completo.
 
 #### Login com email e senha
 

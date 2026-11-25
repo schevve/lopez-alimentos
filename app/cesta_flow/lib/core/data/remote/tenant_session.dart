@@ -1,5 +1,6 @@
 import 'package:cesta_flow/core/data/remote/model/profile_model.dart';
 import 'package:cesta_flow/core/data/remote/repository/profile_repository.dart';
+import 'package:cesta_flow/core/data/remote/tenant_local_guard.dart';
 
 /// Tenant ativo da sessão (1 usuário ↔ 1 tenant). Preenchido a partir de `profiles`.
 class TenantSession {
@@ -35,5 +36,7 @@ Future<bool> ensureTenantSessionFromProfile({
   final profile = await (profiles ?? ProfileRepository()).getCurrentProfile();
   TenantSession.applyProfile(profile);
   final tenant = TenantSession.currentTenantId;
-  return tenant != null && tenant.isNotEmpty;
+  if (tenant == null || tenant.isEmpty) return false;
+  await ensureLocalStoreMatchesTenant();
+  return true;
 }

@@ -30,4 +30,16 @@ class DatabaseHelper {
       rethrow;
     }
   }
+
+  /// Apaga entidades locais ao trocar de tenant (mantém o arquivo do store).
+  Future<void> clearAllLocalData() async {
+    final db = await store;
+    db.runInTransaction(TxMode.write, () {
+      db.box<Customer>().removeAll();
+      db.box<Sale>().removeAll();
+      db.box<Basket>().removeAll();
+      db.box<Installment>().removeAll();
+      db.box<SaleBasket>().removeAll();
+    });
+  }
 }
