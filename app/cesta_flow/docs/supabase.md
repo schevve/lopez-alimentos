@@ -7,7 +7,7 @@ As tabelas do banco de dados são as seguintes:
 | Nome da Tabela   | Descrição                                                                                          | Colunas                                                                                           |
 | ---------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | tb_cliente       | Armazena informações dos clientes, como nome, email e endereço.                                    | usuário_id (usuário que registrou), nome, email, endereco, regiao_id, score, telefone             |
-| tb_perfil        | Armazena informações sobre os perfis de usuário, como administrador ou usuário.                    | nome, sobrenome, cargo                                                                            |
+| profiles         | Perfil estendido do usuário (`auth.users`). Cada usuário pertence a um tenant.                       | id, tenant_id, first_name, last_name, role, updated_at, deleted_at                               |
 | tb_venda         | Armazena informações sobre as vendas realizadas.                                                   | usuario_id (usuário que registrou), cliente_id, cesta_id, created_at, preco, valor_pago, parcelas |
 | tb_produto       | Armazena informações sobre os produtos disponíveis para venda.                                     | nome, preco                                                                                       |
 | tb_cesta         | Armazena informações sobre as cestas de produtos.                                                  | nome                                                                                              |
@@ -35,7 +35,14 @@ Future<void> signUpWithEmailAndPassword(String email, String password) async {
 }
 ```
 
-> Observação: como o sistema ainda não é multi-tenant, o registro de usuários está desativado. Novos usuários devem ser criados manualmente no painel do Supabase.
+> Observação: o app opera em **multi-tenant** (1 usuário ↔ 1 `tenant_id` em `profiles`). O cadastro self-service permanece desativado; novos usuários devem ser criados no painel do Supabase com `tenant_id` preenchido.
+
+#### Multi-tenant e RLS
+
+- `profiles.tenant_id` vincula o usuário à organização.
+- Tabelas de negócio (`customers`, `sales`, `baskets`, `sale_baskets`, `installments`, …) incluem `tenant_id`.
+- As políticas **RLS** no Postgres filtram leitura e escrita pelo `tenant_id` do perfil autenticado (`auth.uid()`).
+- No app, após o login o `ProfileRepository` carrega o perfil e a sessão guarda o tenant (`TenantSession` / `currentTenantId()`). Writes remotos enviam `tenant_id`; pulls confiam no RLS.
 
 #### Login com email e senha
 

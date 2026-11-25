@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/data/remote/tenant_session.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Erro de login com mensagem pronta para ser exibida ao usuário.
@@ -45,7 +46,10 @@ class AuthService {
   }
 
   /// Encerra a sessão do usuário.
-  Future<void> sair() => _client.auth.signOut();
+  Future<void> sair() async {
+    await _client.auth.signOut();
+    TenantSession.clear();
+  }
 
   String _traduzirErro(AuthException e) {
     switch (e.code) {

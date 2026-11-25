@@ -24,6 +24,7 @@ enum ProfileRole {
 
 class Profile {
   final String id;
+  final String? tenantId;
   final String? firstName;
   final String? lastName;
   final DateTime? updatedAt;
@@ -32,6 +33,7 @@ class Profile {
 
   Profile({
     required this.id,
+    this.tenantId,
     this.firstName,
     this.lastName,
     this.updatedAt,
@@ -48,6 +50,7 @@ class Profile {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'tenant_id': tenantId,
       'first_name': firstName,
       'last_name': lastName,
       'updated_at': updatedAt?.toUtc().toIso8601String(),
@@ -59,6 +62,7 @@ class Profile {
   factory Profile.fromMap(Map<String, dynamic> map) {
     return Profile(
       id: map['id'] as String,
+      tenantId: map['tenant_id'] as String?,
       firstName: map['first_name'] as String?,
       lastName: map['last_name'] as String?,
       updatedAt: _parseDateTime(map['updated_at']),
@@ -69,15 +73,18 @@ class Profile {
 
   Profile copyWith({
     String? id,
+    String? tenantId,
     String? firstName,
     String? lastName,
     DateTime? updatedAt,
     DateTime? deletedAt,
     ProfileRole? role,
     bool clearDeletedAt = false,
+    bool clearTenantId = false,
   }) {
     return Profile(
       id: id ?? this.id,
+      tenantId: clearTenantId ? null : tenantId ?? this.tenantId,
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -88,8 +95,9 @@ class Profile {
 
   @override
   String toString() {
-    return 'Profile{id: $id, firstName: $firstName, lastName: $lastName, '
-        'updatedAt: $updatedAt, deletedAt: $deletedAt, role: $role}';
+    return 'Profile{id: $id, tenantId: $tenantId, firstName: $firstName, '
+        'lastName: $lastName, updatedAt: $updatedAt, deletedAt: $deletedAt, '
+        'role: $role}';
   }
 
   static DateTime? _parseDateTime(dynamic value) {

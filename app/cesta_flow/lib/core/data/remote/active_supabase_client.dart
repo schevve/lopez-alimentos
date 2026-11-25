@@ -1,3 +1,4 @@
+import 'package:cesta_flow/core/data/remote/tenant_session.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Cliente remoto quando o Supabase já foi inicializado.
@@ -16,3 +17,6 @@ SupabaseClient? activeSupabaseClient() {
 
 /// Usuário da sessão atual. `sales.user_id` é obrigatório no Supabase.
 String? currentUserId() => activeSupabaseClient()?.auth.currentUser?.id;
+
+/// Organização (tenant) da sessão, vinda de `profiles.tenant_id`.
+String? currentTenantId() => TenantSession.currentTenantId;
