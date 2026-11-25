@@ -11,6 +11,8 @@ import 'package:cesta_flow/core/data/local/repository/sale_repository.dart';
 import 'package:cesta_flow/features/customer/presentation/customer_edit.dart';
 import 'package:cesta_flow/features/dashboard/presentation/widgets/metric_card.dart';
 import 'package:cesta_flow/features/dashboard/presentation/widgets/metrics_row.dart';
+import 'package:cesta_flow/features/dashboard/presentation/widgets/sale_card.dart';
+import 'package:cesta_flow/features/sale/presentation/sale_details.dart';
 import 'package:cesta_flow/features/shared/top_bar.dart';
 import 'package:flutter/material.dart';
 
@@ -40,6 +42,7 @@ class _CustomerDetailsState extends State<CustomerDetails> {
   late final InstallmentRepository _installmentRepository =
       widget.installmentRepository ?? InstallmentRepository();
   late Future<_CustomerDetailsData> _details;
+  _StatusFilter _filter = _StatusFilter.all;
 
   @override
   void initState() {
@@ -94,6 +97,73 @@ class _CustomerDetailsState extends State<CustomerDetails> {
     if (updated == true && mounted) _reload();
   }
 
+  // Abre o resumo da venda e, ao voltar, recarrega os dados do cliente
+  // (pagamentos feitos lá dentro mudam os totais).
+  Future<void> _openSale(Sale sale) async {
+    final saleId = sale.id;
+    if (saleId == null) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => SaleDetails(
+          saleId: saleId,
+          saleRepository: widget.saleRepository,
+          installmentRepository: widget.installmentRepository,
+          customerRepository: widget.customerRepository,
+        ),
+      ),
+    );
+    if (mounted) _reload();
+  }
+
+  // Vendas filtradas, da mais nova para a mais antiga, com um título por mês.
+  List<Widget> _historyItems(List<_SaleSummary> summaries) {
+    final filtered = summaries.where((summary) {
+      switch (_filter) {
+        case _StatusFilter.all:
+          return true;
+        case _StatusFilter.open:
+          return summary.isOpen;
+        case _StatusFilter.paid:
+          return !summary.isOpen;
+      }
+    }).toList()..sort((a, b) => b.sale.createdAt.compareTo(a.sale.createdAt));
+
+    if (filtered.isEmpty) {
+      return const [_EmptySection(message: 'Nenhuma venda neste filtro.')];
+    }
+
+    final widgets = <Widget>[];
+    int? currentMonth;
+    for (final summary in filtered) {
+      final date = summary.sale.createdAt;
+      final month = date.year * 100 + date.month;
+      if (month != currentMonth) {
+        currentMonth = month;
+        widgets.add(_MonthHeader(date: date));
+      }
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _openSale(summary.sale),
+            child: SaleCard(
+              saleId: summary.sale.id,
+              name: 'Venda #${summary.sale.id ?? '-'}',
+              status:
+                  'Registrada em ${_formatDate(date)} • ${summary.statusLabel}',
+              product: summary.label,
+              amount: formatCurrency(summary.total),
+              isFullyPaid: SaleRepository.isSaleFullyPaid(summary.sale),
+              onAfterReceive: () async => _reload(),
+            ),
+          ),
+        ),
+      );
+    }
+    return widgets;
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: const Color(0xFFF0FDF4),
@@ -124,10 +194,9 @@ class _CustomerDetailsState extends State<CustomerDetails> {
                 sale: sale,
                 label: data.basketLabels[sale.id] ?? 'Cesta',
                 total: sale.price,
-                paid: math.max(
-                  0,
-                  data.paymentTotals[sale.id] ?? sale.amountPaid,
-                ).toDouble(),
+                paid: math
+                    .max(0, data.paymentTotals[sale.id] ?? sale.amountPaid)
+                    .toDouble(),
               ),
             )
             .toList();
@@ -188,31 +257,24 @@ class _CustomerDetailsState extends State<CustomerDetails> {
                 ],
               ),
               const SizedBox(height: 24),
-              const _SectionTitle(title: 'Vendas com saldo pendente'),
-              const SizedBox(height: 6),
-              const Text(
-                'O sistema registra pagamentos por venda, mas não possui '
-                'parcelas ou datas de vencimento.',
-                style: TextStyle(color: Color(0xFF59665E), height: 1.4),
+              _SectionTitle(
+                title: 'Histórico de vendas (${data.sales.length})',
               ),
-              const SizedBox(height: 12),
-              if (pending.isEmpty)
-                const _EmptySection(
-                  message: 'Este cliente não possui vendas em aberto.',
-                )
-              else
-                for (final summary in pending)
-                  _SaleCard(summary: summary),
-              const SizedBox(height: 24),
-              _SectionTitle(title: 'Histórico de vendas (${data.sales.length})'),
               const SizedBox(height: 12),
               if (summaries.isEmpty)
                 const _EmptySection(
                   message: 'Este cliente ainda não possui vendas.',
                 )
-              else
-                for (final summary in summaries)
-                  _SaleCard(summary: summary),
+              else ...[
+                _StatusFilterBar(
+                  selected: _filter,
+                  total: summaries.length,
+                  open: summaries.where((s) => s.isOpen).length,
+                  onChanged: (filter) => setState(() => _filter = filter),
+                ),
+                const SizedBox(height: 12),
+                ..._historyItems(summaries),
+              ],
             ],
           ),
         );
@@ -331,69 +393,91 @@ class _SaleSummary {
   final double paid;
 
   double get balance => math.max(0, total - paid).toDouble();
+
+  bool get isOpen => balance > 0;
+
+  String get statusLabel =>
+      isOpen ? (paid > 0 ? 'Parcialmente paga' : 'Em aberto') : 'Paga';
 }
 
-class _SaleCard extends StatelessWidget {
-  const _SaleCard({required this.summary});
+enum _StatusFilter { all, open, paid }
 
-  final _SaleSummary summary;
+class _StatusFilterBar extends StatelessWidget {
+  const _StatusFilterBar({
+    required this.selected,
+    required this.total,
+    required this.open,
+    required this.onChanged,
+  });
+
+  final _StatusFilter selected;
+  final int total;
+  final int open;
+  final ValueChanged<_StatusFilter> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final sale = summary.sale;
-    final isOpen = summary.balance > 0;
-    return Card(
-      color: Colors.white,
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Venda #${sale.id ?? '-'}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Text(
-                  isOpen
-                      ? summary.paid > 0
-                            ? 'Parcialmente paga'
-                            : 'Em aberto'
-                      : 'Paga',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: isOpen
-                        ? const Color(0xFFB54708)
-                        : const Color(0xFF1B4D31),
-                  ),
-                ),
-              ],
+    final labels = <_StatusFilter, String>{
+      _StatusFilter.all: 'Todas ($total)',
+      _StatusFilter.open: 'Em aberto ($open)',
+      _StatusFilter.paid: 'Pagas (${total - open})',
+    };
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final entry in labels.entries)
+          ChoiceChip(
+            label: Text(entry.value),
+            selected: selected == entry.key,
+            showCheckmark: false,
+            selectedColor: const Color(0xFF1B4D31),
+            backgroundColor: Colors.white,
+            labelStyle: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: selected == entry.key
+                  ? Colors.white
+                  : const Color(0xFF46524B),
             ),
-            const SizedBox(height: 4),
-            Text(
-              '${summary.label} • ${_formatDate(sale.createdAt)}',
-              style: const TextStyle(color: Color(0xFF59665E)),
-            ),
-            const SizedBox(height: 10),
-            _InfoLine(label: 'Valor da venda', value: formatCurrency(summary.total)),
-            _InfoLine(label: 'Total pago', value: formatCurrency(summary.paid)),
-            _InfoLine(
-              label: 'Saldo restante',
-              value: formatCurrency(summary.balance),
-            ),
-          ],
-        ),
-      ),
+            onSelected: (_) => onChanged(entry.key),
+          ),
+      ],
     );
   }
+}
 
-  String _formatDate(DateTime date) =>
-      '${date.day.toString().padLeft(2, '0')}/'
-      '${date.month.toString().padLeft(2, '0')}/${date.year}';
+const _monthNames = [
+  'Janeiro',
+  'Fevereiro',
+  'Março',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
+];
+
+class _MonthHeader extends StatelessWidget {
+  const _MonthHeader({required this.date});
+
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(2, 6, 2, 8),
+    child: Text(
+      '${_monthNames[date.month - 1]} de ${date.year}',
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        color: Color(0xFF59665E),
+      ),
+    ),
+  );
 }
 
 class _InfoLine extends StatelessWidget {
@@ -410,10 +494,7 @@ class _InfoLine extends StatelessWidget {
       children: [
         SizedBox(
           width: 130,
-          child: Text(
-            label,
-            style: const TextStyle(color: Color(0xFF59665E)),
-          ),
+          child: Text(label, style: const TextStyle(color: Color(0xFF59665E))),
         ),
         Expanded(
           child: Text(
@@ -458,11 +539,7 @@ class _EmptySection extends StatelessWidget {
 }
 
 class _MessageState extends StatelessWidget {
-  const _MessageState({
-    required this.message,
-    this.actionLabel,
-    this.onAction,
-  });
+  const _MessageState({required this.message, this.actionLabel, this.onAction});
 
   final String message;
   final String? actionLabel;
