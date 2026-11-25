@@ -37,9 +37,17 @@ class CustomerRepository {
     }
   }
 
+  Customer _withCurrentUser(Customer customer) {
+    final userId = customer.userId;
+    if (userId != null && userId.isNotEmpty) return customer;
+    final current = currentUserId();
+    if (current == null || current.isEmpty) return customer;
+    return customer.copyWith(userId: current);
+  }
+
   Future<int> registerCustomer(Customer value) async {
     final db = await _dbHelper.store;
-    final pending = value.copyWith(
+    final pending = _withCurrentUser(value).copyWith(
       isAdminUnblocked: false,
       updatedAt: SyncTimestamps.forCreate(value.createdAt, value.updatedAt),
       isSynced: false,

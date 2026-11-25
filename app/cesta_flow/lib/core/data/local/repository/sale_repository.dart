@@ -84,7 +84,8 @@ class SaleRepository {
         ? value.copyWith(customerUuid: customer.uuid)
         : value;
     final sale = _withCurrentUser(identified);
-    final resolvedLines = <({Basket basket, SaleBasketInput line, bool isNew})>[];
+    final resolvedLines =
+        <({Basket basket, SaleBasketInput line, bool isNew})>[];
     for (final line in lines) {
       if (line.isCatalog) {
         final catalog = findBasketByUuid(db, line.basketUuid);
@@ -158,19 +159,21 @@ class SaleRepository {
       }
       for (var index = 0; index < resolvedLines.length; index++) {
         final resolved = resolvedLines[index];
-        await client.from('sale_baskets').insert(
-          _withCurrentTenant(
-            SaleBasket(
-              saleId: saleId,
-              basketId: 0,
-              saleUuid: pendingSale.uuid,
-              basketUuid: resolved.basket.uuid,
-              quantity: resolved.line.quantity,
-              createdAt: pendingSale.createdAt,
-              updatedAt: saleStamp,
-            ).toRemote(),
-          ),
-        );
+        await client
+            .from('sale_baskets')
+            .insert(
+              _withCurrentTenant(
+                SaleBasket(
+                  saleId: saleId,
+                  basketId: 0,
+                  saleUuid: pendingSale.uuid,
+                  basketUuid: resolved.basket.uuid,
+                  quantity: resolved.line.quantity,
+                  createdAt: pendingSale.createdAt,
+                  updatedAt: saleStamp,
+                ).toRemote(),
+              ),
+            );
       }
     }, debugLabel: 'sales.register');
     if (synced) {
@@ -226,10 +229,8 @@ class SaleRepository {
       );
     }
     final db = await _dbHelper.store;
-    final pending = _withCurrentUser(value).copyWith(
-      updatedAt: SyncTimestamps.forUpdate(),
-      isSynced: false,
-    );
+    final pending = _withCurrentUser(value)
+        .copyWith(updatedAt: SyncTimestamps.forUpdate(), isSynced: false);
     final updated = db.runInTransaction(TxMode.write, () {
       if (db.box<Sale>().get(pending.id!) == null) return 0;
       if (db.box<Customer>().get(pending.customerId) == null) {
@@ -333,13 +334,15 @@ class SaleRepository {
       final lines = <int, List<SaleBasketLine>>{};
       for (final link in links) {
         final basket = baskets[link.basketId];
-        lines.putIfAbsent(link.saleId, () => []).add(
-          SaleBasketLine(
-            name: basket?.name ?? '',
-            price: basket?.price ?? 0,
-            quantity: link.quantity,
-          ),
-        );
+        lines
+            .putIfAbsent(link.saleId, () => [])
+            .add(
+              SaleBasketLine(
+                name: basket?.name ?? '',
+                price: basket?.price ?? 0,
+                quantity: link.quantity,
+              ),
+            );
       }
       return lines;
     } finally {
@@ -409,7 +412,11 @@ class SaleRepository {
       }
       for (final installment in installments) {
         db.box<Installment>().put(
-          installment.copyWith(isDeleted: true, isSynced: false, updatedAt: now),
+          installment.copyWith(
+            isDeleted: true,
+            isSynced: false,
+            updatedAt: now,
+          ),
           mode: PutMode.update,
         );
       }
@@ -423,7 +430,8 @@ class SaleRepository {
       baskets: baskets,
       installments: installments,
     );
-    await CustomerScoreService(dbHelper: _dbHelper).recalculate(sale.customerId);
+    await CustomerScoreService(dbHelper: _dbHelper)
+        .recalculate(sale.customerId);
     return 1;
   }
 
@@ -595,7 +603,10 @@ class SaleRepository {
             await Supabase.instance.client
                 .from('sales')
                 .upsert(_withCurrentTenant(ready.toRemote()));
-            db.box<Sale>().put(ready.copyWith(isSynced: true), mode: PutMode.update);
+            db.box<Sale>().put(
+              ready.copyWith(isSynced: true),
+              mode: PutMode.update,
+            );
             continue;
           }
         } catch (_) {
@@ -608,7 +619,9 @@ class SaleRepository {
   }
 
   Future<void> pullSince(DateTime since) async {
-    debugPrint('[SaleRepository.pullSince] since=${since.toUtc().toIso8601String()}');
+    debugPrint(
+      '[SaleRepository.pullSince] since=${since.toUtc().toIso8601String()}',
+    );
     final db = await _dbHelper.store;
     await _pullSalesSince(db, since);
   }
@@ -626,7 +639,9 @@ class SaleRepository {
       debugPrint('$stackTrace');
       return;
     }
-    debugPrint('[SaleRepository.pullSince] ${rows.length} registro(s) remoto(s)');
+    debugPrint(
+      '[SaleRepository.pullSince] ${rows.length} registro(s) remoto(s)',
+    );
     var merged = 0;
     var skipped = 0;
     for (final raw in rows) {
@@ -658,5 +673,4 @@ class SaleRepository {
       '$skipped ignorada(s)',
     );
   }
-
 }
