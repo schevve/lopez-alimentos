@@ -21,6 +21,13 @@ class TenantSession {
   static void clear() => _currentTenantId = null;
 }
 
+/// Anexa `tenant_id` da sessão a payloads de insert/upsert/update remoto.
+Map<String, dynamic> withCurrentTenant(Map<String, dynamic> remote) {
+  final tenant = TenantSession.currentTenantId;
+  if (tenant == null || tenant.isEmpty) return remote;
+  return Map<String, dynamic>.from(remote)..['tenant_id'] = tenant;
+}
+
 /// Carrega o perfil remoto e atualiza [TenantSession]. Retorna `false` sem tenant.
 Future<bool> ensureTenantSessionFromProfile({
   ProfileRepository? profiles,

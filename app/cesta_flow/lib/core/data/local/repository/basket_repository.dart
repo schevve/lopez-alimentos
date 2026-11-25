@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../objectbox.g.dart';
 import '../../remote/sync_remote_if_available.dart';
+import '../../remote/tenant_session.dart';
 import '../../remote/supabase_sync_query.dart';
 import '../db_helper.dart';
 import '../model/basket_model.dart';
@@ -15,6 +16,9 @@ class BasketRepository {
   BasketRepository({DatabaseHelper? dbHelper})
     : _dbHelper = dbHelper ?? DatabaseHelper();
 
+  Map<String, dynamic> _withCurrentTenant(Map<String, dynamic> remote) =>
+      withCurrentTenant(remote);
+
   Future<int> registerBasket(Basket value) async {
     final db = await _dbHelper.store;
     final pending = value.copyWith(
@@ -26,7 +30,9 @@ class BasketRepository {
     });
     final saved = pending.copyWith(id: id);
     final synced = await syncRemoteIfAvailable(
-      (client) => client.from('baskets').insert(saved.toRemote()),
+      (client) => client
+          .from('baskets')
+          .insert(_withCurrentTenant(saved.toRemote())),
       debugLabel: 'baskets.insert',
     );
     if (synced) {
@@ -73,7 +79,9 @@ class BasketRepository {
     });
     if (updated == 0) return 0;
     final synced = await syncRemoteIfAvailable(
-      (client) => client.from('baskets').upsert(pending.toRemote()),
+      (client) => client
+          .from('baskets')
+          .upsert(_withCurrentTenant(pending.toRemote())),
       debugLabel: 'baskets.upsert',
     );
     if (synced) {
@@ -167,7 +175,7 @@ class BasketRepository {
           } else {
             await Supabase.instance.client
                 .from('baskets')
-                .upsert(basket.toRemote());
+                .upsert(_withCurrentTenant(basket.toRemote()));
             synced = true;
           }
         } catch (_) {
@@ -200,7 +208,7 @@ class BasketRepository {
           } else {
             await Supabase.instance.client
                 .from('sale_baskets')
-                .upsert(link.toRemote());
+                .upsert(_withCurrentTenant(link.toRemote()));
             synced = true;
           }
         } catch (_) {

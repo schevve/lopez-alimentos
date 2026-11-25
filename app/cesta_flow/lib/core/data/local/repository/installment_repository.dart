@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../../domain/installment_due_date.dart';
 import '../../../../objectbox.g.dart';
 import '../../remote/sync_remote_if_available.dart';
+import '../../remote/tenant_session.dart';
 import '../db_helper.dart';
 import '../model/installment_model.dart';
 import '../model/sale_model.dart';
@@ -18,6 +19,9 @@ class InstallmentRepository {
   final DatabaseHelper _dbHelper;
   InstallmentRepository({DatabaseHelper? dbHelper})
     : _dbHelper = dbHelper ?? DatabaseHelper();
+
+  Map<String, dynamic> _withCurrentTenant(Map<String, dynamic> remote) =>
+      withCurrentTenant(remote);
 
   Future<int> createInstallment(Installment value) async {
     if (_isPaid(value)) {
@@ -49,7 +53,9 @@ class InstallmentRepository {
     });
     final saved = installment.copyWith(id: id);
     final synced = await syncRemoteIfAvailable(
-      (client) => client.from('installments').insert(saved.toRemote()),
+      (client) => client
+          .from('installments')
+          .insert(_withCurrentTenant(saved.toRemote())),
       debugLabel: 'installments.insert',
     );
     if (synced) {
@@ -181,11 +187,11 @@ class InstallmentRepository {
     final synced = await syncRemoteIfAvailable((client) async {
       await client
           .from('installments')
-          .update(written.installment.toRemote())
+          .update(_withCurrentTenant(written.installment.toRemote()))
           .eq('id', written.installment.uuid);
       await client
           .from('sales')
-          .update(written.sale.toRemote())
+          .update(_withCurrentTenant(written.sale.toRemote()))
           .eq('id', written.sale.uuid);
     }, debugLabel: 'registerPayment');
     if (synced) {
@@ -421,7 +427,7 @@ class InstallmentRepository {
     final synced = await syncRemoteIfAvailable(
       (client) => client
           .from('installments')
-          .update(pending.toRemote())
+          .update(_withCurrentTenant(pending.toRemote()))
           .eq('id', pending.uuid),
       debugLabel: 'installments.update',
     );
@@ -539,7 +545,7 @@ class InstallmentRepository {
           } else {
             await Supabase.instance.client
                 .from('installments')
-                .upsert(installment.toRemote());
+                .upsert(_withCurrentTenant(installment.toRemote()));
           }
           synced = true;
         } catch (_) {

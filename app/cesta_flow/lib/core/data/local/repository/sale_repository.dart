@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../../../objectbox.g.dart';
 import '../../remote/active_supabase_client.dart';
 import '../../remote/sync_remote_if_available.dart';
+import '../../remote/tenant_session.dart';
 import '../db_helper.dart';
 import '../model/basket_model.dart';
 import '../model/customer_model.dart';
@@ -65,6 +66,9 @@ class SaleRepository {
     if (current == null || current.isEmpty) return sale;
     return sale.copyWith(userId: current);
   }
+
+  Map<String, dynamic> _withCurrentTenant(Map<String, dynamic> remote) =>
+      withCurrentTenant(remote);
 
   Future<int> registerSale(Sale value, List<SaleBasketInput> lines) async {
     SaleBasketInput.ensureValid(lines);
@@ -143,23 +147,29 @@ class SaleRepository {
       return saleId;
     });
     final synced = await syncRemoteIfAvailable((client) async {
-      await client.from('sales').insert(pendingSale.toRemote());
+      await client
+          .from('sales')
+          .insert(_withCurrentTenant(pendingSale.toRemote()));
       for (final resolved in resolvedLines) {
         if (!resolved.isNew) continue;
-        await client.from('baskets').insert(resolved.basket.toRemote());
+        await client
+            .from('baskets')
+            .insert(_withCurrentTenant(resolved.basket.toRemote()));
       }
       for (var index = 0; index < resolvedLines.length; index++) {
         final resolved = resolvedLines[index];
         await client.from('sale_baskets').insert(
-          SaleBasket(
-            saleId: saleId,
-            basketId: 0,
-            saleUuid: pendingSale.uuid,
-            basketUuid: resolved.basket.uuid,
-            quantity: resolved.line.quantity,
-            createdAt: pendingSale.createdAt,
-            updatedAt: saleStamp,
-          ).toRemote(),
+          _withCurrentTenant(
+            SaleBasket(
+              saleId: saleId,
+              basketId: 0,
+              saleUuid: pendingSale.uuid,
+              basketUuid: resolved.basket.uuid,
+              quantity: resolved.line.quantity,
+              createdAt: pendingSale.createdAt,
+              updatedAt: saleStamp,
+            ).toRemote(),
+          ),
         );
       }
     }, debugLabel: 'sales.register');
@@ -232,7 +242,7 @@ class SaleRepository {
     final synced = await syncRemoteIfAvailable(
       (client) => client
           .from('sales')
-          .update(pending.toRemote())
+          .update(_withCurrentTenant(pending.toRemote()))
           .eq('id', pending.uuid),
       debugLabel: 'sales.update',
     );
@@ -582,7 +592,9 @@ class SaleRepository {
             synced = await _markRemoteDeleted('sales', sale.uuid);
           } else {
             final ready = _withCurrentUser(sale);
-            await Supabase.instance.client.from('sales').upsert(ready.toRemote());
+            await Supabase.instance.client
+                .from('sales')
+                .upsert(_withCurrentTenant(ready.toRemote()));
             db.box<Sale>().put(ready.copyWith(isSynced: true), mode: PutMode.update);
             continue;
           }
