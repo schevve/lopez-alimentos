@@ -12,6 +12,7 @@ import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/constants/theme/app_theme.dart';
 import 'package:cesta_flow/core/data/remote/model/profile_model.dart';
 import 'package:cesta_flow/core/data/remote/repository/profile_repository.dart';
+import 'package:cesta_flow/core/data/remote/tenant_session.dart';
 import 'package:cesta_flow/features/auth/data/auth_service.dart';
 import 'package:cesta_flow/features/auth/presentation/login_screen.dart';
 import 'package:cesta_flow/features/customer/presentation/tela_clientes.dart';
@@ -65,6 +66,12 @@ Future<void> synchronizeWhenLoggedIn() async {
   );
   if (Supabase.instance.client.auth.currentSession == null) {
     debugPrint('Sincronização ignorada: usuário não está logado.');
+    return;
+  }
+  if (!await ensureTenantSessionFromProfile()) {
+    debugPrint(
+      'Sincronização ignorada: perfil sem tenant_id ou indisponível.',
+    );
     return;
   }
   try {
@@ -153,8 +160,13 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     selectMainShellTab = _selecionarAba;
-    synchronizeWhenLoggedIn();
-    _carregarPerfil();
+    _inicializarSessao();
+  }
+
+  Future<void> _inicializarSessao() async {
+    await _carregarPerfil();
+    if (!mounted) return;
+    await synchronizeWhenLoggedIn();
   }
 
   @override
@@ -174,6 +186,7 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _carregarPerfil() async {
     try {
       final profile = await _profileRepository.getCurrentProfile();
+      TenantSession.applyProfile(profile);
       if (!mounted) return;
       setState(() => _profile = profile);
     } catch (error, stack) {

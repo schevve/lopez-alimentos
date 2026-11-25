@@ -2,6 +2,11 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
 import '../../../objectbox.g.dart';
+import 'model/basket_model.dart';
+import 'model/customer_model.dart';
+import 'model/installment_model.dart';
+import 'model/sale_basket_model.dart';
+import 'model/sale_model.dart';
 
 /// Mantém uma única instância do armazenamento local durante a execução.
 class DatabaseHelper {
@@ -29,5 +34,17 @@ class DatabaseHelper {
       _opening = null;
       rethrow;
     }
+  }
+
+  /// Apaga entidades locais ao trocar de tenant (mantém o arquivo do store).
+  Future<void> clearAllLocalData() async {
+    final db = await store;
+    db.runInTransaction(TxMode.write, () {
+      db.box<Customer>().removeAll();
+      db.box<Sale>().removeAll();
+      db.box<Basket>().removeAll();
+      db.box<Installment>().removeAll();
+      db.box<SaleBasket>().removeAll();
+    });
   }
 }

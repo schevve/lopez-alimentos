@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../objectbox.g.dart';
 import '../../remote/active_supabase_client.dart';
+import '../../remote/tenant_session.dart';
 import '../../remote/model/profile_model.dart';
 import '../../remote/repository/profile_repository.dart';
 import '../../remote/sync_remote_if_available.dart';
@@ -20,6 +21,9 @@ class CustomerRepository {
   CustomerRepository({DatabaseHelper? dbHelper})
     : _dbHelper = dbHelper ?? DatabaseHelper();
 
+  Map<String, dynamic> _withCurrentTenant(Map<String, dynamic> remote) =>
+      withCurrentTenant(remote);
+
   Future<bool> canManageSalesOverride() async {
     final userId = currentUserId();
     try {
@@ -33,9 +37,17 @@ class CustomerRepository {
     }
   }
 
+  Customer _withCurrentUser(Customer customer) {
+    final userId = customer.userId;
+    if (userId != null && userId.isNotEmpty) return customer;
+    final current = currentUserId();
+    if (current == null || current.isEmpty) return customer;
+    return customer.copyWith(userId: current);
+  }
+
   Future<int> registerCustomer(Customer value) async {
     final db = await _dbHelper.store;
-    final pending = value.copyWith(
+    final pending = _withCurrentUser(value).copyWith(
       isAdminUnblocked: false,
       updatedAt: SyncTimestamps.forCreate(value.createdAt, value.updatedAt),
       isSynced: false,
@@ -47,7 +59,9 @@ class CustomerRepository {
     final synced = await syncRemoteIfAvailable(
       (client) => client
           .from('customers')
-          .insert(saved.toRemote()..remove('is_admin_unblocked')),
+          .insert(
+            _withCurrentTenant(saved.toRemote()..remove('is_admin_unblocked')),
+          ),
       debugLabel: 'customers.insert',
     );
     if (synced) {
@@ -133,7 +147,11 @@ class CustomerRepository {
     final synced = await syncRemoteIfAvailable(
       (client) => client
           .from('customers')
-          .update(pending.toRemote()..remove('is_admin_unblocked'))
+          .update(
+            _withCurrentTenant(
+              pending.toRemote()..remove('is_admin_unblocked'),
+            ),
+          )
           .eq('id', pending.uuid),
       debugLabel: 'customers.update',
     );
@@ -220,7 +238,11 @@ class CustomerRepository {
           } else {
             await Supabase.instance.client
                 .from('customers')
-                .upsert(customer.toRemote()..remove('is_admin_unblocked'));
+                .upsert(
+                  _withCurrentTenant(
+                    customer.toRemote()..remove('is_admin_unblocked'),
+                  ),
+                );
           }
           synced = true;
         } catch (_) {
