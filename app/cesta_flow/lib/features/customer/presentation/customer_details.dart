@@ -434,6 +434,16 @@ class _ScoreCard extends StatelessWidget {
                 color: _scoreColor(score),
               ),
             ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(99),
+              child: LinearProgressIndicator(
+                value: ((score ?? 0) / 100).clamp(0, 1).toDouble(),
+                minHeight: 8,
+                backgroundColor: _scoreColor(score).withValues(alpha: 0.15),
+                color: _scoreColor(score),
+              ),
+            ),
             if (score == null) ...[
               const SizedBox(height: 8),
               const Text(
