@@ -14,26 +14,47 @@ void main() {
     expect(installmentScore(6), 0);
   });
 
-  test('Média de 4 ou mais com volume e assiduidade altos fica em 40 ou mais', () {
-    final score = calculateCustomerScore(
-      salePrices: List<double>.filled(6, 160),
-      installmentCounts: List<int>.filled(6, 4),
-      timings: [
-        InstallmentTiming(
-          dueDate: DateTime(2026, 6, 1),
-          paymentDate: DateTime(2026, 6, 2),
-        ),
-      ],
-      today: today,
-    );
+  test(
+    'Média de 4 ou mais com volume e assiduidade altos fica em 40 ou mais',
+    () {
+      final score = calculateCustomerScore(
+        salePrices: List<double>.filled(6, 160),
+        installmentCounts: List<int>.filled(6, 4),
+        timings: [
+          InstallmentTiming(
+            dueDate: DateTime(2026, 6, 1),
+            paymentDate: DateTime(2026, 6, 2),
+          ),
+        ],
+        today: today,
+      );
 
-    expect(volumeScore(purchaseCount: 6, totalSpent: 960), 90);
-    expect(installmentScore(4), 35);
-    expect(score, 76);
-    expect(score!, inInclusiveRange(40, 100));
-    expect(ScoreBand.fromScore(score), ScoreBand.bom);
-    expect(ScoreBand.bom.label, 'Bom');
-  });
+      expect(volumeScore(purchaseCount: 6, totalSpent: 960), 90);
+      expect(installmentScore(4), 35);
+      expect(score, 76);
+      final breakdown = explainCustomerScore(
+        salePrices: List<double>.filled(6, 160),
+        installmentCounts: List<int>.filled(6, 4),
+        timings: [
+          InstallmentTiming(
+            dueDate: DateTime(2026, 6, 1),
+            paymentDate: DateTime(2026, 6, 2),
+          ),
+        ],
+        today: today,
+      );
+      expect(breakdown.score, score);
+      expect(breakdown.volume, 90);
+      expect(breakdown.installments, 35);
+      expect(breakdown.purchaseCount, 6);
+      expect(breakdown.totalSpent, 960);
+      expect(breakdown.averageInstallments, 4);
+      expect(breakdown.assiduityIsNeutral, isFalse);
+      expect(score!, inInclusiveRange(40, 100));
+      expect(ScoreBand.fromScore(score), ScoreBand.bom);
+      expect(ScoreBand.bom.label, 'Bom');
+    },
+  );
 
   test('Atraso com média alta de parcelas fica abaixo de 40', () {
     final score = calculateCustomerScore(
@@ -66,12 +87,19 @@ void main() {
       isNull,
     );
     expect(
+      explainCustomerScore(
+        salePrices: const [],
+        installmentCounts: const [],
+        timings: const [],
+        today: today,
+      ).score,
+      isNull,
+    );
+    expect(
       calculateCustomerScore(
         salePrices: List<double>.filled(8, 2000),
         installmentCounts: List<int>.filled(8, 1),
-        timings: [
-          InstallmentTiming(dueDate: today, paymentDate: today),
-        ],
+        timings: [InstallmentTiming(dueDate: today, paymentDate: today)],
         today: today,
       ),
       100,
@@ -92,39 +120,36 @@ void main() {
     );
   });
 
-  test('Parcela no prazo, futura e vencida em aberto entram como o esperado', () {
-    expect(
-      daysLate(
-        InstallmentTiming(
-          dueDate: DateTime(2026, 6, 10, 18),
-          paymentDate: DateTime(2026, 6, 10, 8),
+  test(
+    'Parcela no prazo, futura e vencida em aberto entram como o esperado',
+    () {
+      expect(
+        daysLate(
+          InstallmentTiming(
+            dueDate: DateTime(2026, 6, 10, 18),
+            paymentDate: DateTime(2026, 6, 10, 8),
+          ),
+          today,
         ),
-        today,
-      ),
-      0,
-    );
-    expect(
-      daysLate(
-        const InstallmentTiming(dueDate: null, paymentDate: null),
-        today,
-      ),
-      isNull,
-    );
-    expect(
-      daysLate(
-        InstallmentTiming(dueDate: DateTime(2026, 6, 20)),
-        today,
-      ),
-      isNull,
-    );
-    expect(
-      daysLate(
-        InstallmentTiming(dueDate: DateTime(2026, 6, 10)),
-        today,
-      ),
-      5,
-    );
-  });
+        0,
+      );
+      expect(
+        daysLate(
+          const InstallmentTiming(dueDate: null, paymentDate: null),
+          today,
+        ),
+        isNull,
+      );
+      expect(
+        daysLate(InstallmentTiming(dueDate: DateTime(2026, 6, 20)), today),
+        isNull,
+      );
+      expect(
+        daysLate(InstallmentTiming(dueDate: DateTime(2026, 6, 10)), today),
+        5,
+      );
+    },
+  );
 
   test('Faixas e bloqueio permanente', () {
     expect(ScoreBand.fromScore(null), isNull);
