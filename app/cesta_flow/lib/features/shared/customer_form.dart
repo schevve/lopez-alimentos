@@ -1,10 +1,12 @@
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
+import 'package:cesta_flow/core/constants/data/brazil_locations.dart';
 import 'package:cesta_flow/core/constants/util/customer_form_validators.dart';
 import 'package:cesta_flow/core/constants/util/format_cep.dart';
 import 'package:cesta_flow/core/constants/util/format_cpf.dart';
 import 'package:cesta_flow/core/constants/util/format_date.dart';
 import 'package:cesta_flow/core/constants/util/format_phone.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
+import 'package:cesta_flow/features/shared/app_dropdown_form_field.dart';
 import 'package:cesta_flow/features/shared/app_text_form_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -37,6 +39,10 @@ class _CustomerFormState extends State<CustomerForm> {
   final _formData = <String, dynamic>{};
   bool _isSubmitting = false;
   late final Future<bool>? _canManageSalesOverride;
+  BrazilLocations? _locations;
+  bool _locationsLoading = true;
+  String? _selectedStateUf;
+  String? _selectedCity;
 
   @override
   void initState() {
@@ -44,6 +50,46 @@ class _CustomerFormState extends State<CustomerForm> {
     _canManageSalesOverride = widget.customer == null
         ? null
         : widget.canManageSalesOverride?.call();
+    _loadLocations();
+  }
+
+  void _loadLocations() {
+    BrazilLocations.load().then((locations) {
+      if (!mounted) return;
+      final customer = widget.customer;
+      String? uf;
+      String? city;
+      if (customer != null) {
+        uf = locations.resolveStateUf(customer.state);
+        if (uf != null) {
+          city = locations.resolveCityName(uf, customer.city);
+        }
+      }
+      setState(() {
+        _locations = locations;
+        _locationsLoading = false;
+        _selectedStateUf = uf;
+        _selectedCity = city;
+      });
+    });
+  }
+
+  List<String> _citiesForSelectedState() {
+    final locations = _locations;
+    final uf = _selectedStateUf;
+    if (locations == null || uf == null) return const [];
+
+    final cities = List<String>.from(locations.citiesFor(uf));
+    final legacyCity = widget.customer?.city;
+    if (_selectedCity != null && !cities.contains(_selectedCity)) {
+      cities.insert(0, _selectedCity!);
+    } else if (_selectedCity == null &&
+        legacyCity != null &&
+        legacyCity.isNotEmpty &&
+        !cities.contains(legacyCity)) {
+      cities.insert(0, legacyCity);
+    }
+    return cities;
   }
 
   Future<void> _submitForm() async {
@@ -128,21 +174,58 @@ class _CustomerFormState extends State<CustomerForm> {
                   onSaved: (value) => _formData['cep'] = value,
                   validator: validateCep,
                 ),
-                AppTextFormField(
+                AppDropdownFormField<String>(
+                  fieldKey: const Key('estado_dropdown'),
                   labelText: 'Estado *',
-                  initialValue: customer?.state ?? '',
-                  keyboardType: TextInputType.text,
+                  hintText: _locationsLoading
+                      ? 'Carregando...'
+                      : 'Toque e digite para buscar',
+                  value: _selectedStateUf,
+                  enabled: !_locationsLoading && !_isSubmitting,
+                  options: _locations == null
+                      ? const []
+                      : _locations!.states
+                            .map(
+                              (state) => AppDropdownOption(
+                                value: state.uf,
+                                label: state.name,
+                              ),
+                            )
+                            .toList(),
+                  onChanged: (uf) {
+                    setState(() {
+                      _selectedStateUf = uf;
+                      _selectedCity = null;
+                    });
+                  },
                   onSaved: (value) => _formData['estado'] = value,
                   validator: (value) =>
-                      validateRequired(value, 'Informe o estado.'),
+                      validateRequired(value, 'Selecione o estado.'),
                 ),
-                AppTextFormField(
+                AppDropdownFormField<String>(
+                  fieldKey: const Key('cidade_dropdown'),
                   labelText: 'Cidade *',
-                  initialValue: customer?.city ?? '',
-                  keyboardType: TextInputType.text,
+                  hintText: _locationsLoading
+                      ? 'Carregando...'
+                      : _selectedStateUf == null
+                      ? 'Selecione o estado primeiro'
+                      : 'Toque e digite para buscar',
+                  value: _selectedStateUf == null ? null : _selectedCity,
+                  enabled:
+                      !_locationsLoading &&
+                      !_isSubmitting &&
+                      _selectedStateUf != null,
+                  options: _citiesForSelectedState()
+                      .map(
+                        (city) => AppDropdownOption(value: city, label: city),
+                      )
+                      .toList(),
+                  onChanged: (city) {
+                    setState(() => _selectedCity = city);
+                  },
                   onSaved: (value) => _formData['cidade'] = value,
                   validator: (value) =>
-                      validateRequired(value, 'Informe a cidade.'),
+                      validateRequired(value, 'Selecione a cidade.'),
                 ),
                 AppTextFormField(
                   labelText: 'Rua *',

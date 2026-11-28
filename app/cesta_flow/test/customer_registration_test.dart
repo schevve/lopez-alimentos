@@ -39,20 +39,39 @@ class _CustomerRepository extends CustomerRepository {
 }
 
 Future<void> _fillCustomerForm(WidgetTester tester) async {
+  await tester.pumpAndSettle();
+
   final fields = find.byType(TextFormField);
   for (final (index, value) in [
     (0, 'Cliente de teste'),
     (1, '01/01/2000'),
     (3, '(45) 99999-0000'),
-    (5, 'PR'),
-    (6, 'Toledo'),
-    (7, 'Rua das Flores'),
-    (8, '10'),
-    (9, '11144477735'),
+    (5, 'Rua das Flores'),
+    (6, '10'),
+    (7, '11144477735'),
   ]) {
     await tester.ensureVisible(fields.at(index));
     await tester.enterText(fields.at(index), value);
   }
+
+  await tester.ensureVisible(find.byKey(const Key('estado_dropdown')));
+  await tester.tap(find.byKey(const Key('estado_dropdown')));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 350));
+  await tester.enterText(find.byKey(const Key('estado_dropdown')), 'paran');
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Paraná').last);
+  await tester.pumpAndSettle();
+
+  await tester.ensureVisible(find.byKey(const Key('cidade_dropdown')));
+  await tester.tap(find.byKey(const Key('cidade_dropdown')));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 350));
+  await tester.enterText(find.byKey(const Key('cidade_dropdown')), 'toledo');
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Toledo').last);
+  await tester.pumpAndSettle();
+
   FocusManager.instance.primaryFocus?.unfocus();
   await tester.pumpAndSettle();
 }
