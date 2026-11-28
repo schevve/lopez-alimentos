@@ -27,36 +27,100 @@ class InstallmentTiming {
   final DateTime? paymentDate;
 }
 
+/// Notas de cada fator e o score final. [score] é nulo quando não há compras.
+class CustomerScoreBreakdown {
+  const CustomerScoreBreakdown({
+    required this.score,
+    required this.volume,
+    required this.assiduity,
+    required this.installments,
+    required this.purchaseCount,
+    required this.totalSpent,
+    required this.averageInstallments,
+    required this.assiduityIsNeutral,
+  });
+
+  final double? score;
+  final double volume;
+  final double assiduity;
+  final double installments;
+  final int purchaseCount;
+  final double totalSpent;
+  final double averageInstallments;
+  final bool assiduityIsNeutral;
+}
+
 /// Score de 0 a 100, ou nulo quando não há compras.
 double? calculateCustomerScore({
   required List<double> salePrices,
   required List<int> installmentCounts,
   required List<InstallmentTiming> timings,
   DateTime? today,
+}) => explainCustomerScore(
+  salePrices: salePrices,
+  installmentCounts: installmentCounts,
+  timings: timings,
+  today: today,
+).score;
+
+/// Mesma conta de [calculateCustomerScore], com cada fator separado.
+CustomerScoreBreakdown explainCustomerScore({
+  required List<double> salePrices,
+  required List<int> installmentCounts,
+  required List<InstallmentTiming> timings,
+  DateTime? today,
 }) {
-  if (salePrices.isEmpty) return null;
-  final volume = volumeScore(
-    purchaseCount: salePrices.length,
-    totalSpent: salePrices.fold<double>(0, (sum, price) => sum + price),
-  );
+  final now = today ?? DateTime.now();
+  final purchaseCount = salePrices.length;
+  final totalSpent = salePrices.fold<double>(0, (sum, price) => sum + price);
   final average = installmentCounts.isEmpty
       ? 1.0
       : installmentCounts.fold<int>(0, (sum, count) => sum + count) /
             installmentCounts.length;
+  final volume = volumeScore(
+    purchaseCount: purchaseCount,
+    totalSpent: totalSpent,
+  );
   final parcels = installmentScore(average);
-  final punctuality = assiduityScore(timings, today ?? DateTime.now());
+  final punctuality = assiduityScore(timings, now);
+  final neutral = _assiduityIsNeutral(timings, now);
+  if (salePrices.isEmpty) {
+    return CustomerScoreBreakdown(
+      score: null,
+      volume: volume,
+      assiduity: punctuality,
+      installments: parcels,
+      purchaseCount: purchaseCount,
+      totalSpent: totalSpent,
+      averageInstallments: average,
+      assiduityIsNeutral: neutral,
+    );
+  }
   final raw =
       scoreWeightVolume * volume +
       scoreWeightAssiduity * punctuality +
       scoreWeightInstallments * parcels;
-  return raw.roundToDouble().clamp(0, 100).toDouble();
+  return CustomerScoreBreakdown(
+    score: raw.roundToDouble().clamp(0, 100).toDouble(),
+    volume: volume,
+    assiduity: punctuality,
+    installments: parcels,
+    purchaseCount: purchaseCount,
+    totalSpent: totalSpent,
+    averageInstallments: average,
+    assiduityIsNeutral: neutral,
+  );
+}
+
+bool _assiduityIsNeutral(List<InstallmentTiming> timings, DateTime today) {
+  for (final timing in timings) {
+    if (daysLate(timing, today) != null) return false;
+  }
+  return true;
 }
 
 double volumeScore({required int purchaseCount, required double totalSpent}) {
-  final countScore = math.min(
-    100,
-    purchaseCount / scorePurchasesForFull * 100,
-  );
+  final countScore = math.min(100, purchaseCount / scorePurchasesForFull * 100);
   final valueScore = math.min(100, totalSpent / scoreValueForFull * 100);
   return (countScore + valueScore) / 2;
 }

@@ -2,8 +2,10 @@ import 'dart:math' as math;
 
 import 'package:cesta_flow/core/constants/colors/app_colors.dart';
 import 'package:cesta_flow/core/constants/util/format_currency.dart';
+import 'package:cesta_flow/core/domain/customer_score.dart';
 import 'package:cesta_flow/core/domain/score_band.dart';
 import 'package:cesta_flow/core/data/local/model/customer_model.dart';
+import 'package:cesta_flow/core/data/local/model/installment_model.dart';
 import 'package:cesta_flow/core/data/local/model/sale_model.dart';
 import 'package:cesta_flow/core/data/local/repository/customer_repository.dart';
 import 'package:cesta_flow/core/data/local/repository/installment_repository.dart';
@@ -64,12 +66,45 @@ class _CustomerDetailsState extends State<CustomerDetails> {
       saleIds,
     );
     final basketLabels = await _saleRepository.basketLabelsFor(saleIds);
+    final breakdown = await _scoreBreakdown(sales);
 
     return _CustomerDetailsData(
       customer: customer,
       sales: sales,
       paymentTotals: paymentTotals,
       basketLabels: basketLabels,
+      score: breakdown,
+    );
+  }
+
+  Future<CustomerScoreBreakdown> _scoreBreakdown(List<Sale> sales) async {
+    final prices = <double>[];
+    final counts = <int>[];
+    final timings = <InstallmentTiming>[];
+    for (final sale in sales) {
+      prices.add(sale.price);
+      final saleId = sale.id;
+      final installments = saleId == null
+          ? const <Installment>[]
+          : await _installmentRepository.getInstallmentsBySaleId(saleId);
+      if (installments.isEmpty) {
+        counts.add(sale.installments);
+        continue;
+      }
+      counts.add(installments.length);
+      for (final installment in installments) {
+        timings.add(
+          InstallmentTiming(
+            dueDate: installment.dueDate,
+            paymentDate: installment.paymentDate,
+          ),
+        );
+      }
+    }
+    return explainCustomerScore(
+      salePrices: prices,
+      installmentCounts: counts,
+      timings: timings,
     );
   }
 
@@ -224,6 +259,8 @@ class _CustomerDetailsState extends State<CustomerDetails> {
             children: [
               _customerCard(customer),
               const SizedBox(height: 20),
+              _ScoreCard(breakdown: data.score),
+              const SizedBox(height: 20),
               const _SectionTitle(title: 'Resumo financeiro'),
               const SizedBox(height: 12),
               MetricsRow(
@@ -340,12 +377,6 @@ class _CustomerDetailsState extends State<CustomerDetails> {
                   ? 'Não informada'
                   : _formatDate(customer.dateOfBirth!),
             ),
-            _InfoLine(
-              label: 'Score',
-              value: customer.score == null
-                  ? 'Não informado'
-                  : '${_formatScore(customer.score!)} · ${ScoreBand.fromScore(customer.score)!.label}',
-            ),
             if (customer.isBlockedForSales)
               const _InfoLine(label: 'Situação', value: 'Bloqueado'),
             if (customer.id != null)
@@ -361,9 +392,137 @@ class _CustomerDetailsState extends State<CustomerDetails> {
       '${date.month.toString().padLeft(2, '0')}/${date.year}';
 }
 
-String _formatScore(double score) => score == score.roundToDouble()
-    ? score.toInt().toString()
-    : score.toString();
+String _formatScore(double score) {
+  final rounded = (score * 10).round() / 10;
+  return rounded == rounded.roundToDouble()
+      ? rounded.toInt().toString()
+      : rounded.toStringAsFixed(1);
+}
+
+String _weightPercent(double weight) => '${(weight * 100).round()}%';
+
+Color _scoreColor(double? score) {
+  if (score == null) return const Color(0xFF59665E);
+  if (score >= ScoreBand.bomFrom) return AppColors.primary;
+  if (score >= ScoreBand.ruimBelow) return const Color(0xFFCA8A04);
+  return const Color(0xFFB42318);
+}
+
+class _ScoreCard extends StatelessWidget {
+  const _ScoreCard({required this.breakdown});
+
+  final CustomerScoreBreakdown breakdown;
+
+  @override
+  Widget build(BuildContext context) {
+    final score = breakdown.score;
+    final title = score == null ? 'Score: —' : 'Score: ${_formatScore(score)}';
+    return Card(
+      color: Colors.white,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: _scoreColor(score),
+              ),
+            ),
+            if (score == null) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'Sem compras para calcular o score.',
+                style: TextStyle(color: Color(0xFF59665E)),
+              ),
+            ] else ...[
+              const SizedBox(height: 12),
+              _ScoreFactor(
+                label: 'Volume de compras',
+                weight: scoreWeightVolume,
+                value: breakdown.volume,
+                detail:
+                    '${breakdown.purchaseCount} de $scorePurchasesForFull compras · ${formatCurrency(breakdown.totalSpent)} de ${formatCurrency(scoreValueForFull)}',
+              ),
+              _ScoreFactor(
+                label: 'Assiduidade',
+                weight: scoreWeightAssiduity,
+                value: breakdown.assiduity,
+                detail: breakdown.assiduityIsNeutral
+                    ? 'Sem parcela vencida; nota neutra ${_formatScore(scoreNeutralAssiduity)}'
+                    : '${_formatScore(scoreLateDayPenalty)} pontos a menos por dia de atraso',
+              ),
+              _ScoreFactor(
+                label: 'Parcelamento',
+                weight: scoreWeightInstallments,
+                value: breakdown.installments,
+                detail:
+                    'Média de ${_formatScore(breakdown.averageInstallments)} parcelas',
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScoreFactor extends StatelessWidget {
+  const _ScoreFactor({
+    required this.label,
+    required this.weight,
+    required this.value,
+    required this.detail,
+  });
+
+  final String label;
+  final double weight;
+  final double value;
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 10),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$label · ${_weightPercent(weight)}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF18251F),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                detail,
+                style: const TextStyle(color: Color(0xFF59665E), fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          _formatScore(value),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: _scoreColor(value),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
 class _CustomerDetailsData {
   const _CustomerDetailsData({
@@ -371,12 +530,23 @@ class _CustomerDetailsData {
     this.sales = const [],
     this.paymentTotals = const {},
     this.basketLabels = const {},
+    this.score = const CustomerScoreBreakdown(
+      score: null,
+      volume: 0,
+      assiduity: scoreNeutralAssiduity,
+      installments: 100,
+      purchaseCount: 0,
+      totalSpent: 0,
+      averageInstallments: 1,
+      assiduityIsNeutral: true,
+    ),
   });
 
   final Customer? customer;
   final List<Sale> sales;
   final Map<int, double> paymentTotals;
   final Map<int, String> basketLabels;
+  final CustomerScoreBreakdown score;
 }
 
 class _SaleSummary {
