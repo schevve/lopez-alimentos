@@ -47,13 +47,13 @@ class _AppDropdownFormFieldState<T> extends State<AppDropdownFormField<T>> {
   final _textController = TextEditingController();
   final _focusNode = FocusNode();
   bool _editing = false;
+  bool _suppressOpen = false;
   String _query = '';
 
   @override
   void initState() {
     super.initState();
     _syncDisplayText();
-    _focusNode.addListener(_onFocusChange);
   }
 
   @override
@@ -69,16 +69,9 @@ class _AppDropdownFormFieldState<T> extends State<AppDropdownFormField<T>> {
 
   @override
   void dispose() {
-    _focusNode.removeListener(_onFocusChange);
     _textController.dispose();
     _focusNode.dispose();
     super.dispose();
-  }
-
-  void _onFocusChange() {
-    if (!_focusNode.hasFocus && _editing) {
-      _stopEditing(restoreLabel: true);
-    }
   }
 
   void _syncDisplayText() {
@@ -115,7 +108,7 @@ class _AppDropdownFormFieldState<T> extends State<AppDropdownFormField<T>> {
     return null;
   }
 
-  void _startEditing(FormFieldState<T> field) {
+  void _startEditing() {
     if (!widget.enabled || _editing) return;
     setState(() {
       _editing = true;
@@ -135,22 +128,29 @@ class _AppDropdownFormFieldState<T> extends State<AppDropdownFormField<T>> {
       }
       _focusNode.requestFocus();
     });
-    field.validate();
   }
 
-  void _stopEditing({required bool restoreLabel}) {
+  void _closeWithoutSelection() {
     if (!_editing) return;
     setState(() {
       _editing = false;
       _query = '';
-      if (restoreLabel) {
-        _syncDisplayText();
-      }
+      _syncDisplayText();
     });
+    _focusNode.unfocus();
+  }
+
+  bool _tapIsInsideAnchor(Offset globalPosition) {
+    final box = _anchorKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return false;
+    final local = box.globalToLocal(globalPosition);
+    return box.size.contains(local);
   }
 
   void _select(FormFieldState<T> field, T value) {
-    field.didChange(value);
+    // setValue atualiza o campo sem marcar interação. didChange faria o
+    // Form em onUserInteraction validar todos os campos na hora.
+    field.setValue(value);
     widget.onChanged?.call(value);
     _textController.text = _labelFor(value) ?? '';
     setState(() {
@@ -160,8 +160,15 @@ class _AppDropdownFormFieldState<T> extends State<AppDropdownFormField<T>> {
     _focusNode.unfocus();
   }
 
+  TextStyle _fieldTextStyle(BuildContext context) {
+    return (Theme.of(context).textTheme.bodyLarge ?? const TextStyle()).copyWith(
+      fontSize: 16,
+    );
+  }
+
   InputDecoration _decoration(
     BuildContext context, {
+    required FormFieldState<T> field,
     String? errorText,
   }) {
     final errorColor = Theme.of(context).colorScheme.error;
@@ -169,9 +176,23 @@ class _AppDropdownFormFieldState<T> extends State<AppDropdownFormField<T>> {
       labelText: widget.labelText,
       hintText: widget.hintText,
       errorText: errorText,
-      suffixIcon: Icon(
-        _editing ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-        color: const Color(0xff1C5631),
+      suffixIcon: IconButton(
+        tooltip: _editing ? 'Fechar' : 'Abrir',
+        onPressed: !widget.enabled
+            ? null
+            : _editing
+            ? () {
+                _suppressOpen = true;
+                _closeWithoutSelection();
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _suppressOpen = false;
+                });
+              }
+            : _startEditing,
+        icon: Icon(
+          _editing ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+          color: const Color(0xff1C5631),
+        ),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
@@ -192,6 +213,9 @@ class _AppDropdownFormFieldState<T> extends State<AppDropdownFormField<T>> {
       onSaved: widget.onSaved,
       autovalidateMode: widget.autovalidateMode,
       builder: (field) {
+        if (field.value != widget.value) {
+          field.setValue(widget.value);
+        }
         final showError = field.hasError;
 
         return Column(
@@ -205,12 +229,20 @@ class _AppDropdownFormFieldState<T> extends State<AppDropdownFormField<T>> {
               enabled: widget.enabled,
               readOnly: !_editing,
               showCursor: _editing,
+              style: _fieldTextStyle(context),
               decoration: _decoration(
                 context,
+                field: field,
                 errorText: showError ? field.errorText : null,
               ),
               onTap: () {
-                if (!_editing) _startEditing(field);
+                if (_suppressOpen || _editing) return;
+                _startEditing();
+              },
+              onTapOutside: (event) {
+                if (!_editing) return;
+                if (_tapIsInsideAnchor(event.position)) return;
+                _closeWithoutSelection();
               },
               onChanged: _editing
                   ? (value) => setState(() => _query = value)
@@ -220,35 +252,49 @@ class _AppDropdownFormFieldState<T> extends State<AppDropdownFormField<T>> {
             if (_editing) ...[
               const SizedBox(height: 8),
               ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 220),
+                constraints: const BoxConstraints(maxHeight: 280),
                 child: _filteredOptions.isEmpty
                     ? Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 18,
+                        ),
                         child: Text(
                           _query.trim().isEmpty
                               ? 'Digite para pesquisar.'
                               : 'Nenhum resultado para "$_query".',
-                          style: Theme.of(context).textTheme.bodyMedium,
+                          style: _fieldTextStyle(context),
                         ),
                       )
                     : Material(
-                        elevation: 2,
-                        borderRadius: BorderRadius.circular(12),
                         color: const Color(0xFFE4F1E8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        clipBehavior: Clip.antiAlias,
                         child: ListView.separated(
                           shrinkWrap: true,
                           padding: EdgeInsets.zero,
                           itemCount: _filteredOptions.length,
-                          separatorBuilder: (_, _) => const Divider(height: 1),
+                          separatorBuilder: (_, _) => const Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: Color(0xFF9EBBA8),
+                          ),
                           itemBuilder: (context, index) {
                             final option = _filteredOptions[index];
-                            final isSelected =
-                                (widget.value ?? field.value) == option.value;
-                            return ListTile(
-                              dense: true,
-                              title: Text(option.label),
-                              selected: isSelected,
+                            return InkWell(
                               onTap: () => _select(field, option.value),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 18,
+                                ),
+                                child: Text(
+                                  option.label,
+                                  style: _fieldTextStyle(context),
+                                ),
+                              ),
                             );
                           },
                         ),
