@@ -399,8 +399,6 @@ String _formatScore(double score) {
       : rounded.toStringAsFixed(1);
 }
 
-String _weightPercent(double weight) => '${(weight * 100).round()}%';
-
 Color _scoreColor(double? score) {
   if (score == null) return const Color(0xFF59665E);
   if (score >= ScoreBand.bomFrom) return AppColors.primary;
@@ -454,14 +452,12 @@ class _ScoreCard extends StatelessWidget {
               const SizedBox(height: 12),
               _ScoreFactor(
                 label: 'Volume de compras',
-                weight: scoreWeightVolume,
                 value: breakdown.volume,
                 detail:
                     '${breakdown.purchaseCount} de $scorePurchasesForFull compras · ${formatCurrency(breakdown.totalSpent)} de ${formatCurrency(scoreValueForFull)}',
               ),
               _ScoreFactor(
                 label: 'Assiduidade',
-                weight: scoreWeightAssiduity,
                 value: breakdown.assiduity,
                 detail: breakdown.assiduityIsNeutral
                     ? 'Sem parcela vencida; nota neutra ${_formatScore(scoreNeutralAssiduity)}'
@@ -469,7 +465,6 @@ class _ScoreCard extends StatelessWidget {
               ),
               _ScoreFactor(
                 label: 'Parcelamento',
-                weight: scoreWeightInstallments,
                 value: breakdown.installments,
                 detail:
                     'Média de ${_formatScore(breakdown.averageInstallments)} parcelas',
@@ -485,13 +480,11 @@ class _ScoreCard extends StatelessWidget {
 class _ScoreFactor extends StatelessWidget {
   const _ScoreFactor({
     required this.label,
-    required this.weight,
     required this.value,
     required this.detail,
   });
 
   final String label;
-  final double weight;
   final double value;
   final String detail;
 
@@ -506,7 +499,7 @@ class _ScoreFactor extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '$label · ${_weightPercent(weight)}',
+                label,
                 style: const TextStyle(
                   fontWeight: FontWeight.w600,
                   color: Color(0xFF18251F),
